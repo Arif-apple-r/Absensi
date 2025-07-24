@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daftar Guru</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background-color: #f4f4f4;
+    }
+
+    .header {
+      width: 100%;
+      height: 60px;
+      background-color: #1abc9c;
+      color: white;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 999;
+    }
+
+    .content {
+      padding: 80px 20px 20px 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    .card h2 {
+      margin-bottom: 15px;
+    }
+
+    .kelas-list {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .kelas-list li {
+      background: #ecf0f1;
+      margin-bottom: 10px;
+      padding: 10px 15px;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .kelas-list button {
+      margin-left: 10px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .kelas-list button:hover {
+      background-color: #2980b9;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Daftar Guru</h1>
+  </div>
+
+  <div class="content">
+    <div class="card">
+      <h2>Daftar Guru</h2>
+      <ul class="kelas-list">
+        <li>
+          Bu Ratna
+          <span>
+            <button onclick="alert('Edit Data')">Edit</button>
+            <button onclick="alert('Hapus Data')">Hapus</button>
+          </span>
+        </li>
+        <li>
+          Bu Riska
+          <span>
+            <button onclick="alert('Edit Data')">Edit</button>
+            <button onclick="alert('Hapus Data')">Hapus</button>
+          </span>
+        </li>
+        <li>
+          Bu Rina
+          <span>
+            <button onclick="alert('Edit Data')">Edit</button>
+            <button onclick="alert('Hapus Data')">Hapus</button>
+          </span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+</body>
+</html>
