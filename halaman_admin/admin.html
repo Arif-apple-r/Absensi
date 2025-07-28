@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -35,7 +36,7 @@
       width: 70px;
     }
 
-    .sidebar a, .sidebar button.collapsible1 {
+    .sidebar a {
       display: flex;
       align-items: center;
       padding: 15px 20px;
@@ -46,24 +47,21 @@
       width: 100%;
     }
 
-    .sidebar a i, .sidebar button.collapsible1 i {
+    .sidebar a i {
       margin-right: 15px;
       min-width: 20px;
       text-align: center;
     }
 
-    .sidebar.collapsed a span,
-    .sidebar.collapsed button.collapsible1 span {
+    .sidebar.collapsed a span {
       display: none;
     }
 
-    .sidebar a:hover,
-    .sidebar button.collapsible1:hover {
+    .sidebar a:hover {
       background-color: #34495e;
     }
 
     .header {
-      width: 100%;
       height: 60px;
       background-color: #1abc9c;
       color: white;
@@ -72,9 +70,19 @@
       padding: 0 20px;
       position: fixed;
       top: 0;
-      left: 0;
+      left: 250px;
+      /* default posisi sidebar */
+      width: calc(100% - 250px);
+      /* supaya tidak menumpuk sidebar */
       z-index: 999;
+      transition: left 0.3s ease;
     }
+
+    .header.shifted {
+      left: 70px;
+      width: calc(100% - 70px);
+    }
+
 
     .menu-btn {
       font-size: 24px;
@@ -97,7 +105,7 @@
       margin-left: 70px;
     }
 
-    .collapsible, .collapsible1 {
+    .collapsible {
       cursor: pointer;
       font-size: 15px;
       width: 100%;
@@ -107,41 +115,15 @@
       padding: 18px;
     }
 
-    .collapsible1 {
-      background: #2c3e50;
-      color: white;
-    }
-
-    .collapsible:hover,
-    .collapsible1:hover {
+    .collapsible:hover {
       background: #ccc;
     }
 
-    .collapsible1:hover {
-      background: #34495e;
-    }
-
-    .content-collapse,
-    .content-collapse1 {
+    .content-collapse {
       max-height: 0;
       overflow: hidden;
       transition: max-height 0.2s ease-out;
       background: #f0f0f0;
-    }
-
-    .content-collapse1 {
-      background: #34495e;
-    }
-
-    .content-collapse1 a {
-      display: block;
-      padding: 10px 40px;
-      color: white;
-      text-decoration: none;
-    }
-
-    .content-collapse1 a:hover {
-      background-color: #3d566e;
     }
 
     input[type="text"] {
@@ -166,6 +148,7 @@
     }
   </style>
 </head>
+
 <body>
 
   <!-- Sidebar -->
@@ -174,17 +157,11 @@
     <a href="guru.html"><i>👨‍🏫</i><span>Guru</span></a>
     <a href="murid.html"><i>👨‍🎓</i><span>Murid</span></a>
     <a href="#"><i>📅</i><span>Jadwal</span></a>
-    <button class="collapsible1"><i>🏫</i><span>Kelas</span></button>
-    <div class="content-collapse1">
-      <a href="klsX.html">Kelas X</a>
-      <a href="klsXI.html">Kelas XI</a>
-      <a href="klsXII.html">Kelas XII</a>
-    </div>
+    <a href="kelas.html"><i>🏫</i><span>Kelas</span></a>
   </div>
 
   <!-- Header -->
   <div class="header">
-    <button class="menu-btn" onclick="toggleSidebar()">☰</button>
     <h1>Admin</h1>
   </div>
 
@@ -217,8 +194,10 @@
     function toggleSidebar() {
       const sidebar = document.getElementById("sidebar");
       const content = document.getElementById("mainContent");
+      const header = document.querySelector(".header");
       sidebar.classList.toggle("collapsed");
       content.classList.toggle("shifted");
+      header.classList.toggle("shifted");
     }
 
     document.querySelectorAll(".collapsible").forEach(button => {
@@ -249,4 +228,5 @@
   </script>
 
 </body>
+
 </html>
