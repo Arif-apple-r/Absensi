@@ -16,7 +16,7 @@ $admission_date = date('Y-m-d H:i:s');
 // Upload foto
 $foto = $_FILES['photo']['name'];
 $tmp  = $_FILES['photo']['tmp_name'];
-$folder = "uploads/";
+$folder = "uploads/siswa/";
 $ext  = pathinfo($foto, PATHINFO_EXTENSION);
 $namaFotoBaru = uniqid() . '.' . $ext;
 move_uploaded_file($tmp, $folder . $namaFotoBaru);
@@ -40,7 +40,7 @@ try {
         $admission_date,
     ]);
 
-    echo "Registrasi berhasil! Silakan <a href='index.php'>login</a>.";
+    echo "Registrasi berhasil! Silakan <a href='login.php'>login</a>.";
 
     // header("Location: login.php");
     // exit;
