@@ -162,15 +162,19 @@
             font-weight: bold;
         }
 
-        .collapsible-content input[type="text"] {
+        .collapsible-content input[type="text"],
+        .collapsible-content input[type="email"],
+        .collapsible-content input[type="password"],
+        .collapsible-content input[type="date"] {
             width: 100%;
             padding: 10px;
             margin-top: 5px;
+            margin-bottom: 12px;
             border: 1px solid #ccc;
             border-radius: 5px;
         }
-
-        .collapsible-content button {
+        
+        .collapsible-content button[type="submit"] {
             background-color: #3498db;
             color: white;
             border: none;
@@ -181,8 +185,118 @@
             transition: background-color 0.3s ease;
         }
 
-        .collapsible-content button:hover {
+        .collapsible-content button[type="submit"]:hover {
             background-color: #2980b9;
+        }
+
+        /* Admin List */
+        .admin-list {
+            list-style: none;
+            padding-left: 0;
+            margin-top: 15px;
+        }
+
+        .admin-list li {
+            display: flex;
+            align-items: center;
+            background: #ecf0f1;
+            margin-bottom: 10px;
+            padding: 10px 15px;
+            border-radius: 5px;
+            justify-content: space-between;
+        }
+
+        .admin-list .admin-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .admin-list button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        
+        .admin-list .btn-hapus {
+            background-color: #e74c3c;
+        }
+        
+        .admin-list .btn-hapus:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-tambah-admin {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            float: right;
+            margin-bottom: 15px;
+            display: none; /* Default hidden */
+        }
+
+        .btn-tambah-admin:hover {
+            background-color: #27ae60;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 10px;
+        }
+
+        .modal-buttons {
+            text-align: right;
+            margin-top: 20px;
+        }
+        
+        .modal-buttons button {
+            padding: 8px 16px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn-close-modal {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-save-modal {
+            background-color: #2ecc71;
+            color: white;
         }
 
         /* Responsive */
@@ -239,10 +353,58 @@
             <div class="collapsible-content">
                 <form id="form-guru">
                     <label for="namaGuru">Nama Guru:</label>
-                    <input type="text" id="namaGuru" placeholder="Contoh: Ibu Nani" required />
+                    <input type="text" id="namaGuru" placeholder="Contoh: Ibu Nani" required>
+                    <label for="nipGuru">NIP:</label>
+                    <input type="text" id="nipGuru" placeholder="Contoh: 123456" required>
+    
+                    <label>Jenis Kelamin:</label>
+                    <div class="gender-group">
+                        <input type="radio" id="male" name="gender" value="Laki-Laki">
+                        <label for="male">Laki-Laki</label>
+                        <input type="radio" id="female" name="gender" value="Perempuan">
+                        <label for="female">Perempuan</label>
+                    </div>
+    
+                    <label for="dobGuru">Tanggal Lahir:</label>
+                    <input type="date" id="dobGuru">
+                    <label for="nohpGuru">Nomor HP:</label>
+                    <input type="text" id="nohpGuru">
+                    <label for="emailGuru">Email:</label>
+                    <input type="email" id="emailGuru">
+                    <label for="passwordGuru">Password:</label>
+                    <input type="password" id="passwordGuru">
+                    <label for="alamatGuru">Alamat:</label>
+                    <input type="text" id="alamatGuru">
+
                     <button type="submit">Simpan</button>
                 </form>
             </div>
+        </div>
+        
+        <div class="card" id="admin-card" style="display: none;">
+            <button class="btn-tambah-admin" id="btn-tambah-admin"><b>+</b> Tambah Admin</button>
+            <h2>Kelola Admin</h2><br>
+            <ul class="admin-list" id="admin-list">
+                </ul>
+        </div>
+    </div>
+
+    <div id="admin-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="admin-modal-title">Tambah Admin</h3>
+            <form id="admin-form">
+                <label for="usernameAdmin">Username:</label>
+                <input type="text" id="usernameAdmin" required>
+                <label for="emailAdmin">Email:</label>
+                <input type="email" id="emailAdmin" required>
+                <label for="passwordAdmin">Password:</label>
+                <input type="password" id="passwordAdmin" required>
+                
+                <div class="modal-buttons">
+                    <button type="submit" class="btn-save-modal" id="btn-save-admin">Simpan</button>
+                    <button type="button" class="btn-close-modal" id="btn-close-admin-modal">Batal</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -251,6 +413,55 @@
         const mainContent = document.getElementById("mainContent");
         const header = document.getElementById("header");
         const toggleBtn = document.getElementById("toggle-btn");
+        
+        // Elemen-elemen untuk Kelola Admin
+        const adminCard = document.getElementById("admin-card");
+        const btnTambahAdmin = document.getElementById("btn-tambah-admin");
+        const adminList = document.getElementById("admin-list");
+        const adminModal = document.getElementById("admin-modal");
+        const adminModalTitle = document.getElementById("admin-modal-title");
+        const adminForm = document.getElementById("admin-form");
+        const btnCloseAdminModal = document.getElementById("btn-close-admin-modal");
+
+        // Contoh data admin
+        let adminData = [
+            { id: 1, username: 'superadmin', email: 'superadmin@mail.com' },
+            { id: 2, username: 'admin_sekolah', email: 'admin.sekolah@mail.com' }
+        ];
+
+        // Variabel ini akan diset dari sesi pengguna (siapa yang sedang login)
+        // Set 'true' untuk super admin, 'false' untuk admin biasa atau non-admin
+        const isSuperAdmin = true;
+
+        let isEditAdminMode = false;
+        let currentAdminId = null;
+
+        // Fungsi untuk render daftar admin
+        function renderAdmin() {
+            adminList.innerHTML = '';
+            adminData.forEach(admin => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="admin-info">
+                        <span>ID: ${admin.id}</span>
+                        <span>Username: ${admin.username}</span>
+                        <span>Email: ${admin.email}</span>
+                    </div>
+                    <div>
+                        <button class="btn-edit-admin" data-id="${admin.id}">Edit</button>
+                        <button class="btn-hapus-admin" data-id="${admin.id}">Hapus</button>
+                    </div>
+                `;
+                adminList.appendChild(li);
+            });
+        }
+
+        // Tampilkan card admin jika pengguna adalah Super Admin
+        if (isSuperAdmin) {
+            adminCard.style.display = 'block';
+            btnTambahAdmin.style.display = 'inline-block';
+            renderAdmin(); // Render daftar admin saat halaman dimuat
+        }
 
         // Fungsi untuk toggle sidebar
         toggleBtn.addEventListener("click", () => {
@@ -271,20 +482,110 @@
             });
         });
 
-        // Logika pengiriman form (contoh)
+        // Logika pengiriman form murid (contoh)
         document.getElementById("form-murid").addEventListener("submit", (event) => {
-            event.preventDefault(); // Mencegah form reload halaman
+            event.preventDefault();
             const nama = document.getElementById("namaMurid").value;
             alert(`Murid baru ditambahkan: ${nama}`);
-            document.getElementById("namaMurid").value = ""; // Reset input
+            document.getElementById("namaMurid").value = "";
         });
 
+        // Logika pengiriman form guru
         document.getElementById("form-guru").addEventListener("submit", (event) => {
-            event.preventDefault(); // Mencegah form reload halaman
+            event.preventDefault();
             const nama = document.getElementById("namaGuru").value;
-            alert(`Guru baru ditambahkan: ${nama}`);
-            document.getElementById("namaGuru").value = ""; // Reset input
+            const nip = document.getElementById("nipGuru").value;
+            const gender = document.querySelector('input[name="gender"]:checked')?.value;
+            const dob = document.getElementById("dobGuru").value;
+            const nohp = document.getElementById("nohpGuru").value;
+            const email = document.getElementById("emailGuru").value;
+            const password = document.getElementById("passwordGuru").value;
+            const alamat = document.getElementById("alamatGuru").value;
+
+            if (nama && nip && gender) {
+                alert(`Guru baru ditambahkan:\nNama: ${nama}\nNIP: ${nip}\nJenis Kelamin: ${gender}\nTanggal Lahir: ${dob}\nNo. HP: ${nohp}\nEmail: ${email}\nPassword: ${password}\nAlamat: ${alamat}`);
+                document.getElementById("form-guru").reset(); // Reset form
+            } else {
+                alert("Mohon lengkapi semua data wajib (Nama, NIP, Jenis Kelamin).");
+            }
         });
+
+        // Event listener untuk tombol "Tambah Admin"
+        btnTambahAdmin.addEventListener('click', () => {
+            isEditAdminMode = false;
+            currentAdminId = null;
+            adminModalTitle.textContent = "Tambah Admin";
+            adminForm.reset();
+            adminModal.style.display = 'flex';
+        });
+
+        // Event listener untuk list admin (edit & hapus)
+        adminList.addEventListener('click', (e) => {
+            const id = e.target.dataset.id;
+            if (e.target.classList.contains('btn-edit-admin')) {
+                isEditAdminMode = true;
+                currentAdminId = id;
+                adminModalTitle.textContent = "Edit Admin";
+                const admin = adminData.find(a => a.id == id);
+                if (admin) {
+                    document.getElementById('usernameAdmin').value = admin.username;
+                    document.getElementById('emailAdmin').value = admin.email;
+                    document.getElementById('passwordAdmin').value = 'password'; // Password tidak diisi, hanya placeholder
+                }
+                adminModal.style.display = 'flex';
+            }
+            if (e.target.classList.contains('btn-hapus-admin')) {
+                if (confirm('Apakah Anda yakin ingin menghapus admin ini?')) {
+                    adminData = adminData.filter(a => a.id != id);
+                    renderAdmin();
+                    alert('Admin berhasil dihapus.');
+                }
+            }
+        });
+
+        // Event listener untuk menutup modal admin
+        btnCloseAdminModal.addEventListener('click', () => {
+            adminModal.style.display = 'none';
+        });
+        
+        // Event listener untuk submit form admin
+        adminForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('usernameAdmin').value;
+            const email = document.getElementById('emailAdmin').value;
+            const password = document.getElementById('passwordAdmin').value;
+
+            if (isEditAdminMode) {
+                const admin = adminData.find(a => a.id == currentAdminId);
+                if (admin) {
+                    admin.username = username;
+                    admin.email = email;
+                    // password tidak diubah karena alasan keamanan
+                    alert(`Data admin untuk ${username} berhasil diubah.`);
+                }
+            } else {
+                const newId = Date.now();
+                const newAdmin = {
+                    id: newId,
+                    username: username,
+                    email: email,
+                    password: password
+                };
+                adminData.push(newAdmin);
+                alert(`Admin ${username} berhasil ditambahkan.`);
+            }
+
+            renderAdmin();
+            adminModal.style.display = 'none';
+        });
+
+        // Menutup modal jika klik di luar area modal
+        window.onclick = function(event) {
+            if (event.target == adminModal) {
+                adminModal.style.display = "none";
+            }
+        };
+
     </script>
 </body>
 
