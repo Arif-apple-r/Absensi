@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Daftar Murid</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f4f4f4;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #2c3e50;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            transition: width 0.3s ease;
+            z-index: 1000;
+            padding-top: 60px;
+            overflow-x: hidden;
+        }
+
+        .sidebar.collapsed {
+            width: 70px;
+        }
+
+        .sidebar a {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            color: white;
+            text-decoration: none;
+        }
+
+        .sidebar a i {
+            margin-right: 15px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .sidebar.collapsed a span {
+            display: none;
+        }
+
+        .sidebar a:hover {
+            background-color: #34495e;
+        }
+
+        .sidebar .logo {
+            color: white;
+            font-size: 24px;
+            text-align: center;
+            position: absolute;
+            top: 10px;
+            left: 0;
+            width: 100%;
+        }
+
+        .header {
+            height: 60px;
+            background-color: #1abc9c;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            position: fixed;
+            top: 0;
+            left: 250px;
+            width: calc(100% - 250px);
+            z-index: 999;
+            transition: left 0.3s ease, width 0.3s ease;
+        }
+
+        .header.shifted {
+            left: 70px;
+            width: calc(100% - 70px);
+        }
+
+        .content {
+            padding: 80px 20px 20px 20px;
+            margin-left: 250px;
+            transition: margin-left 0.3s ease;
+            width: 100%;
+        }
+
+        .content.shifted {
+            margin-left: 70px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            max-width: 800px;
+            margin-inline: auto;
+        }
+
+        .card h2 {
+            margin-bottom: 15px;
+        }
+
+        .btn-tambah {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            float: right;
+            margin-bottom: 15px;
+        }
+
+        .btn-tambah:hover {
+            background-color: #2980b9;
+        }
+
+        .murid-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .murid-list li {
+            display: flex;
+            align-items: center;
+            background: #ecf0f1;
+            margin-bottom: 10px;
+            padding: 10px 15px;
+            border-radius: 5px;
+            justify-content: space-between;
+        }
+
+        .murid-list button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .murid-list button:hover {
+            background-color: #2980b9;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 10px;
+        }
+
+        .modal-content label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .modal-content input[type="text"],
+        .modal-content input[type="email"],
+        .modal-content input[type="password"],
+        .modal-content input[type="date"],
+        .modal-content input[type="file"],
+        .modal-content select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            margin-bottom: 12px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .gender-group {
+            margin-bottom: 12px;
+        }
+
+        .gender-group label {
+            display: inline-block;
+            font-weight: normal;
+            margin-right: 15px;
+        }
+        
+        .gender-group input[type="radio"] {
+            margin-right: 5px;
+        }
+
+        .modal-buttons {
+            text-align: right;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            padding: 8px 16px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn-close {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-save {
+            background-color: #2ecc71;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar" id="sidebar">
+        <div class="logo">Logo</div>
+        <a href="#" id="toggle-btn"><i>☰</i><span>Toggle</span></a>
+        <a href="admin.html"><i>📊</i><span>Dashboard</span></a>
+        <a href="guru.html"><i>👨‍🏫</i><span>Guru</span></a>
+        <a href="murid.html"><i>👨‍🎓</i><span>Murid</span></a>
+        <a href="jadwal.html"><i>📅</i><span>Jadwal</span></a>
+        <a href="kelas.html"><i>🏫</i><span>Kelas</span></a>
+        <a href="mapel.html"><i>📚</i><span>Mata Pelajaran</span></a>
+    </div>
+
+    <div class="header" id="header">
+        <h1>Daftar Murid</h1>
+    </div>
+
+    <div class="content" id="mainContent">
+        <div class="card">
+            <button class="btn-tambah" id="btn-tambah-murid"><b>+</b> Tambah Murid</button>
+            <h2>Daftar Murid</h2><br>
+            <ul class="murid-list" id="murid-list">
+                <li data-id="1" data-nama="Ahmad Subagja" data-nis="121010" data-gender="Laki-Laki" data-dob="2008-03-22"
+                    data-kelas="X-A" data-nohp="081122334455" data-email="ahmad@sekolah.ac.id" data-alamat="Jl. Pahlawan No. 7">
+                    <span class="murid-nama">Ahmad Subagja</span>
+                    <div>
+                        <button class="btn-edit">Edit</button>
+                        <button class="btn-hapus">Hapus</button>
+                    </div>
+                </li>
+                <li data-id="2" data-nama="Santi Dewi" data-nis="121011" data-gender="Perempuan" data-dob="2008-07-11"
+                    data-kelas="X-B" data-nohp="081199887766" data-email="santi@sekolah.ac.id" data-alamat="Jl. Kemerdekaan No. 12">
+                    <span class="murid-nama">Santi Dewi</span>
+                    <div>
+                        <button class="btn-edit">Edit</button>
+                        <button class="btn-hapus">Hapus</button>
+                    </div>
+                </li>
+                <li data-id="3" data-nama="Rizky Pratama" data-nis="111025" data-gender="Laki-Laki" data-dob="2007-10-05"
+                    data-kelas="XI-C" data-nohp="081344556677" data-email="rizky@sekolah.ac.id" data-alamat="Jl. Veteran No. 3">
+                    <span class="murid-nama">Rizky Pratama</span>
+                    <div>
+                        <button class="btn-edit">Edit</button>
+                        <button class="btn-hapus">Hapus</button>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="murid-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-title">Edit Data Murid</h3>
+            <form id="murid-form">
+                <label for="namaMurid">Nama Murid:</label>
+                <input type="text" id="namaMurid" required>
+                <label for="nisMurid">NIS:</label>
+                <input type="text" id="nisMurid" required>
+                
+                <label>Jenis Kelamin:</label>
+                <div class="gender-group">
+                    <input type="radio" id="male" name="gender" value="Laki-Laki">
+                    <label for="male">Laki-Laki</label>
+                    <input type="radio" id="female" name="gender" value="Perempuan">
+                    <label for="female">Perempuan</label>
+                </div>
+
+                <label for="dobMurid">Tanggal Lahir:</label>
+                <input type="date" id="dobMurid">
+
+                <label for="kelasMurid">Kelas:</label>
+                <select id="kelasMurid">
+                    <option value="X-A">X-A</option>
+                    <option value="X-B">X-B</option>
+                    <option value="XI-C">XI-C</option>
+                    <option value="XII-D">XII-D</option>
+                </select>
+
+                <label for="photoMurid">Foto Murid:</label>
+                <input type="file" id="photoMurid">
+                <label for="nohpMurid">Nomor HP:</label>
+                <input type="text" id="nohpMurid">
+                <label for="emailMurid">Email:</label>
+                <input type="email" id="emailMurid">
+                <label for="passwordMurid">Password:</label>
+                <input type="password" id="passwordMurid">
+                <label for="alamatMurid">Alamat:</label>
+                <input type="text" id="alamatMurid">
+                <div class="modal-buttons">
+                    <button type="submit" class="btn-save">Simpan</button>
+                    <button type="button" class="btn-close" id="btn-cancel">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const sidebar = document.getElementById("sidebar");
+        const mainContent = document.getElementById("mainContent");
+        const header = document.getElementById("header");
+        const toggleBtn = document.getElementById("toggle-btn");
+
+        toggleBtn.addEventListener("click", () => {
+            sidebar.classList.toggle("collapsed");
+            mainContent.classList.toggle("shifted");
+            header.classList.toggle("shifted");
+        });
+
+        const muridModal = document.getElementById("murid-modal");
+        const btnTambahMurid = document.getElementById("btn-tambah-murid");
+        const muridList = document.getElementById("murid-list");
+        const modalTitle = document.getElementById("modal-title");
+        const muridForm = document.getElementById("murid-form");
+        const btnCancel = document.getElementById("btn-cancel");
+        
+        let isEditMode = false;
+        let currentMuridItem = null;
+
+        btnTambahMurid.addEventListener("click", () => {
+            isEditMode = false;
+            modalTitle.textContent = "Tambah Data Murid";
+            muridForm.reset();
+            muridModal.style.display = "block";
+        });
+
+        muridList.addEventListener("click", (e) => {
+            if (e.target.classList.contains("btn-edit")) {
+                isEditMode = true;
+                modalTitle.textContent = "Edit Data Murid";
+                currentMuridItem = e.target.closest("li");
+                
+                document.getElementById("namaMurid").value = currentMuridItem.dataset.nama;
+                document.getElementById("nisMurid").value = currentMuridItem.dataset.nis;
+                document.getElementById("dobMurid").value = currentMuridItem.dataset.dob;
+                document.getElementById("kelasMurid").value = currentMuridItem.dataset.kelas;
+                document.getElementById("nohpMurid").value = currentMuridItem.dataset.nohp;
+                document.getElementById("emailMurid").value = currentMuridItem.dataset.email;
+                document.getElementById("alamatMurid").value = currentMuridItem.dataset.alamat;
+                
+                const gender = currentMuridItem.dataset.gender;
+                if (gender === "Laki-Laki") {
+                    document.getElementById("male").checked = true;
+                } else if (gender === "Perempuan") {
+                    document.getElementById("female").checked = true;
+                }
+
+                muridModal.style.display = "block";
+            }
+            if (e.target.classList.contains("btn-hapus")) {
+                if (confirm("Apakah Anda yakin ingin menghapus data murid ini?")) {
+                    e.target.closest("li").remove();
+                    alert("Data murid berhasil dihapus.");
+                }
+            }
+        });
+
+        btnCancel.addEventListener("click", () => {
+            muridModal.style.display = "none";
+        });
+
+        muridForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const nama = document.getElementById("namaMurid").value;
+            const nis = document.getElementById("nisMurid").value;
+            const gender = muridForm.querySelector('input[name="gender"]:checked')?.value || "";
+            const dob = document.getElementById("dobMurid").value;
+            const kelas = document.getElementById("kelasMurid").value;
+            const nohp = document.getElementById("nohpMurid").value;
+            const email = document.getElementById("emailMurid").value;
+            const alamat = document.getElementById("alamatMurid").value;
+
+            if (isEditMode) {
+                currentMuridItem.dataset.nama = nama;
+                currentMuridItem.dataset.nis = nis;
+                currentMuridItem.dataset.gender = gender;
+                currentMuridItem.dataset.dob = dob;
+                currentMuridItem.dataset.kelas = kelas;
+                currentMuridItem.dataset.nohp = nohp;
+                currentMuridItem.dataset.email = email;
+                currentMuridItem.dataset.alamat = alamat;
+                currentMuridItem.querySelector(".murid-nama").textContent = nama;
+                alert("Data murid berhasil diubah.");
+            } else {
+                const newId = Date.now();
+                const newMuridHTML = `
+                    <li data-id="${newId}" data-nama="${nama}" data-nis="${nis}" data-gender="${gender}" data-dob="${dob}"
+                        data-kelas="${kelas}" data-nohp="${nohp}" data-email="${email}" data-alamat="${alamat}">
+                        <span class="murid-nama">${nama}</span>
+                        <div>
+                            <button class="btn-edit">Edit</button>
+                            <button class="btn-hapus">Hapus</button>
+                        </div>
+                    </li>
+                `;
+                muridList.insertAdjacentHTML('beforeend', newMuridHTML);
+                alert("Data murid berhasil ditambahkan.");
+            }
+
+            muridModal.style.display = "none";
+        });
+        
+        window.onclick = function (event) {
+            if (event.target == muridModal) {
+                muridModal.style.display = "none";
+            }
+        };
+    </script>
+</body>
+
+</html>
