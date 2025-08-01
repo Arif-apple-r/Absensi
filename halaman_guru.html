@@ -2,42 +2,877 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Halaman Guru</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="user_style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Halaman Guru</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --sidebar-width: 250px;
+            --header-height: 60px;
+        }
+
+        /* Perbaikan: Menggunakan font-family yang lebih modern dan umum */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: #2c3e50;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            padding: 20px;
+            color: white;
+            transition: transform 0.3s ease;
+            transform: translateX(0);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(calc(-1 * var(--sidebar-width)));
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar-menu a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            display: flex; /* Perbaikan: Menggunakan flexbox untuk penataan ikon dan teks */
+            align-items: center;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background-color: #34495e;
+        }
+
+        .sidebar-menu a i {
+            margin-right: 10px;
+        }
+
+        /* Header */
+        .header {
+            height: var(--header-height);
+            background-color: #1abc9c;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            width: calc(100% - var(--sidebar-width));
+            z-index: 999;
+            transition: left 0.3s ease, width 0.3s ease;
+        }
+
+        .header.shifted {
+            left: 0;
+            width: 100%;
+        }
+
+        .toggle-btn {
+            font-size: 24px;
+            cursor: pointer;
+            margin-right: 20px;
+        }
+
+        /* Content */
+        .content {
+            padding: calc(var(--header-height) + 20px) 20px 20px var(--sidebar-width);
+            transition: padding-left 0.3s ease;
+        }
+
+        .content.shifted {
+            padding-left: 20px;
+        }
+
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        /* Profile Sidebar */
+        .profile {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #44617a;
+        }
+        
+        .profile-info {
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .profile-info:hover {
+            background-color: #34495e;
+        }
+
+        .profile-info img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid white;
+            margin-bottom: 10px;
+        }
+
+        .profile-info h3 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+
+        .profile-info p {
+            margin: 5px 0;
+            font-size: 0.9em;
+            color: #bdc3c7;
+        }
+        
+        .logout-btn-container {
+            margin-top: auto;
+            padding-bottom: 20px;
+            text-align: center;
+        }
+
+        .logout-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background-color: #c0392b;
+        }
+        
+        /* --- Modal Umum --- */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        /* Perbaikan: Menambahkan styling untuk form di modal */
+        #guru-form label,
+        #guru-form input,
+        #guru-form .gender-group {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        #guru-form input[type="text"],
+        #guru-form input[type="email"],
+        #guru-form input[type="date"],
+        #guru-form input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        #guru-form .gender-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        /* Gaya tombol modal */
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+            gap: 10px;
+        }
+
+        .modal-buttons button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-save {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .btn-close {
+            background-color: #bdc3c7;
+            color: #34495e;
+        }
+
+        /* --- Style untuk Card Jadwal --- */
+        .day-schedule {
+            margin-bottom: 30px;
+        }
+        
+        .day-schedule h3 {
+            font-size: 1.5em;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .schedule-card {
+            background-color: white;
+            border-left: 5px solid #1abc9c;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+            cursor: pointer; 
+        }
+
+        .schedule-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* --- Style untuk Modal Daftar Absen & Rekapitulasi --- */
+        #attendance-list-modal .modal-content {
+            max-width: 700px;
+        }
+        
+        #attendance-list {
+            margin-top: 20px;
+        }
+
+        .attendance-item {
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .attendance-info {
+            flex-grow: 1;
+        }
+
+        .attendance-status {
+            font-weight: bold;
+            margin-left: 10px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            color: white;
+        }
+        
+        /* Perbaikan: Menambahkan status untuk "Belum dikonfirmasi" dan "Tidak diketahui" */
+        .status-Hadir { background-color: #2ecc71; }
+        .status-Sakit { background-color: #f1c40f; }
+        .status-Izin { background-color: #3498db; }
+        .status-Alpha { background-color: #e74c3c; }
+        .status-Belum_dikonfirmasi { background-color: #95a5a6; } /* Warna abu-abu untuk pending */
+        .status-Tidak_diketahui { background-color: #7f8c8d; } /* Warna abu-abu gelap untuk data kosong */
+
+        .attendance-item .actions {
+            margin-left: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+            font-size: 0.9em;
+        }
+        
+        .action-terima { background-color: #27ae60; }
+        .action-tolak { background-color: #c0392b; }
+        
+        .action-btn:hover {
+            opacity: 0.8;
+        }
+
+        /* --- Style untuk Rekapitulasi Absensi --- */
+        #absensi-content .filter-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        #absensi-content .filter-container select {
+            padding: 8px 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            min-width: 150px;
+        }
+
+        #absensi-content .attendance-summary-card {
+            background-color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #absensi-content .attendance-summary-card h4 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(calc(-1 * var(--sidebar-width)));
+            }
+            .sidebar.collapsed {
+                transform: translateX(0);
+            }
+            .header {
+                left: 0;
+                width: 100%;
+            }
+            .content {
+                padding-left: 20px;
+            }
+            .attendance-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .attendance-item .actions {
+                margin-left: 0;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-  <div class="sidebar" id="sidebar">
-    <div class="profile">
-      <img src="https://i.pinimg.com/originals/56/23/a3/5623a3007d20657bdd96ff799e6fd814.jpg" alt="Profile">
-      <h3>Ahmad Syukri</h3>
-      <p>Guru Matematika</p>
-      <p>ahmad@example.com</p>
-      <button class="logout-btn">Logout</button>
+    <div class="sidebar" id="sidebar">
+        <div class="profile">
+            <div class="profile-info" id="profile-btn" role="button" aria-label="Edit Profil">
+                <img src="https://i.pinimg.com/originals/56/23/a3/5623a3007d20657bdd96ff799e6fd814.jpg" alt="Profile" id="profile-img">
+                <h3 id="profile-name">Ahmad Syukri</h3>
+                <p id="profile-title">Guru Matematika</p>
+                <p id="profile-email">ahmad@example.com</p>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="#" id="jadwal-tab" class="active"><i class="fas fa-calendar-alt"></i>Jadwal Mengajar</a></li>
+            <li><a href="#" id="absensi-tab"><i class="fas fa-user-check"></i>Rekap Absensi</a></li>
+        </ul>
+        <div class="logout-btn-container">
+            <button class="logout-btn" id="logout-btn">Logout</button>
+        </div>
     </div>
-  </div>
 
-  <div class="header">
-    <i class="fas fa-bars toggle-btn" onclick="toggleSidebar()"></i>
-    <h1>Halaman Guru</h1>
-  </div>
+    <div class="header" id="header">
+        <i class="fas fa-bars toggle-btn" onclick="toggleSidebar()" role="button" aria-label="Toggle Sidebar"></i>
+        <h1 id="page-title">Halaman Guru</h1>
+    </div>
 
-  <div class="content">
-    <h2>Selamat Datang, Pak Ahmad!</h2>
-    <p>Silakan cek dan kelola data Anda di sini.</p>
-  </div>
+    <div class="content" id="mainContent">
 
-  <script>
-    function toggleSidebar() {
-      const sidebar = document.getElementById('sidebar');
-      sidebar.classList.toggle('collapsed');
-    }
-  </script>
+        <div id="jadwal-content" class="content-section active">
+            <h2>Selamat Datang, <span id="welcome-name">Pak Ahmad</span>!</h2>
+            <p>Berikut adalah jadwal mengajar Anda. Klik jadwal untuk melihat daftar absensi murid.</p>
+            <div id="schedule-container">
+            </div>
+        </div>
 
+        <div id="absensi-content" class="content-section">
+            <h2>Rekapitulasi Absensi Murid</h2>
+            <div class="filter-container">
+                <label for="class-filter">Pilih Kelas:</label>
+                <select id="class-filter">
+                </select>
+            </div>
+            <div id="attendance-summary-container">
+            </div>
+        </div>
+
+    </div>
+
+    <div id="guru-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-title">Edit Profil Guru</h3>
+            <form id="guru-form">
+                <label for="namaGuru">Nama Guru:</label>
+                <input type="text" id="namaGuru" required>
+                <label for="nipGuru">NIP:</label>
+                <input type="text" id="nipGuru" readonly>
+
+                <label>Jenis Kelamin:</label>
+                <div class="gender-group">
+                    <input type="radio" id="male" name="gender" value="Laki-Laki">
+                    <label for="male">Laki-Laki</label>
+                    <input type="radio" id="female" name="gender" value="Perempuan">
+                    <label for="female">Perempuan</label>
+                </div>
+
+                <label for="dobGuru">Tanggal Lahir:</label>
+                <input type="date" id="dobGuru">
+
+                <label for="photoGuru">Foto Guru:</label>
+                <div class="image-preview" id="photo-preview"></div>
+                <input type="file" id="photoGuru" accept="image/*">
+
+                <label for="nohpGuru">Nomor HP:</label>
+                <input type="text" id="nohpGuru">
+                <label for="emailGuru">Email:</label>
+                <input type="email" id="emailGuru">
+                <label for="passwordGuru">Password Baru:</label>
+                <input type="password" id="passwordGuru" placeholder="Kosongkan jika tidak ingin diubah">
+                <label for="alamatGuru">Alamat:</label>
+                <input type="text" id="alamatGuru">
+                <div class="modal-buttons">
+                    <button type="submit" class="btn-save">Simpan</button>
+                    <button type="button" class="btn-close" id="btn-cancel">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="attendance-list-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="attendance-list-modal-title">Daftar Absen</h3>
+            <p>Klik tombol untuk mengkonfirmasi atau menolak status absen murid.</p>
+            <div id="attendance-list">
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-close" id="btn-close-absensi">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data guru, jadwal, dan absensi disatukan dalam satu objek untuk pengelolaan yang lebih baik
+        const appData = {
+            loggedInGuru: {
+                id: 1,
+                nama: 'Ahmad Syukri',
+                nip: '1234567890',
+                jabatan: 'Guru Matematika',
+                email: 'ahmad@example.com',
+                gender: 'Laki-Laki',
+                dob: '1985-05-10',
+                nohp: '08123456789',
+                alamat: 'Jl. Jend. Sudirman No. 45',
+                photoUrl: 'https://i.pinimg.com/originals/56/23/a3/5623a3007d20657bdd96ff799e6fd814.jpg'
+            },
+            schedules: {
+                'Senin': [
+                    { id: 'senin_mat_xa', kelas: 'X A', mataPelajaran: 'Matematika Wajib', jamMulai: '08:00', jamSelesai: '09:30' },
+                    { id: 'senin_bindo_xipa1', kelas: 'XI IPA 1', mataPelajaran: 'Bahasa Indonesia', jamMulai: '10:00', jamSelesai: '11:30' }
+                ],
+                'Selasa': [
+                    { id: 'selasa_fis_xiipa2', kelas: 'XI IPA 2', mataPelajaran: 'Fisika', jamMulai: '09:00', jamSelesai: '10:30' }
+                ]
+            },
+            simulatedStudentsData: {
+                'X A': [
+                    { nama: 'Dinda Amelia' },
+                    { nama: 'Budi Santoso' },
+                    { nama: 'Citra Dewi' },
+                    { nama: 'Joni Iskandar' },
+                    { nama: 'Putri Salsabila' }
+                ],
+                'XI IPA 1': [
+                    { nama: 'Eko Prasetyo' },
+                    { nama: 'Hendra Gunawan' }
+                ],
+                'XI IPA 2': [
+                    { nama: 'Fani Lestari' },
+                    { nama: 'Gita Permata' }
+                ]
+            },
+            simulatedAttendanceData: [
+                { id: 1, jadwalId: 'senin_mat_xa', muridNama: 'Dinda Amelia', status: 'Sakit', keterangan: 'Demam tinggi', waktuAbsen: '1 Agustus 2025, 07:45:00', isConfirmed: false },
+                { id: 2, jadwalId: 'senin_mat_xa', muridNama: 'Budi Santoso', status: 'Hadir', keterangan: '', waktuAbsen: '1 Agustus 2025, 07:50:00', isConfirmed: true },
+                { id: 3, jadwalId: 'senin_mat_xa', muridNama: 'Citra Dewi', status: 'Izin', keterangan: 'Ada acara keluarga', waktuAbsen: '1 Agustus 2025, 07:55:00', isConfirmed: false },
+                { id: 4, jadwalId: 'senin_mat_xa', muridNama: 'Joni Iskandar', status: 'Hadir', keterangan: '', waktuAbsen: '1 Agustus 2025, 07:58:00', isConfirmed: false },
+                { id: 5, jadwalId: 'senin_bindo_xipa1', muridNama: 'Eko Prasetyo', status: 'Hadir', keterangan: '', waktuAbsen: '1 Agustus 2025, 09:50:00', isConfirmed: true },
+                { id: 6, jadwalId: 'selasa_fis_xiipa2', muridNama: 'Fani Lestari', status: 'Izin', keterangan: 'Mengikuti lomba', waktuAbsen: '2 Agustus 2025, 08:30:00', isConfirmed: false }
+            ]
+        };
+
+        // DOM Elements
+        const sidebar = document.getElementById('sidebar');
+        const header = document.getElementById('header');
+        const mainContent = document.getElementById('mainContent');
+        const pageTitle = document.getElementById('page-title');
+        
+        const profileBtn = document.getElementById('profile-btn');
+        const jadwalTab = document.getElementById('jadwal-tab');
+        const absensiTab = document.getElementById('absensi-tab');
+        const logoutBtn = document.getElementById('logout-btn');
+        
+        const jadwalContent = document.getElementById('jadwal-content');
+        const absensiContent = document.getElementById('absensi-content');
+        const scheduleContainer = document.getElementById('schedule-container');
+        const attendanceSummaryContainer = document.getElementById('attendance-summary-container');
+        const classFilter = document.getElementById('class-filter');
+
+        const guruModal = document.getElementById('guru-modal');
+        const guruForm = document.getElementById('guru-form');
+        const btnCancel = document.getElementById('btn-cancel');
+        const photoGuru = document.getElementById('photoGuru');
+        const photoPreview = document.getElementById('photo-preview');
+        const attendanceListModal = document.getElementById('attendance-list-modal');
+        const attendanceListModalTitle = document.getElementById('attendance-list-modal-title');
+        const attendanceList = document.getElementById('attendance-list');
+        const btnCloseAbsensi = document.getElementById('btn-close-absensi');
+        
+        const profileImg = document.getElementById('profile-img');
+        const profileName = document.getElementById('profile-name');
+        const profileTitle = document.getElementById('profile-title');
+        const profileEmail = document.getElementById('profile-email');
+        const welcomeName = document.getElementById('welcome-name');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('collapsed');
+            header.classList.toggle('shifted');
+            mainContent.classList.toggle('shifted');
+        }
+        
+        function updateProfileView(guru) {
+            profileImg.src = guru.photoUrl;
+            profileName.textContent = guru.nama;
+            profileTitle.textContent = guru.jabatan;
+            profileEmail.textContent = guru.email;
+            welcomeName.textContent = guru.nama.split(' ')[0]; // Mengambil nama depan
+        }
+
+        function loadGuruDataToForm(guru) {
+            document.getElementById('namaGuru').value = guru.nama;
+            document.getElementById('nipGuru').value = guru.nip;
+            document.getElementById('dobGuru').value = guru.dob;
+            document.getElementById('nohpGuru').value = guru.nohp;
+            document.getElementById('emailGuru').value = guru.email;
+            document.getElementById('alamatGuru').value = guru.alamat;
+            document.getElementById('passwordGuru').value = '';
+            
+            document.getElementById('male').checked = guru.gender === 'Laki-Laki';
+            document.getElementById('female').checked = guru.gender === 'Perempuan';
+            photoPreview.style.backgroundImage = `url(${guru.photoUrl})`;
+        }
+
+        function displaySchedules() {
+            scheduleContainer.innerHTML = '';
+            const daysOrder = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+            daysOrder.forEach(day => {
+                const daySchedules = appData.schedules[day];
+                if (daySchedules && daySchedules.length > 0) {
+                    const dayScheduleDiv = document.createElement('div');
+                    dayScheduleDiv.classList.add('day-schedule');
+                    dayScheduleDiv.innerHTML = `<h3>${day}</h3>`;
+                    
+                    const cardContainerDiv = document.createElement('div');
+                    cardContainerDiv.classList.add('card-container');
+                    daySchedules.forEach(schedule => {
+                        const scheduleCard = document.createElement('div');
+                        scheduleCard.classList.add('schedule-card');
+                        scheduleCard.setAttribute('data-schedule-id', schedule.id); // Perbaikan: Menambahkan ID data
+                        scheduleCard.innerHTML = `
+                            <h4>${schedule.mataPelajaran}</h4>
+                            <p>${schedule.kelas}</p>
+                            <p class="time">${schedule.jamMulai} - ${schedule.jamSelesai}</p>
+                        `;
+                        scheduleCard.addEventListener('click', () => {
+                            showAttendanceListModal(schedule);
+                        });
+                        cardContainerDiv.appendChild(scheduleCard);
+                    });
+                    dayScheduleDiv.appendChild(cardContainerDiv);
+                    scheduleContainer.appendChild(dayScheduleDiv);
+                }
+            });
+        }
+        
+        function showAttendanceListModal(schedule) {
+            attendanceListModalTitle.textContent = `Daftar Absen ${schedule.mataPelajaran} (${schedule.kelas})`;
+            attendanceList.innerHTML = '';
+            const allStudentsInClass = appData.simulatedStudentsData[schedule.kelas] || [];
+            
+            allStudentsInClass.forEach(student => {
+                const record = appData.simulatedAttendanceData.find(r => 
+                    r.muridNama === student.nama && r.jadwalId === schedule.id
+                );
+                const attendanceItem = createAttendanceItem(record, 'modal', student.nama);
+                attendanceList.appendChild(attendanceItem);
+            });
+            
+            attendanceListModal.style.display = 'flex';
+        }
+        
+        function displayAllAttendance() {
+            const selectedClass = classFilter.value;
+            attendanceSummaryContainer.innerHTML = '';
+
+            const allSchedules = Object.values(appData.schedules).flat();
+            const filteredSchedules = selectedClass ? 
+                allSchedules.filter(s => s.kelas === selectedClass) : 
+                allSchedules;
+            
+            filteredSchedules.forEach(schedule => {
+                const studentsInClass = appData.simulatedStudentsData[schedule.kelas] || [];
+                const summaryCard = document.createElement('div');
+                summaryCard.classList.add('attendance-summary-card');
+                summaryCard.innerHTML = `<h4>${schedule.mataPelajaran} (${schedule.kelas})</h4>`;
+                
+                if (studentsInClass.length === 0) {
+                    summaryCard.innerHTML += `<p>Tidak ada data murid untuk kelas ini.</p>`;
+                } else {
+                    studentsInClass.forEach(student => {
+                        const record = appData.simulatedAttendanceData.find(r => 
+                            r.muridNama === student.nama && r.jadwalId === schedule.id
+                        );
+                        
+                        const attendanceItem = createAttendanceItem(record, 'rekap', student.nama);
+                        summaryCard.appendChild(attendanceItem);
+                    });
+                }
+                attendanceSummaryContainer.appendChild(summaryCard);
+            });
+        }
+
+        function createAttendanceItem(record, context, studentName) {
+            const attendanceItem = document.createElement('div');
+            attendanceItem.classList.add('attendance-item');
+            
+            let statusDisplay;
+            let statusClass;
+            let actionsHtml = '';
+
+            if (record) {
+                if (!record.isConfirmed) {
+                    statusDisplay = `Belum dikonfirmasi (${record.status})`;
+                    statusClass = `status-Belum_dikonfirmasi`;
+                    actionsHtml = `
+                        <button class="action-btn action-terima" onclick="handleAttendanceAction(${record.id}, 'terima', '${context}')">Terima</button>
+                        <button class="action-btn action-tolak" onclick="handleAttendanceAction(${record.id}, 'tolak', '${context}')">Tolak</button>
+                    `;
+                } else {
+                    statusDisplay = record.status;
+                    statusClass = `status-${record.status}`;
+                }
+            } else {
+                statusDisplay = `Tidak diketahui`;
+                statusClass = `status-Tidak_diketahui`;
+            }
+
+            // Perbaikan: Keterangan ditampilkan untuk semua status, bukan hanya yang belum dikonfirmasi
+            attendanceItem.innerHTML = `
+                <div class="attendance-info">
+                    <h4>${studentName}</h4>
+                    <p>Status: <span class="attendance-status ${statusClass}">${statusDisplay}</span></p>
+                    ${record && record.keterangan ? `<p>Keterangan: ${record.keterangan}</p>` : ''}
+                    ${record && record.waktuAbsen ? `<small>Waktu Absen: ${record.waktuAbsen}</small>` : ''}
+                </div>
+                <div class="actions">
+                    ${actionsHtml}
+                </div>
+            `;
+            return attendanceItem;
+        }
+
+        // Perbaikan: Fungsi ini sekarang global agar bisa diakses dari atribut onclick
+        window.handleAttendanceAction = function(recordId, action, context) {
+            const record = appData.simulatedAttendanceData.find(r => r.id === recordId);
+            if (record) {
+                if (action === 'terima') {
+                    record.isConfirmed = true;
+                    alert(`Absen murid ${record.muridNama} berhasil diterima.`);
+                } else if (action === 'tolak') {
+                    record.status = 'Alpha';
+                    record.isConfirmed = true;
+                    alert(`Absen murid ${record.muridNama} berhasil ditolak. Status diubah menjadi Alpha.`);
+                }
+                
+                if (context === 'modal') {
+                    const currentSchedule = Object.values(appData.schedules).flat().find(s => s.id === record.jadwalId);
+                    showAttendanceListModal(currentSchedule);
+                } else if (context === 'rekap') {
+                    displayAllAttendance();
+                }
+            }
+        }
+        // Perbaikan: Fungsi toggleSidebar juga dibuat global
+        window.toggleSidebar = function() {
+            sidebar.classList.toggle('collapsed');
+            header.classList.toggle('shifted');
+            mainContent.classList.toggle('shifted');
+        }
+
+        function switchContent(contentId) {
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(contentId).classList.add('active');
+            
+            document.querySelectorAll('.sidebar-menu a').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            if(contentId === 'jadwal-content') {
+                jadwalTab.classList.add('active');
+                pageTitle.textContent = 'Jadwal Mengajar';
+            } else if (contentId === 'absensi-content') {
+                absensiTab.classList.add('active');
+                pageTitle.textContent = 'Rekapitulasi Absensi';
+                displayAllAttendance();
+            }
+        }
+        
+        function populateClassFilter() {
+            const classes = new Set(Object.values(appData.schedules).flatMap(day => day.map(s => s.kelas)));
+            classFilter.innerHTML = '<option value="">Semua Kelas</option>';
+            classes.forEach(cls => {
+                const option = document.createElement('option');
+                option.value = cls;
+                option.textContent = cls;
+                classFilter.appendChild(option);
+            });
+            classFilter.addEventListener('change', displayAllAttendance);
+        }
+
+        // Event listener untuk menu sidebar
+        jadwalTab.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchContent('jadwal-content');
+        });
+
+        absensiTab.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchContent('absensi-content');
+        });
+        
+        btnCloseAbsensi.addEventListener('click', () => {
+            attendanceListModal.style.display = 'none';
+        });
+
+        profileBtn.addEventListener('click', () => {
+            loadGuruDataToForm(appData.loggedInGuru);
+            guruModal.style.display = 'flex';
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            alert('Anda telah logout!');
+            // window.location.href = 'login.html';
+        });
+
+        btnCancel.addEventListener('click', () => {
+            guruModal.style.display = 'none';
+        });
+        
+        guruForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nama = document.getElementById('namaGuru').value;
+            const nip = document.getElementById('nipGuru').value;
+            const gender = guruForm.querySelector('input[name="gender"]:checked')?.value || "";
+            const dob = document.getElementById('dobGuru').value;
+            const nohp = document.getElementById('nohpGuru').value;
+            const email = document.getElementById('emailGuru').value;
+            const password = document.getElementById('passwordGuru').value;
+            const alamat = document.getElementById('alamatGuru').value;
+            const photoFile = photoGuru.files[0];
+
+            // Perbaikan: Mengupdate objek data
+            appData.loggedInGuru.nama = nama;
+            appData.loggedInGuru.nip = nip;
+            appData.loggedInGuru.gender = gender;
+            appData.loggedInGuru.dob = dob;
+            appData.loggedInGuru.nohp = nohp;
+            appData.loggedInGuru.email = email;
+            appData.loggedInGuru.alamat = alamat;
+            if (password) { console.log('Password diperbarui'); }
+            if (photoFile) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    appData.loggedInGuru.photoUrl = e.target.result;
+                    updateProfileView(appData.loggedInGuru);
+                    alert('Profil berhasil diubah!');
+                    guruModal.style.display = 'none';
+                };
+                reader.readAsDataURL(photoFile);
+            } else {
+                updateProfileView(appData.loggedInGuru);
+                alert('Profil berhasil diubah!');
+                guruModal.style.display = 'none';
+            }
+        });
+
+        window.onclick = function (event) {
+            if (event.target == guruModal) { guruModal.style.display = "none"; }
+            if (event.target == attendanceListModal) { attendanceListModal.style.display = "none"; }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateProfileView(appData.loggedInGuru);
+            displaySchedules();
+            populateClassFilter();
+        });
+    </script>
 </body>
 
 </html>
