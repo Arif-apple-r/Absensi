@@ -103,6 +103,7 @@
         /* Content */
         .content {
             padding: calc(var(--header-height) + 20px) 20px 20px var(--sidebar-width);
+            padding-left: calc(var(--sidebar-width) + 20px);
             transition: padding-left 0.3s ease;
         }
 
@@ -283,7 +284,16 @@
         .btn-submit:hover {
             background-color: #27ae60;
         }
+        
+        .btn-edit-profile {
+            background-color: #3498db;
+            color: white;
+        }
 
+        .btn-edit-profile:hover {
+            background-color: #2980b9;
+        }
+        
         /* Dashboard */
         .dashboard-grid {
             display: grid;
@@ -313,7 +323,7 @@
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .notification-item:last-child {
             border-bottom: none;
         }
@@ -341,7 +351,7 @@
             width: 100%;
             margin-top: 10px;
         }
-        
+
         .add-notification-btn:hover {
             background-color: #2980b9;
         }
@@ -526,6 +536,51 @@
                 padding-left: 20px;
             }
         }
+        
+        .profile-view-data {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .profile-view-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .profile-view-item i {
+            margin-right: 15px;
+            font-size: 1.5em;
+            color: #3498db;
+        }
+        
+        .profile-view-item .item-text {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .profile-view-item .item-label {
+            font-size: 0.8em;
+            color: #7f8c8d;
+        }
+        
+        .profile-view-item .item-value {
+            font-weight: bold;
+            color: #34495e;
+        }
+        
+        .profile-view-image-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .profile-view-image-container img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #3498db;
+        }
     </style>
 </head>
 
@@ -564,12 +619,12 @@
                 <div class="dashboard-card">
                     <h3>Jadwal Hari Ini</h3>
                     <div id="today-schedule-list">
-                        </div>
+                    </div>
                 </div>
                 <div class="dashboard-card">
                     <h3>Pengingat Pribadi</h3>
                     <div id="notifications-list">
-                        </div>
+                    </div>
                     <button class="add-notification-btn" id="add-notification-btn">
                         <i class="fas fa-plus"></i> Tambah Pengingat
                     </button>
@@ -581,7 +636,7 @@
             <h2>Jadwal Pelajaran</h2>
             <p>Klik pada jadwal untuk melakukan absensi.</p>
             <div id="schedule-container">
-                </div>
+            </div>
         </div>
 
         <div id="absensi-content" class="content-section">
@@ -592,11 +647,68 @@
                 </select>
             </div>
             <div id="attendance-summary-container">
-                </div>
+            </div>
         </div>
 
     </div>
 
+    <div id="profile-view-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="profile-view-modal-title" style="text-align: center;">Profil Murid</h3>
+            <div class="profile-view-image-container">
+                <img id="profile-view-img" src="" alt="Foto Profil" />
+            </div>
+            <div class="profile-view-data">
+                <div class="profile-view-item">
+                    <i class="fas fa-id-card"></i>
+                    <div class="item-text">
+                        <span class="item-label">NIS</span>
+                        <span class="item-value" id="profile-view-nis"></span>
+                    </div>
+                </div>
+                <div class="profile-view-item">
+                    <i class="fas fa-user"></i>
+                    <div class="item-text">
+                        <span class="item-label">Nama Lengkap</span>
+                        <span class="item-value" id="profile-view-nama"></span>
+                    </div>
+                </div>
+                <div class="profile-view-item">
+                    <i class="fas fa-birthday-cake"></i>
+                    <div class="item-text">
+                        <span class="item-label">Tanggal Lahir</span>
+                        <span class="item-value" id="profile-view-dob"></span>
+                    </div>
+                </div>
+                <div class="profile-view-item">
+                    <i class="fas fa-envelope"></i>
+                    <div class="item-text">
+                        <span class="item-label">Email</span>
+                        <span class="item-value" id="profile-view-email"></span>
+                    </div>
+                </div>
+                <div class="profile-view-item">
+                    <i class="fas fa-phone"></i>
+                    <div class="item-text">
+                        <span class="item-label">Nomor HP</span>
+                        <span class="item-value" id="profile-view-nohp"></span>
+                    </div>
+                </div>
+                <div class="profile-view-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <div class="item-text">
+                        <span class="item-label">Alamat</span>
+                        <span class="item-value" id="profile-view-alamat"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons" style="margin-top: 30px;">
+                <button type="button" class="btn-close" id="btn-close-profile-view">Tutup</button>
+                <button type="button" class="btn-edit-profile" id="btn-edit-from-view">Edit Profil</button>
+            </div>
+        </div>
+    </div>
+    
     <div id="murid-modal" class="modal">
         <div class="modal-content">
             <h3 id="modal-title">Edit Profil Murid</h3>
@@ -657,7 +769,7 @@
         <div class="modal-content">
             <h3 id="rundown-modal-title">Rundown Jadwal Harian</h3>
             <ul id="rundown-modal-list" class="rundown-modal-list">
-                </ul>
+            </ul>
             <div class="modal-buttons">
                 <button type="button" class="btn-close" id="btn-close-rundown">Tutup</button>
             </div>
@@ -678,7 +790,7 @@
             </form>
         </div>
     </div>
-
+    
     <script>
         // Data murid yang akan disimulasikan dari backend
         let loggedInMurid = {
@@ -775,10 +887,7 @@
         ];
 
         // Array untuk menyimpan pengingat pribadi murid
-        let studentNotifications = [
-            { id: 1, text: 'Kumpul tugas kelompok Biologi besok' },
-            { id: 2, text: 'Materi Fisika untuk ulangan minggu depan' }
-        ];
+        let studentNotifications = [];
 
         // DOM Elements
         const sidebar = document.getElementById('sidebar');
@@ -818,6 +927,9 @@
         const rundownModalTitle = document.getElementById('rundown-modal-title');
         const rundownModalList = document.getElementById('rundown-modal-list');
         const btnCloseRundown = document.getElementById('btn-close-rundown');
+        const profileViewModal = document.getElementById('profile-view-modal');
+        const btnCloseProfileView = document.getElementById('btn-close-profile-view');
+        const btnEditFromView = document.getElementById('btn-edit-from-view');
 
         // Notification Modal
         const notificationModal = document.getElementById('notification-modal');
@@ -893,6 +1005,18 @@
             photoPreview.style.backgroundImage = `url(${murid.photoUrl})`;
         }
 
+        // Fungsi baru untuk menampilkan modal tampilan profil
+        function showProfileViewModal(murid) {
+            document.getElementById('profile-view-img').src = murid.photoUrl;
+            document.getElementById('profile-view-nis').textContent = murid.nis;
+            document.getElementById('profile-view-nama').textContent = murid.nama;
+            document.getElementById('profile-view-dob').textContent = murid.dob;
+            document.getElementById('profile-view-email').textContent = murid.email;
+            document.getElementById('profile-view-nohp').textContent = murid.nohp;
+            document.getElementById('profile-view-alamat').textContent = murid.alamat;
+            profileViewModal.style.display = 'flex';
+        }
+
         function displayDashboardInfo() {
             const today = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
             todayScheduleList.innerHTML = '';
@@ -913,6 +1037,17 @@
         }
 
         // FUNGSI BARU UNTUK NOTIFIKASI
+        function loadNotifications() {
+            const storedNotifications = localStorage.getItem('studentNotifications');
+            if (storedNotifications) {
+                studentNotifications = JSON.parse(storedNotifications);
+            }
+        }
+
+        function saveNotifications() {
+            localStorage.setItem('studentNotifications', JSON.stringify(studentNotifications));
+        }
+
         function renderNotifications() {
             notificationsList.innerHTML = '';
             if (studentNotifications.length > 0) {
@@ -936,6 +1071,7 @@
         function addNotification(text) {
             const newId = studentNotifications.length > 0 ? Math.max(...studentNotifications.map(n => n.id)) + 1 : 1;
             studentNotifications.push({ id: newId, text: text });
+            saveNotifications();
             renderNotifications();
         }
 
@@ -953,6 +1089,7 @@
             const notificationIndex = studentNotifications.findIndex(n => n.id === id);
             if (notificationIndex > -1) {
                 studentNotifications[notificationIndex].text = newText;
+                saveNotifications();
                 renderNotifications();
             }
         }
@@ -960,6 +1097,7 @@
         function deleteNotification(id) {
             if (confirm('Apakah Anda yakin ingin menghapus pengingat ini?')) {
                 studentNotifications = studentNotifications.filter(n => n.id !== id);
+                saveNotifications();
                 renderNotifications();
             }
         }
@@ -992,7 +1130,7 @@
         btnCancelNotification.addEventListener('click', () => {
             notificationModal.style.display = 'none';
         });
-        
+
         // Fungsi untuk menampilkan modal rundown
         function showRundownModal(day) {
             rundownModalTitle.textContent = `Rundown Jadwal ${day}`;
@@ -1148,7 +1286,12 @@
             e.preventDefault();
 
             const selectedStatus = attendanceForm.querySelector('input[name="attendanceStatus"]:checked').value;
-            const keterangan = selectedStatus === 'Izin' || selectedStatus === 'Sakit' ? keteranganTextarea.value : '';
+            const keterangan = keteranganTextarea.value.trim();
+
+            if ((selectedStatus === 'Izin' || selectedStatus === 'Sakit') && keterangan === '') {
+                alert('Keterangan wajib diisi untuk status Sakit atau Izin.');
+                return;
+            }
 
             let currentSchedule = null;
             const scheduleId = attendanceForm.dataset.scheduleId;
@@ -1196,9 +1339,21 @@
             rundownModal.style.display = 'none';
         });
 
+        // Mengubah event listener profileBtn
         profileBtn.addEventListener('click', () => {
+            showProfileViewModal(loggedInMurid);
+        });
+
+        // Event listener untuk tombol "Edit Profil" dari modal tampilan
+        btnEditFromView.addEventListener('click', () => {
+            profileViewModal.style.display = 'none';
             loadMuridDataToForm(loggedInMurid);
             muridModal.style.display = 'flex';
+        });
+
+        // Event listener untuk tombol "Tutup" pada modal tampilan profil
+        btnCloseProfileView.addEventListener('click', () => {
+            profileViewModal.style.display = 'none';
         });
 
         logoutBtn.addEventListener('click', () => {
@@ -1256,7 +1411,7 @@
         });
 
         window.onclick = function (event) {
-            if (event.target == muridModal || event.target == attendanceModal || event.target == rundownModal || event.target == notificationModal) {
+            if (event.target == muridModal || event.target == attendanceModal || event.target == rundownModal || event.target == notificationModal || event.target == profileViewModal) {
                 event.target.style.display = "none";
             }
         };
@@ -1278,6 +1433,7 @@
         });
 
         document.addEventListener('DOMContentLoaded', () => {
+            loadNotifications();
             updateProfileView(loggedInMurid);
             populateDayFilter();
             switchContent('dashboard-content');
