@@ -166,6 +166,7 @@ if (isset($_GET['error'])) {
 
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -237,6 +238,10 @@ if (isset($_GET['error'])) {
             background: var(--primary-color);
         }
 
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
         .sidebar nav a {
             display: flex;
             align-items: center;
@@ -251,6 +256,11 @@ if (isset($_GET['error'])) {
             text-align: center;
             margin-right: 20px;
             font-size: 18px;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
         }
 
         .sidebar.collapsed nav a i {
@@ -304,17 +314,29 @@ if (isset($_GET['error'])) {
             display: flex;
             align-items: center;
         }
+
         .header h1 i {
             margin-right: 10px;
         }
 
+        /* User Info Dropdown Styling */
         .user-info {
+            position: relative;
             display: flex;
             align-items: center;
             gap: 10px;
             font-size: 14px;
             color: var(--text-color);
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
         }
+
+        .user-info:hover {
+            background-color: #f0f0f0;
+        }
+
         .user-info img {
             width: 35px;
             height: 35px;
@@ -322,8 +344,51 @@ if (isset($_GET['error'])) {
             object-fit: cover;
             border: 2px solid var(--primary-color);
         }
+
         .user-info span {
             font-weight: 600;
+        }
+
+        .user-info .last-login {
+            color: var(--light-text-color);
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .user-info i.fa-caret-down {
+            margin-left: 5px;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: var(--card-background);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            z-index: 1002;
+            min-width: 160px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .dropdown-menu a {
+            color: var(--text-color);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+
+        .dropdown-menu a:hover {
+            background-color: var(--background-color);
+        }
+
+        .dropdown-menu a i {
+            margin-right: 10px;
+            width: 20px;
         }
 
         /* Konten Utama */
@@ -404,13 +469,14 @@ if (isset($_GET['error'])) {
         .data-table tr:hover {
             background-color: #fafafa;
         }
-        
+
         /* Actions button in table */
         .action-links {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
         }
+
         .action-link {
             padding: 8px 12px;
             border-radius: 6px;
@@ -418,24 +484,30 @@ if (isset($_GET['error'])) {
             font-weight: 600;
             transition: background-color 0.2s, color 0.2s;
         }
+
         .action-link.edit {
             background-color: #3498db;
             color: white;
         }
+
         .action-link.edit:hover {
             background-color: #2980b9;
         }
+
         .action-link.absensi {
             background-color: #2ecc71;
             color: white;
         }
+
         .action-link.absensi:hover {
             background-color: #27ae60;
         }
+
         .action-link.delete {
             background-color: #e74c3c;
             color: white;
         }
+
         .action-link.delete:hover {
             background-color: #c0392b;
         }
@@ -471,10 +543,12 @@ if (isset($_GET['error'])) {
             color: var(--text-color);
             font-size: 0.95em;
         }
+
         .info-header p {
             margin: 5px 0;
             line-height: 1.5;
         }
+
         .info-header strong {
             color: var(--secondary-color);
         }
@@ -503,39 +577,46 @@ if (isset($_GET['error'])) {
             border-radius: 8px;
             font-weight: 600;
         }
+
         .alert-success {
             background-color: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
+
         .alert-error {
             background-color: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
-        
+
         /* Absensi form styles */
         .absensi-status-options input[type="radio"] {
             margin-right: 5px;
         }
+
         .absensi-status-options label {
             margin-right: 15px;
             font-weight: normal;
         }
+
         .absensi-keterangan textarea {
             width: 100%;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 5px;
             margin-top: 5px;
-            box-sizing: border-box; /* Include padding in element's total width and height */
+            box-sizing: border-box;
+            /* Include padding in element's total width and height */
             resize: vertical;
             min-height: 50px;
         }
+
         .absensi-keterangan label {
             font-size: 0.9em;
             color: var(--light-text-color);
         }
+
         .save-absensi-btn {
             background-color: #2ecc71;
             color: white;
@@ -548,6 +629,7 @@ if (isset($_GET['error'])) {
             transition: background-color 0.3s;
             margin-top: 20px;
         }
+
         .save-absensi-btn:hover {
             background-color: #27ae60;
         }
@@ -557,24 +639,62 @@ if (isset($_GET['error'])) {
             .sidebar {
                 transform: translateX(-100%);
             }
+
             .sidebar.collapsed {
                 transform: translateX(0);
                 width: var(--sidebar-collapsed-width);
             }
-            .content, .header {
+
+            .content,
+            .header {
                 margin-left: 0 !important;
                 left: 0 !important;
                 width: 100% !important;
                 padding-left: 20px !important;
             }
+
             .header .user-info {
                 display: none;
             }
-            .sidebar.collapsed + .header, .sidebar.collapsed ~ .content {
+
+            .sidebar.collapsed+.header,
+            .sidebar.collapsed~.content {
                 margin-left: var(--sidebar-collapsed-width) !important;
                 left: var(--sidebar-collapsed-width) !important;
                 width: calc(100% - var(--sidebar-collapsed-width)) !important;
             }
+        }
+
+        .sidebar .logout-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .sidebar .logout-button-container a {
+            background-color: #e74c3c;
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar .logout-button-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .sidebar.collapsed .logout-button-container {
+            padding: 0;
+        }
+
+        .sidebar.collapsed .logout-button-container a span {
+            display: none;
         }
     </style>
 </head>
@@ -582,7 +702,7 @@ if (isset($_GET['error'])) {
 <body>
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-        <div class="logo">GuruCoy</div>
+        <div class="logo"><span>GuruCoy</span></div>
         <nav>
             <a href="dashboard_guru.php">
                 <i class="fas fa-tachometer-alt"></i>
@@ -592,7 +712,7 @@ if (isset($_GET['error'])) {
                 <i class="fas fa-calendar-alt" class=></i>
                 <span>Jadwal Mengajar</span>
             </a>
-            <a href="pertemuan_guru.php">
+            <a href="pertemuan_guru.php?id_jadwal=<?= htmlspecialchars($id_jadwal_current); ?>">
                 <i class="fas fa-clipboard-list"></i>
                 <span>Pertemuan</span>
             </a>
@@ -604,6 +724,12 @@ if (isset($_GET['error'])) {
                 <i class="fas fa-chart-bar"></i>
                 <span>Rekap Absensi</span>
             </a>
+            <div class="logout-button-container">
+                <a href="../logout.php">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
         </nav>
     </div>
 
@@ -613,14 +739,21 @@ if (isset($_GET['error'])) {
             <i class="fas fa-bars"></i>
         </button>
         <h1><i class="fas fa-check-circle"></i> Isi Absensi</h1>
-        <div class="user-info">
-            <span id="teacherName"><?php echo htmlspecialchars($guru_name); ?></span>
-            <img
-                src="../uploads/guru/<?= $guru_photo ?>"
-                alt="Foto <?= htmlspecialchars($guru_name) ?>"
+        <div class="user-info" id="userInfoDropdown">
+            <span id="guruName"><?php echo htmlspecialchars($guru_name); ?></span>
+            <?php
+            // Tampilkan foto profil guru jika ada, jika tidak pakai placeholder
+            $guru_photo_src_header = !empty($guru_photo) ? '../uploads/guru/' . htmlspecialchars($guru_photo) : 'https://placehold.co/40x40/cccccc/000000?text=GR';
+            ?>
+            <img src="<?php echo $guru_photo_src_header; ?>" alt="User Avatar"
                 loading="lazy"
-                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/000000?text=GR';"
-            >
+                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=GR';">
+
+            <!-- Dropdown Menu -->
+            <div class="dropdown-menu" id="userDropdownContent">
+                <a href="profil_guru.php"><i class="fas fa-user-circle"></i> Profil</a>
+                <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
         </div>
     </div>
 
@@ -668,9 +801,9 @@ if (isset($_GET['error'])) {
                             <?php else: ?>
                                 <?php foreach ($list_siswa as $siswa): ?>
                                     <?php
-                                        // Dapatkan status dan keterangan yang sudah ada untuk siswa ini
-                                        $current_status = $absensi_existing[$siswa['id']]['status'] ?? 'Alpha';
-                                        $current_keterangan = $absensi_existing[$siswa['id']]['keterangan'] ?? '';
+                                    // Dapatkan status dan keterangan yang sudah ada untuk siswa ini
+                                    $current_status = $absensi_existing[$siswa['id']]['status'] ?? 'Alpha';
+                                    $current_keterangan = $absensi_existing[$siswa['id']]['keterangan'] ?? '';
                                     ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($siswa['NIS']); ?></td>
@@ -678,41 +811,40 @@ if (isset($_GET['error'])) {
                                         <td>
                                             <div class="absensi-status-options">
                                                 <label>
-                                                    <input type="radio" 
-                                                        name="absensi[<?php echo htmlspecialchars($siswa['id']); ?>]" 
-                                                        value="Hadir" 
-                                                        onchange="toggleKeterangan(this)" 
+                                                    <input type="radio"
+                                                        name="absensi[<?php echo htmlspecialchars($siswa['id']); ?>]"
+                                                        value="Hadir"
+                                                        onchange="toggleKeterangan(this)"
                                                         <?php echo ($current_status == 'Hadir') ? 'checked' : ''; ?>> Hadir
                                                 </label>
-                                                
+
                                                 <label>
-                                                    <input type="radio" 
-                                                           name="absensi[<?php echo htmlspecialchars($siswa['id']); ?>]" 
-                                                           value="Alpha" 
-                                                           onchange="toggleKeterangan(this)" 
-                                                           <?php echo ($current_status == 'Alpha') ? 'checked' : ''; ?>> Alpha
+                                                    <input type="radio"
+                                                        name="absensi[<?php echo htmlspecialchars($siswa['id']); ?>]"
+                                                        value="Alpha"
+                                                        onchange="toggleKeterangan(this)"
+                                                        <?php echo ($current_status == 'Alpha') ? 'checked' : ''; ?>> Alpha
                                                 </label>
                                                 <label>
-                                                    <input type="radio" 
-                                                           name="absensi[<?php echo htmlspecialchars($siswa['id']); ?>]" 
-                                                           value="Sakit" 
-                                                           onchange="toggleKeterangan(this)" 
-                                                           <?php echo ($current_status == 'Sakit') ? 'checked' : ''; ?>> Sakit
+                                                    <input type="radio"
+                                                        name="absensi[<?php echo htmlspecialchars($siswa['id']); ?>]"
+                                                        value="Sakit"
+                                                        onchange="toggleKeterangan(this)"
+                                                        <?php echo ($current_status == 'Sakit') ? 'checked' : ''; ?>> Sakit
                                                 </label>
                                                 <label>
-                                                    <input type="radio" 
-                                                           name="absensi[<?php echo htmlspecialchars($siswa['id']); ?>]" 
-                                                           value="Izin" 
-                                                           onchange="toggleKeterangan(this)" 
-                                                           <?php echo ($current_status == 'Izin') ? 'checked' : ''; ?>> Izin
+                                                    <input type="radio"
+                                                        name="absensi[<?php echo htmlspecialchars($siswa['id']); ?>]"
+                                                        value="Izin"
+                                                        onchange="toggleKeterangan(this)"
+                                                        <?php echo ($current_status == 'Izin') ? 'checked' : ''; ?>> Izin
                                                 </label>
                                             </div>
                                         </td>
                                         <td class="absensi-keterangan">
-                                            <textarea name="keterangan[<?php echo htmlspecialchars($siswa['id']); ?>]" 
-                                                      placeholder="Tambahkan keterangan (opsional)"
-                                                      <?php echo (!($current_status == 'Sakit' || $current_status == 'Izin')) ? 'disabled' : ''; ?>
-                                            ><?php echo htmlspecialchars($current_keterangan); ?></textarea>
+                                            <textarea name="keterangan[<?php echo htmlspecialchars($siswa['id']); ?>]"
+                                                placeholder="Tambahkan keterangan (opsional)"
+                                                <?php echo (!($current_status == 'Sakit' || $current_status == 'Izin')) ? 'disabled' : ''; ?>><?php echo htmlspecialchars($current_keterangan); ?></textarea>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -743,6 +875,25 @@ if (isset($_GET['error'])) {
             header.classList.toggle("shifted");
         }
 
+        // Logika Dropdown User Info
+        const userInfoDropdown = document.getElementById("userInfoDropdown");
+        const userDropdownContent = document.getElementById("userDropdownContent");
+
+        if (userInfoDropdown && userDropdownContent) { // Pastikan elemen ada
+            userInfoDropdown.addEventListener('click', function() {
+                userDropdownContent.style.display = userDropdownContent.style.display === 'block' ? 'none' : 'block';
+            });
+
+            // Tutup dropdown jika user klik di luar area dropdown
+            window.onclick = function(event) {
+                if (!event.target.matches('#userInfoDropdown') && !event.target.closest('#userInfoDropdown')) {
+                    if (userDropdownContent.style.display === 'block') {
+                        userDropdownContent.style.display = 'none';
+                    }
+                }
+            }
+        }
+
 
 
         // Fungsi untuk mengaktifkan/menonaktifkan textarea keterangan
@@ -763,4 +914,5 @@ if (isset($_GET['error'])) {
         // Jalankan saat halaman dimuat
     </script>
 </body>
+
 </html>

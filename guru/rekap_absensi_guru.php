@@ -63,6 +63,7 @@ if (!empty($guru_id)) {
 
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -134,6 +135,10 @@ if (!empty($guru_id)) {
             background: var(--primary-color);
         }
 
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
         .sidebar nav a {
             display: flex;
             align-items: center;
@@ -148,6 +153,11 @@ if (!empty($guru_id)) {
             text-align: center;
             margin-right: 20px;
             font-size: 18px;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
         }
 
         .sidebar.collapsed nav a i {
@@ -198,6 +208,7 @@ if (!empty($guru_id)) {
             display: flex;
             align-items: center;
         }
+
         .header h1 i {
             margin-right: 10px;
         }
@@ -215,9 +226,11 @@ if (!empty($guru_id)) {
             border-radius: 8px;
             transition: background-color 0.2s ease;
         }
+
         .user-info:hover {
             background-color: #f0f0f0;
         }
+
         .user-info img {
             width: 35px;
             height: 35px;
@@ -225,14 +238,17 @@ if (!empty($guru_id)) {
             object-fit: cover;
             border: 2px solid var(--primary-color);
         }
+
         .user-info span {
             font-weight: 600;
         }
+
         .user-info .last-login {
             color: var(--light-text-color);
             font-size: 12px;
             margin-left: 10px;
         }
+
         .user-info i.fa-caret-down {
             margin-left: 5px;
         }
@@ -243,13 +259,14 @@ if (!empty($guru_id)) {
             top: 100%;
             right: 0;
             background-color: var(--card-background);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
             z-index: 1002;
             min-width: 160px;
             border-radius: 8px;
             overflow: hidden;
             margin-top: 10px;
         }
+
         .dropdown-menu a {
             color: var(--text-color);
             padding: 12px 16px;
@@ -258,9 +275,11 @@ if (!empty($guru_id)) {
             font-weight: 500;
             transition: background-color 0.2s ease;
         }
+
         .dropdown-menu a:hover {
             background-color: var(--background-color);
         }
+
         .dropdown-menu a i {
             margin-right: 10px;
             width: 20px;
@@ -345,10 +364,11 @@ if (!empty($guru_id)) {
         .data-table tbody tr:nth-child(even) {
             background-color: #f9f9f9;
         }
+
         .data-table tr:hover {
             background-color: #fafafa;
         }
-        
+
         /* Actions button in table */
         .action-link {
             padding: 8px 12px;
@@ -357,10 +377,12 @@ if (!empty($guru_id)) {
             font-weight: 600;
             transition: background-color 0.2s, color 0.2s;
         }
+
         .action-link.view {
             background-color: #3498db;
             color: white;
         }
+
         .action-link.view:hover {
             background-color: #2980b9;
         }
@@ -375,10 +397,12 @@ if (!empty($guru_id)) {
             color: var(--text-color);
             font-size: 0.95em;
         }
+
         .info-header p {
             margin: 5px 0;
             line-height: 1.5;
         }
+
         .info-header strong {
             color: var(--secondary-color);
         }
@@ -390,11 +414,13 @@ if (!empty($guru_id)) {
             border-radius: 8px;
             font-weight: 600;
         }
+
         .alert-success {
             background-color: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
+
         .alert-error {
             background-color: #f8d7da;
             color: #721c24;
@@ -415,24 +441,62 @@ if (!empty($guru_id)) {
             .sidebar {
                 transform: translateX(-100%);
             }
+
             .sidebar.collapsed {
                 transform: translateX(0);
                 width: var(--sidebar-collapsed-width);
             }
-            .content, .header {
+
+            .content,
+            .header {
                 margin-left: 0 !important;
                 left: 0 !important;
                 width: 100% !important;
                 padding-left: 20px !important;
             }
+
             .header .user-info .last-login {
                 display: none;
             }
-            .sidebar.collapsed + .header, .sidebar.collapsed ~ .content {
+
+            .sidebar.collapsed+.header,
+            .sidebar.collapsed~.content {
                 margin-left: var(--sidebar-collapsed-width) !important;
                 left: var(--sidebar-collapsed-width) !important;
                 width: calc(100% - var(--sidebar-collapsed-width)) !important;
             }
+        }
+
+        .sidebar .logout-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .sidebar .logout-button-container a {
+            background-color: #e74c3c;
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar .logout-button-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .sidebar.collapsed .logout-button-container {
+            padding: 0;
+        }
+
+        .sidebar.collapsed .logout-button-container a span {
+            display: none;
         }
     </style>
 </head>
@@ -440,7 +504,7 @@ if (!empty($guru_id)) {
 <body>
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-        <div class="logo">GuruCoy</div>
+        <div class="logo"><span>GuruCoy</span></div>
         <nav>
             <a href="dashboard_guru.php">
                 <i class="fas fa-tachometer-alt"></i>
@@ -450,18 +514,16 @@ if (!empty($guru_id)) {
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal Mengajar</span>
             </a>
-            <a href="pertemuan_guru.php">
-                <i class="fas fa-clipboard-list"></i>
-                <span>Pertemuan</span>
-            </a>
-            <a href="absensi_guru.php">
-                <i class="fas fa-check-circle"></i>
-                <span>Absensi</span>
-            </a>
             <a href="rekap_absensi_guru.php" class="active">
                 <i class="fas fa-chart-bar"></i>
                 <span>Rekap Absensi</span>
             </a>
+            <div class="logout-button-container">
+                <a href="../logout.php">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
         </nav>
     </div>
 
@@ -479,10 +541,7 @@ if (!empty($guru_id)) {
             ?>
             <img src="<?php echo $guru_photo_src_header; ?>" alt="User Avatar"
                 loading="lazy"
-                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=GR';"
-            >
-            <div class="last-login">Terakhir Login: <span id="lastLogin"><?php echo htmlspecialchars($last_login); ?></span></div>
-            <i class="fas fa-caret-down"></i>
+                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=GR';">
 
             <!-- Dropdown Menu -->
             <div class="dropdown-menu" id="userDropdownContent">
@@ -496,7 +555,7 @@ if (!empty($guru_id)) {
     <div class="content" id="mainContent">
         <div class="card">
             <h2>Pilih Kelas untuk Rekap Absensi</h2>
-            
+
             <?php if (!empty($message)): ?>
                 <div class="alert <?php echo $alert_type; ?>"><?php echo $message; ?></div>
             <?php endif; ?>
@@ -522,8 +581,7 @@ if (!empty($guru_id)) {
                                         <div style="display: flex; align-items: center;">
                                             <img src="<?php echo htmlspecialchars('../uploads/kelas/' . ($data_kelas['class_photo'] ?? 'default.jpg')); ?>" alt="Foto Kelas" class="class-photo-thumb"
                                                 loading="lazy"
-                                                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=NO+IMG';"
-                                            >
+                                                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=NO+IMG';">
                                             <span><?php echo htmlspecialchars($data_kelas['nama_kelas']); ?></span>
                                         </div>
                                     </td>
@@ -592,4 +650,5 @@ if (!empty($guru_id)) {
         };
     </script>
 </body>
+
 </html>

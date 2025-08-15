@@ -147,6 +147,7 @@ $total_pertemuan = getCount($conn, $sql_pertemuan, $guru_id);
         .sidebar.collapsed {
             width: var(--sidebar-collapsed-width);
         }
+
         .sidebar .logo {
             color: #fff;
             font-size: 24px;
@@ -158,6 +159,10 @@ $total_pertemuan = getCount($conn, $sql_pertemuan, $guru_id);
             left: 0;
             width: 100%;
             background: var(--primary-color);
+        }
+
+        .logo span {
+            transition: font-size 0.3s ease;
         }
         .sidebar nav a {
             display: flex;
@@ -175,6 +180,11 @@ $total_pertemuan = getCount($conn, $sql_pertemuan, $guru_id);
         }
         .sidebar.collapsed nav a i {
             margin-right: 0;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
         }
         .sidebar.collapsed nav a span {
             display: none;
@@ -231,13 +241,25 @@ $total_pertemuan = getCount($conn, $sql_pertemuan, $guru_id);
         .header h1 i {
             margin-right: 10px;
         }
+
+        /* User Info Dropdown Styling */
         .user-info {
+            position: relative;
             display: flex;
             align-items: center;
             gap: 10px;
             font-size: 14px;
             color: var(--text-color);
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
         }
+
+        .user-info:hover {
+            background-color: #f0f0f0;
+        }
+
         .user-info img {
             width: 35px;
             height: 35px;
@@ -245,12 +267,51 @@ $total_pertemuan = getCount($conn, $sql_pertemuan, $guru_id);
             object-fit: cover;
             border: 2px solid var(--primary-color);
         }
+
         .user-info span {
             font-weight: 600;
         }
-        .user-info:hover {
-            cursor: pointer;
-            color: var(--primary-color);
+
+        .user-info .last-login {
+            color: var(--light-text-color);
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .user-info i.fa-caret-down {
+            margin-left: 5px;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: var(--card-background);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            z-index: 1002;
+            min-width: 160px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .dropdown-menu a {
+            color: var(--text-color);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+
+        .dropdown-menu a:hover {
+            background-color: var(--background-color);
+        }
+
+        .dropdown-menu a i {
+            margin-right: 10px;
+            width: 20px;
         }
          
         .content {
@@ -420,7 +481,7 @@ $total_pertemuan = getCount($conn, $sql_pertemuan, $guru_id);
 
 <body>
     <div class="sidebar" id="sidebar">
-        <div class="logo">GuruCoy</div>
+        <div class="logo"><span>GuruCoy</span></div>
         <nav>
             <a href="#" class="active">
                 <i class="fas fa-tachometer-alt"></i>
@@ -429,14 +490,6 @@ $total_pertemuan = getCount($conn, $sql_pertemuan, $guru_id);
             <a href="jadwal_guru.php">
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal Mengajar</span>
-            </a>
-            <a href="pertemuan_guru.php" class="deactive">
-                <i class="fas fa-clipboard-list"></i>
-                <span>Pertemuan</span>
-            </a>
-            <a href="absensi_guru.php" class="deactive">
-                <i class="fas fa-check-circle"></i>
-                <span>Absensi</span>
             </a>
             <a href="rekap_absensi_guru.php">
                 <i class="fas fa-chart-bar"></i>
@@ -456,15 +509,20 @@ $total_pertemuan = getCount($conn, $sql_pertemuan, $guru_id);
             <i class="fas fa-bars"></i>
         </button>
         <h1><i class="fas fa-tachometer-alt"></i> Dashboard Guru</h1>
-        <div class="user-info" onclick="toprofile()">
-            <span id="teacherName"><?php echo htmlspecialchars($guru_name); ?></span>
-            <img
-                onclick="toprofile()"
-                src="../uploads/guru/<?= $guru_photo ?>"
-                alt="Foto <?= $guru_name ?>"
+        <div class="user-info" id="userInfoDropdown">
+            <span id="guruName"><?php echo htmlspecialchars($guru_name); ?></span>
+            <?php
+            // Tampilkan foto profil guru jika ada, jika tidak pakai placeholder
+            $guru_photo_src_header = !empty($guru_photo) ? '../uploads/guru/' . htmlspecialchars($guru_photo) : 'https://placehold.co/40x40/cccccc/000000?text=GR';
+            ?>
+            <img src="<?php echo $guru_photo_src_header; ?>" alt="User Avatar"
                 loading="lazy"
-                onerror="this.onerror=null;this.src='https://placehold.co/60x60/cccccc/333333?text=No+Foto';"
-            >
+                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=GR';">
+            <!-- Dropdown Menu -->
+            <div class="dropdown-menu" id="userDropdownContent">
+                <a href="profil_guru.php"><i class="fas fa-user-circle"></i> Profil</a>
+                <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
         </div>
     </div>
 
@@ -527,8 +585,23 @@ $total_pertemuan = getCount($conn, $sql_pertemuan, $guru_id);
             header.classList.toggle("shifted");
         }
 
-        function toprofile() {
-            window.location.href = 'profil_guru.php';
+        // Logika Dropdown User Info
+        const userInfoDropdown = document.getElementById("userInfoDropdown");
+        const userDropdownContent = document.getElementById("userDropdownContent");
+
+        if (userInfoDropdown && userDropdownContent) { // Pastikan elemen ada
+            userInfoDropdown.addEventListener('click', function() {
+                userDropdownContent.style.display = userDropdownContent.style.display === 'block' ? 'none' : 'block';
+            });
+
+            // Tutup dropdown jika user klik di luar area dropdown
+            window.onclick = function(event) {
+                if (!event.target.matches('#userInfoDropdown') && !event.target.closest('#userInfoDropdown')) {
+                    if (userDropdownContent.style.display === 'block') {
+                        userDropdownContent.style.display = 'none';
+                    }
+                }
+            }
         }
     </script>
 </body>

@@ -126,6 +126,15 @@ if (isset($_GET['success'])) {
             background: var(--primary-color);
         }
 
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
+        }
+
         .sidebar nav a {
             display: flex;
             align-items: center;
@@ -397,13 +406,46 @@ if (isset($_GET['success'])) {
                 width: calc(100% - var(--sidebar-collapsed-width)) !important;
             }
         }
+
+        /* --- Penambahan CSS untuk Tombol Logout --- */
+        .sidebar .logout-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .sidebar .logout-button-container a {
+            background-color: #e74c3c; /* Warna merah untuk Logout */
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar .logout-button-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .sidebar.collapsed .logout-button-container {
+            padding: 0;
+        }
+
+        .sidebar.collapsed .logout-button-container a span {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-        <div class="logo">GuruCoy</div>
+        <div class="logo"><span>GuruCoy</span></div>
         <nav>
             <a href="dashboard_guru.php">
                 <i class="fas fa-tachometer-alt"></i>
@@ -413,18 +455,16 @@ if (isset($_GET['success'])) {
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal Mengajar</span>
             </a>
-            <a href="pertemuan_guru.php">
-                <i class="fas fa-clipboard-list"></i>
-                <span>Pertemuan</span>
-            </a>
-            <a href="absensi_guru.php">
-                <i class="fas fa-check-circle"></i>
-                <span>Absensi</span>
-            </a>
             <a href="rekap_absensi_guru.php">
                 <i class="fas fa-chart-bar"></i>
                 <span>Rekap Absensi</span>
             </a>
+            <div class="logout-button-container">
+                <a href="../logout.php">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
         </nav>
     </div>
 
@@ -441,8 +481,6 @@ if (isset($_GET['success'])) {
             $photo_src = !empty($guru_data['photo']) ? '../uploads/guru/' . htmlspecialchars($guru_data['photo']) : 'https://placehold.co/40x40/cccccc/000000?text=GR';
             ?>
             <img src="<?php echo $photo_src; ?>" alt="User Avatar">
-            <div class="last-login">Terakhir Login: <span id="lastLogin"><?php echo htmlspecialchars($last_login); ?></span></div>
-            <i class="fas fa-caret-down"></i>
 
             <!-- Dropdown Menu -->
             <div class="dropdown-menu" id="userDropdownContent">
