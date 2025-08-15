@@ -130,6 +130,15 @@ if (isset($_GET['success'])) {
             background: var(--primary-color);
         }
 
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
+        }
+
         .sidebar nav a {
             display: flex;
             align-items: center;
@@ -201,14 +210,16 @@ if (isset($_GET['success'])) {
             gap: 10px;
             font-size: 14px;
             color: var(--text-color);
-            cursor: pointer; /* Menjadikan seluruh area user-info clickable */
-            padding: 5px 10px; /* Sedikit padding agar lebih mudah diklik */
+            cursor: pointer;
+            padding: 5px 10px;
             border-radius: 8px;
             transition: background-color 0.2s ease;
         }
+
         .user-info:hover {
             background-color: #f0f0f0;
         }
+
         .user-info img {
             width: 35px;
             height: 35px;
@@ -216,31 +227,29 @@ if (isset($_GET['success'])) {
             object-fit: cover;
             border: 2px solid var(--primary-color);
         }
+
         .user-info span {
             font-weight: 600;
         }
-        .user-info .last-login {
-            color: var(--light-text-color);
-            font-size: 12px;
-            margin-left: 10px; /* Spasi dari nama */
-        }
+
         .user-info i.fa-caret-down {
-            margin-left: 5px; /* Spasi untuk ikon dropdown */
+            margin-left: 5px;
         }
 
         .dropdown-menu {
             display: none;
             position: absolute;
-            top: 100%; /* Posisikan di bawah user-info */
+            top: 100%;
             right: 0;
             background-color: var(--card-background);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
             z-index: 1002;
             min-width: 160px;
             border-radius: 8px;
-            overflow: hidden; /* Pastikan sudut melengkung */
-            margin-top: 10px; /* Jarak antara user-info dan dropdown */
+            overflow: hidden;
+            margin-top: 10px;
         }
+
         .dropdown-menu a {
             color: var(--text-color);
             padding: 12px 16px;
@@ -249,12 +258,14 @@ if (isset($_GET['success'])) {
             font-weight: 500;
             transition: background-color 0.2s ease;
         }
+
         .dropdown-menu a:hover {
             background-color: var(--background-color);
         }
+
         .dropdown-menu a i {
             margin-right: 10px;
-            width: 20px; /* Agar ikon sejajar */
+            width: 20px;
         }
 
 
@@ -401,13 +412,46 @@ if (isset($_GET['success'])) {
                 width: calc(100% - var(--sidebar-collapsed-width)) !important;
             }
         }
+
+        /* --- Penambahan CSS untuk Tombol Logout --- */
+        .sidebar .logout-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .sidebar .logout-button-container a {
+            background-color: #e74c3c; /* Warna merah untuk Logout */
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar .logout-button-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .sidebar.collapsed .logout-button-container {
+            padding: 0;
+        }
+
+        .sidebar.collapsed .logout-button-container a span {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-        <div class="logo">SiswaCoy</div>
+        <div class="logo"><span>SiswaCoy</span></div>
         <nav>
             <a href="dashboard_siswa.php">
                 <i class="fas fa-tachometer-alt"></i>
@@ -421,6 +465,12 @@ if (isset($_GET['success'])) {
                 <i class="fas fa-check-circle"></i>
                 <span>Absensi Saya</span>
             </a>
+            <div class="logout-button-container">
+                <a href="../logout.php">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
         </nav>
     </div>
 
@@ -434,12 +484,11 @@ if (isset($_GET['success'])) {
             <span id="siswaName"><?php echo htmlspecialchars($siswa_name); ?></span>
             <?php
             // Tampilkan foto profil siswa jika ada, jika tidak pakai placeholder
-            $photo_src = !empty($siswa_data['photo']) ? '../uploads/siswa/' . htmlspecialchars($siswa_data['photo']) : 'https://placehold.co/40x40/cccccc/000000?text=SW';
+            $siswa_photo_src_header = !empty($siswa_photo) ? '../uploads/siswa/' . htmlspecialchars($siswa_photo) : 'https://placehold.co/40x40/cccccc/000000?text=GR';
             ?>
-            <img src="<?php echo $photo_src; ?>" alt="User Avatar">
-            <div class="last-login">Terakhir Login: <span id="lastLogin"><?php echo htmlspecialchars($last_login); ?></span></div>
-            <i class="fas fa-caret-down"></i>
-
+            <img src="<?php echo $siswa_photo_src_header; ?>" alt="User Avatar"
+                loading="lazy"
+                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=GR';">
             <!-- Dropdown Menu -->
             <div class="dropdown-menu" id="userDropdownContent">
                 <a href="profil_siswa.php"><i class="fas fa-user-circle"></i> Profil</a>
@@ -491,15 +540,17 @@ if (isset($_GET['success'])) {
         const userInfoDropdown = document.getElementById("userInfoDropdown");
         const userDropdownContent = document.getElementById("userDropdownContent");
 
-        userInfoDropdown.addEventListener('click', function() {
-            userDropdownContent.style.display = userDropdownContent.style.display === 'block' ? 'none' : 'block';
-        });
+        if (userInfoDropdown && userDropdownContent) { // Pastikan elemen ada
+            userInfoDropdown.addEventListener('click', function() {
+                userDropdownContent.style.display = userDropdownContent.style.display === 'block' ? 'none' : 'block';
+            });
 
-        // Tutup dropdown jika user klik di luar area dropdown
-        window.onclick = function(event) {
-            if (!event.target.matches('#userInfoDropdown') && !event.target.closest('#userInfoDropdown')) {
-                if (userDropdownContent.style.display === 'block') {
-                    userDropdownContent.style.display = 'none';
+            // Tutup dropdown jika user klik di luar area dropdown
+            window.onclick = function(event) {
+                if (!event.target.matches('#userInfoDropdown') && !event.target.closest('#userInfoDropdown')) {
+                    if (userDropdownContent.style.display === 'block') {
+                        userDropdownContent.style.display = 'none';
+                    }
                 }
             }
         }

@@ -138,6 +138,7 @@ $success_message = $_GET['success'] ?? '';
         .sidebar.collapsed {
             width: var(--sidebar-collapsed-width);
         }
+
         .sidebar .logo {
             color: #fff;
             font-size: 24px;
@@ -149,6 +150,15 @@ $success_message = $_GET['success'] ?? '';
             left: 0;
             width: 100%;
             background: var(--primary-color);
+        }
+
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
         }
         .sidebar nav a {
             display: flex;
@@ -208,13 +218,25 @@ $success_message = $_GET['success'] ?? '';
         .header h1 i {
             margin-right: 10px;
         }
+
+        /* User Info Dropdown Styling */
         .user-info {
+            position: relative;
             display: flex;
             align-items: center;
             gap: 10px;
             font-size: 14px;
             color: var(--text-color);
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
         }
+
+        .user-info:hover {
+            background-color: #f0f0f0;
+        }
+
         .user-info img {
             width: 35px;
             height: 35px;
@@ -222,12 +244,45 @@ $success_message = $_GET['success'] ?? '';
             object-fit: cover;
             border: 2px solid var(--primary-color);
         }
+
         .user-info span {
             font-weight: 600;
         }
-        .user-info .last-login {
-            color: var(--light-text-color);
-            font-size: 12px;
+
+        .user-info i.fa-caret-down {
+            margin-left: 5px;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: var(--card-background);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            z-index: 1002;
+            min-width: 160px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .dropdown-menu a {
+            color: var(--text-color);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+
+        .dropdown-menu a:hover {
+            background-color: var(--background-color);
+        }
+
+        .dropdown-menu a i {
+            margin-right: 10px;
+            width: 20px;
         }
         .content {
             flex-grow: 1;
@@ -392,12 +447,45 @@ $success_message = $_GET['success'] ?? '';
                 width: calc(100% - var(--sidebar-collapsed-width)) !important;
             }
         }
+
+        /* --- Penambahan CSS untuk Tombol Logout --- */
+        .sidebar .logout-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .sidebar .logout-button-container a {
+            background-color: #e74c3c; /* Warna merah untuk Logout */
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar .logout-button-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .sidebar.collapsed .logout-button-container {
+            padding: 0;
+        }
+
+        .sidebar.collapsed .logout-button-container a span {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
     <div class="sidebar" id="sidebar">
-        <div class="logo">SiswaCoy</div>
+        <div class="logo"><span>SiswaCoy</span></div>
         <nav>
             <a href="#" class="active">
                 <i class="fas fa-tachometer-alt"></i>
@@ -425,15 +513,20 @@ $success_message = $_GET['success'] ?? '';
             <i class="fas fa-bars"></i>
         </button>
         <h1><i class="fas fa-tachometer-alt"></i> Dashboard Siswa</h1>
-        <div class="user-info">
-            <span id="teacherName"><?php echo htmlspecialchars($siswa_name); ?></span>
-            <img
-                onclick="toprofile()"
-                src="../uploads/siswa/<?= $siswa_photo ?>"
-                alt="Foto <?= htmlspecialchars($siswa_name) ?>"
+        <div class="user-info" id="userInfoDropdown">
+            <span id="siswaName"><?php echo htmlspecialchars($siswa_name); ?></span>
+            <?php
+            // Tampilkan foto profil siswa jika ada, jika tidak pakai placeholder
+            $siswa_photo_src_header = !empty($siswa_photo) ? '../uploads/siswa/' . htmlspecialchars($siswa_photo) : 'https://placehold.co/40x40/cccccc/000000?text=GR';
+            ?>
+            <img src="<?php echo $siswa_photo_src_header; ?>" alt="User Avatar"
                 loading="lazy"
-                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/000000?text=SW';"
-            >
+                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=GR';">
+            <!-- Dropdown Menu -->
+            <div class="dropdown-menu" id="userDropdownContent">
+                <a href="profil_siswa.php"><i class="fas fa-user-circle"></i> Profil</a>
+                <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
         </div>
     </div>
 
@@ -515,8 +608,23 @@ $success_message = $_GET['success'] ?? '';
             header.classList.toggle("shifted");
         }
 
-        function toprofile() {
-            window.location.href = 'profil_siswa.php';
+        // Logika Dropdown User Info
+        const userInfoDropdown = document.getElementById("userInfoDropdown");
+        const userDropdownContent = document.getElementById("userDropdownContent");
+
+        if (userInfoDropdown && userDropdownContent) { // Pastikan elemen ada
+            userInfoDropdown.addEventListener('click', function() {
+                userDropdownContent.style.display = userDropdownContent.style.display === 'block' ? 'none' : 'block';
+            });
+
+            // Tutup dropdown jika user klik di luar area dropdown
+            window.onclick = function(event) {
+                if (!event.target.matches('#userInfoDropdown') && !event.target.closest('#userInfoDropdown')) {
+                    if (userDropdownContent.style.display === 'block') {
+                        userDropdownContent.style.display = 'none';
+                    }
+                }
+            }
         }
     </script>
 </body>
