@@ -14,7 +14,7 @@ if ($superadmin && password_verify($pass, $superadmin['pass'])) {
     $_SESSION['superadmin_id'] = $superadmin['id'];
     $_SESSION['superadmin_name'] = $superadmin['username'];
     $_SESSION['superadmin'] = $superadmin;
-    header("Location: dashboard.php");
+    header("Location: superadmin/dashboard_superadmin.php");
     exit;
 }
 
@@ -40,10 +40,11 @@ if ($guru && password_verify($pass, $guru['pass'])) {
     $_SESSION['guru_id'] = $guru['id'];
     $_SESSION['guru_name'] = $guru['name'];
     $_SESSION['guru'] = $guru;
-    header("Location: dashboard_guru.php");
+    header("Location: guru/dashboard_guru.php");
     exit;
 }
 
+// cek ke siswa
 // cek ke siswa
 $stmt = $pdo->prepare("SELECT * FROM siswa WHERE email = ?");
 $stmt->execute([$email]);
@@ -52,10 +53,16 @@ $siswa = $stmt->fetch();
 if ($siswa && password_verify($pass, $siswa['pass'])) {
     $_SESSION['siswa_id'] = $siswa['id'];
     $_SESSION['siswa_name'] = $siswa['name'];
-    $_SESSION['siswa'] = $siswa;
-    header("Location: dashboard_siswa.php");
+    $_SESSION['siswa_nis'] = $siswa['NIS']; // Penting untuk ditampilkan di dashboard
+    $_SESSION['siswa_class_id'] = $siswa['class_id']; // Penting untuk filtering jadwal/absensi
+    $_SESSION['siswa'] = $siswa; // Simpan seluruh objek siswa jika perlu
+    $_SESSION['last_login'] = date('Y-m-d H:i:s'); // Simpan waktu login
+    header("Location: siswa/dashboard_siswa.php"); // Arahkan ke dashboard siswa
     exit;
 }
+
+// ... kode PHP jika login gagal (redirect ke login.php dengan error) ...
+
 
 echo "Login gagal: Email atau password salah!";
 ?>
