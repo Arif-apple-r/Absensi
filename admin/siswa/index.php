@@ -6,484 +6,283 @@ if (!isset($_SESSION['admin_id'])) {
 }
 require '../../koneksi.php';
 
-// Check if the user is an admin
-$stmt = $pdo->query("SELECT * FROM siswa ORDER BY name ASC");
-$siswalist = $stmt->fetchAll();
+// Ambil data untuk dropdown kelas
+$kelas_list = $pdo->query("SELECT id, nama_kelas FROM class ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
 
-// Handle AJAX POST for adding siswa
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'edit_siswa') {
-    $NIS      = $_POST['NISsiswa'];
-    $name     = $_POST['namasiswa'];
-    $email    = $_POST['emailsiswa'];
-    $gender   = $_POST['gender'];
-    $dob      = $_POST['dobsiswa'];
-    $no_hp    = $_POST['nohpsiswa'];
-    $alamat   = $_POST['alamatsiswa'];
+// Tangani AJAX POST untuk menambah atau mengedit siswa
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if ($_POST['action'] === 'edit_siswa') {
+        $NIS      = $_POST['NISsiswa'];
+        $name     = $_POST['namasiswa'];
+        $email    = $_POST['emailsiswa'];
+        $gender   = $_POST['gender'];
+        $dob      = $_POST['dobsiswa'];
+        $no_hp    = $_POST['nohpsiswa'];
+        $alamat   = $_POST['alamatsiswa'];
+        $class_id = $_POST['class_id'] ?? null;
 
-    // Handle photo update if a new file is uploaded
-    $foto = $_FILES['photosiswa']['name'] ?? '';
-    $tmp  = $_FILES['photosiswa']['tmp_name'] ?? '';
-    $folder = "../../uploads/siswa/";
-    $namaFotoBaru = '';
+        if (isset($_FILES['photosiswa']) && $_FILES['photosiswa']['error'] === UPLOAD_ERR_OK) {
+            $foto = $_FILES['photosiswa']['name'];
+            $tmp  = $_FILES['photosiswa']['tmp_name'];
+            $folder = "../../uploads/siswa/";
+            $ext  = pathinfo($foto, PATHINFO_EXTENSION);
+            $namaFotoBaru = uniqid() . '.' . $ext;
 
-    if ($foto && $tmp) {
-        $ext  = pathinfo($foto, PATHINFO_EXTENSION);
-        $namaFotoBaru = uniqid() . '.' . $ext;
-        move_uploaded_file($tmp, $folder . $namaFotoBaru);
+            if (move_uploaded_file($tmp, $folder . $namaFotoBaru)) {
+                $stmtOld = $pdo->prepare("SELECT photo FROM siswa WHERE NIS = ?");
+                $stmtOld->execute([$NIS]);
+                $oldData = $stmtOld->fetch(PDO::FETCH_ASSOC);
+                if ($oldData && !empty($oldData['photo'])) {
+                    $oldFilePath = $folder . $oldData['photo'];
+                    if (file_exists($oldFilePath)) {
+                        unlink($oldFilePath);
+                    }
+                }
 
-        // Delete old photo
-        $stmtOld = $pdo->prepare("SELECT photo FROM siswa WHERE NIS = ?");
-        $stmtOld->execute([$NIS]);
-        $oldData = $stmtOld->fetch();
-        if ($oldData && !empty($oldData['photo'])) {
-            $oldFilePath = $folder . $oldData['photo'];
-            if (file_exists($oldFilePath)) {
-                unlink($oldFilePath);
+                $stmt = $pdo->prepare("UPDATE siswa SET photo = ? WHERE NIS = ?");
+                $stmt->execute([$namaFotoBaru, $NIS]);
             }
         }
 
-        // Update photo in DB
-        $stmt = $pdo->prepare("UPDATE siswa SET photo = ? WHERE NIS = ?");
-        $stmt->execute([$namaFotoBaru, $NIS]);
+        $stmt = $pdo->prepare("UPDATE siswa SET name = ?, email = ?, gender = ?, dob = ?, alamat = ?, no_hp = ?, class_id = ? WHERE NIS = ?");
+        $stmt->execute([$name, $email, $gender, $dob, $alamat, $no_hp, $class_id, $NIS]);
+
+        echo "success";
+        exit;
+    } elseif ($_POST['action'] === 'tambah_siswa') {
+        $name     = $_POST['namasiswa'];
+        $email    = $_POST['emailsiswa'];
+        $password = password_hash($_POST['passwordsiswa'], PASSWORD_DEFAULT);
+        $NIS      = $_POST['NISsiswa'];
+        $gender   = $_POST['gender'];
+        $dob      = $_POST['dobsiswa'];
+        $no_hp    = $_POST['nohpsiswa'];
+        $alamat   = $_POST['alamatsiswa'];
+        $class_id = $_POST['class_id'] ?? null;
+        $admission_date = date('Y-m-d H:i:s');
+
+        $namaFotoBaru = '';
+        if (isset($_FILES['photosiswa']) && $_FILES['photosiswa']['error'] === UPLOAD_ERR_OK) {
+            $foto = $_FILES['photosiswa']['name'];
+            $tmp  = $_FILES['photosiswa']['tmp_name'];
+            $folder = "../../uploads/siswa/";
+            $ext  = pathinfo($foto, PATHINFO_EXTENSION);
+            $namaFotoBaru = uniqid() . '.' . $ext;
+            move_uploaded_file($tmp, $folder . $namaFotoBaru);
+        }
+
+        $stmt = $pdo->prepare("INSERT INTO siswa
+            (NIS, name, gender, dob, photo, no_hp, email, pass, alamat, admission_date, class_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([
+            $NIS,
+            $name,
+            $gender,
+            $dob,
+            $namaFotoBaru,
+            $no_hp,
+            $email,
+            $password,
+            $alamat,
+            $admission_date,
+            $class_id,
+        ]);
+        echo "success";
+        exit;
     }
-
-    // Update other fields
-    $stmt = $pdo->prepare("UPDATE siswa SET name = ?, email = ?, gender = ?, dob = ?, alamat = ?, no_hp = ? WHERE NIS = ?");
-    $stmt->execute([$name, $email, $gender, $dob, $alamat, $no_hp, $NIS]);
-
-    echo "success";
-    exit;
 }
 
-// Handle AJAX POST for adding siswa
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'tambah_siswa') {
-    $name     = $_POST['namasiswa'];
-    $email    = $_POST['emailsiswa'];
-    $password = password_hash($_POST['passwordsiswa'], PASSWORD_DEFAULT);
-    $NIS      = $_POST['NISsiswa'];
-    $gender   = $_POST['gender'];
-    $dob      = $_POST['dobsiswa'];
-    $no_hp    = $_POST['nohpsiswa'];
-    $alamat   = $_POST['alamatsiswa'];
-    $admission_date = date('Y-m-d H:i:s');
+// --- Logika GET untuk menampilkan data siswa (termasuk fitur pencarian) ---
 
-    // Upload foto
-    $foto = $_FILES['photosiswa']['name'] ?? '';
-    $tmp  = $_FILES['photosiswa']['tmp_name'] ?? '';
-    $folder = "../../uploads/siswa/";
-    $namaFotoBaru = '';
-    if ($foto && $tmp) {
-        $ext  = pathinfo($foto, PATHINFO_EXTENSION);
-        $namaFotoBaru = uniqid() . '.' . $ext;
-        move_uploaded_file($tmp, $folder . $namaFotoBaru);
-    }
+$search_query = $_GET['search'] ?? '';
 
-    // Simpan ke DB
-    $stmt = $pdo->prepare("INSERT INTO siswa 
-        (NIS, name, gender, dob, photo, no_hp, email, pass, alamat, admission_date) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->execute([
-        $NIS,
-        $name,
-        $gender,
-        $dob,
-        $namaFotoBaru,
-        $no_hp,
-        $email,
-        $password,
-        $alamat,
-        $admission_date,
-    ]);
-    echo "success";
-    exit;
+$query = "
+    SELECT
+        siswa.*,
+        class.nama_kelas,
+        class.photo AS class_photo
+    FROM
+        siswa
+    LEFT JOIN
+        class ON siswa.class_id = class.id
+";
+
+$params = [];
+$conditions = [];
+
+if (!empty($search_query)) {
+    $conditions[] = "siswa.name LIKE ? OR class.nama_kelas LIKE ?";
+    $search_param = "%" . $search_query . "%";
+    $params[] = $search_param;
+    $params[] = $search_param;
 }
+
+if (!empty($conditions)) {
+    $query .= " WHERE " . implode(' AND ', $conditions);
+}
+
+$query .= " ORDER BY siswa.name ASC";
+
+$stmt = $pdo->prepare($query);
+$stmt->execute($params);
+$siswalist = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Daftar siswa</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-        }
-
-        body {
-            background-color: #f4f4f4;
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 250px;
-            background-color: #2c3e50;
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            transition: width 0.3s ease;
-            z-index: 1000;
-            padding-top: 60px;
-            overflow-x: hidden;
-        }
-
-        .sidebar.collapsed {
-            width: 70px;
-        }
-
-        .sidebar a {
-            display: flex;
-            align-items: center;
-            padding: 15px 20px;
-            color: white;
-            text-decoration: none;
-        }
-
-        .sidebar a i {
-            margin-right: 15px;
-            min-width: 20px;
-            text-align: center;
-        }
-
-        .sidebar.collapsed a span {
-            display: none;
-        }
-
-        .sidebar a:hover {
-            background-color: #34495e;
-        }
-
-        .sidebar .logo {
-            color: white;
-            font-size: 24px;
-            text-align: center;
-            position: absolute;
-            top: 10px;
-            left: 0;
-            width: 100%;
-        }
-
-        .header {
-            height: 60px;
-            background-color: #1abc9c;
-            color: white;
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            position: fixed;
-            top: 0;
-            left: 250px;
-            width: calc(100% - 250px);
-            z-index: 999;
-            transition: left 0.3s ease, width 0.3s ease;
-        }
-
-        .header.shifted {
-            left: 70px;
-            width: calc(100% - 70px);
-        }
-
-        .content {
-            padding: 80px 20px 20px 20px;
-            margin-left: 250px;
-            transition: margin-left 0.3s ease;
-            width: 100%;
-        }
-
-        .content.shifted {
-            margin-left: 70px;
-        }
-
-        .card {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            max-width: 800px;
-            margin-inline: auto;
-        }
-
-        .card h2 {
-            margin-bottom: 15px;
-        }
-
-        .btn-tambah {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            float: right;
-            margin-bottom: 15px;
-        }
-
-        .btn-tambah:hover {
-            background-color: #2980b9;
-        }
-
-        /* siswalist */
-        .siswa-list {
-        list-style: none;
-        padding-left: 0;
-        }
-
-        .siswa-list li {
-        display: flex;
-        align-items: center;
-        background: #ecf0f1;
-        margin-bottom: 10px;
-        padding: 10px 15px;
-        border-radius: 5px;
-        justify-content: space-between;
-        }
-
-        .siswa-info {
-        display: flex; /* Menggunakan flexbox untuk merapikan info siswa */
-        align-items: center;
-        flex-grow: 1; /* Memberikan fleksibilitas agar kolom ini bisa melebar */
-        }
-
-        /* Mengatur spasi antara foto dan teks */
-        .siswa-info img {
-        margin-right: 15px;
-        }
-
-        .siswa-text {
-        /* Hapus display: flex; di sini */
-        display: flex;
-        flex-direction: column; /* Mengubah arah flex menjadi kolom agar nama dan email berada di baris berbeda */
-        /* Kita bisa beri sedikit margin-left jika perlu */
-        }
-
-        /* Mengatur margin dan font */
-        .siswa-nama {
-        font-weight: bold;
-        font-size: 16px;
-        margin-right: 0; /* Menghilangkan margin-right agar tidak ada jarak berlebih */
-        margin-bottom: 5px; /* Menambah sedikit jarak di bawah nama */
-        display: block; /* Memastikan setiap span nama memiliki baris baru */
-        }
-
-        .siswa-email {
-        font-weight: normal;
-        color: #555;
-        font-size: 15px;
-        margin-left: 0; /* Menghilangkan margin-left */
-        display: block; /* Memastikan setiap span email memiliki baris baru */
-        }
-
-        .siswa-actions {
-        display: flex;
-        align-items: center;
-        }
-
-        .siswa-actions button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 6px 10px;
-            
-            border-radius: 5px;
-            cursor: pointer;
-            margin-left: 10px; /* Memberikan jarak antar tombol */
-        }
-        .siswa-actions button:hover {
-            background-color: #2980b9;
-        }
-
-        .siswa-actions .btn-hapus {
-            background-color: #e74c3c;
-        }
-        .siswa-actions .btn-hapus:hover {
-            background-color: #c0392b;
-        }
-        
-
-        .siswa-list button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 6px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .siswa-list button:hover {
-            background-color: #2980b9;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.4);
-        }
-
-        .modal-content {
-            background-color: #fff;
-            margin: 5% auto;
-            padding: 20px;
-            border-radius: 10px;
-            width: 80%;
-            max-width: 500px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            position: relative;
-        }
-
-        .modal-content h3 {
-            margin-bottom: 10px;
-        }
-
-        .modal-content label {
-            display: block;
-            margin-top: 10px;
-            font-weight: bold;
-        }
-
-        .modal-content input[type="text"],
-        .modal-content input[type="email"],
-        .modal-content input[type="password"],
-        .modal-content input[type="date"],
-        .modal-content input[type="file"] {
-            width: 100%;
-            padding: 8px;
-            margin-top: 5px;
-            margin-bottom: 12px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-
-        .gender-group {
-            margin-bottom: 12px;
-        }
-
-        .gender-group label {
-            display: inline-block;
-            font-weight: normal;
-            margin-right: 15px;
-        }
-        
-        .gender-group input[type="radio"] {
-            margin-right: 5px;
-        }
-
-        .modal-buttons {
-            text-align: right;
-            margin-top: 20px;
-        }
-
-        .modal-buttons button {
-            padding: 8px 16px;
-            margin-left: 10px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .btn-close {
-            background-color: #e74c3c;
-            color: white;
-        }
-
-        .btn-save {
-            background-color: #2ecc71;
-            color: white;
-        }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/admin.css">
+    <title>Daftar Siswa</title>
 </head>
 <body>
     <div class="sidebar" id="sidebar">
-        <div class="logo">Admin</div>
-        <a href="#" id="toggle-btn"><i>☰</i><span>ㅤToggle</span></a>
-        <a href="../dashboard_admin.php">📊<span>ㅤDashboard</span></a>
-        <a href="../guru/index.php">👨‍🏫<span>ㅤGuru</span></a>
-        <a href="index.php">👨‍🎓<span>ㅤSiswa</span></a>
-        <a href="../jadwal/index.php">📅<span>ㅤJadwal</span></a>
-        <a href="../kelas/index.php">🏫<span>ㅤKelas</span></a>
-        <a href="../mapel/index.php">📚<span>ㅤMata Pelajaran</span></a>
+        <div class="logo">AdminCoy</div>
+        <nav>
+            <a href="../dashboard_admin.php">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="../guru/index.php">
+                <i class="fas fa-chalkboard-teacher"></i>
+                <span>Guru</span>
+            </a>
+            <a href="index.php" class="active">
+                <i class="fas fa-user-graduate"></i>
+                <span>Siswa</span>
+            </a>
+            <a href="../jadwal/index.php">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Jadwal</span>
+            </a>
+            <a href="../kelas/index.php">
+                <i class="fas fa-school"></i>
+                <span>Kelas</span>
+            </a>
+            <a href="../mapel/index.php">
+                <i class="fas fa-book"></i>
+                <span>Mata Pelajaran</span>
+            </a>
+            <a  onclick="showLogoutConfirm()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </a>
+        </nav>
     </div>
+
     <div class="header" id="header">
-        <h1>Daftar siswa</h1>
+        <button class="toggle-btn" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
+        <h1>Daftar Siswa</h1>
     </div>
+
     <div class="content" id="mainContent">
         <div class="card">
-            <button class="btn-tambah" id="btn-tambah-siswa"><b>+</b> Tambah siswa</button>
-            <h2>Daftar Siswa</h2><br>
+            <h2>Data Siswa</h2>
+            <div class="card-header-actions">
+                <button class="add-link" id="btn-tambah-siswa">
+                    <i class="fas fa-plus"></i> Tambah Siswa
+                </button>
+                <form class="search-form" action="" method="get">
+                    <input type="text" name="search" placeholder="Cari siswa atau kelas..." value="<?= htmlspecialchars($search_query) ?>">
+                    <button type="submit"><i class="fas fa-search"></i></button>
+                </form>
+            </div>
             <ul class="siswa-list" id="siswa-list">
                 <?php foreach ($siswalist as $siswa): ?>
-                <li 
-                    data-id="<?= htmlspecialchars($siswa['NIS']) ?>"
-                    data-nama="<?= htmlspecialchars($siswa['name']) ?>"
+                <li
                     data-nis="<?= htmlspecialchars($siswa['NIS']) ?>"
+                    data-nama="<?= htmlspecialchars($siswa['name']) ?>"
                     data-gender="<?= htmlspecialchars($siswa['gender']) ?>"
                     data-dob="<?= htmlspecialchars($siswa['dob']) ?>"
                     data-nohp="<?= htmlspecialchars($siswa['no_hp']) ?>"
                     data-email="<?= htmlspecialchars($siswa['email']) ?>"
                     data-alamat="<?= htmlspecialchars($siswa['alamat']) ?>"
                     data-photo="<?= htmlspecialchars($siswa['photo']) ?>"
+                    data-class-id="<?= htmlspecialchars($siswa['class_id']) ?>"
                 >
                     <div class="siswa-info">
-                        <img 
-                            src="../../uploads/siswa/<?= htmlspecialchars($siswa['photo']) ?>" 
-                            alt="Foto <?= htmlspecialchars($siswa['name']) ?>" 
-                            width="50" 
-                            height="50"
-                            style="border-radius: 50%; margin-right: 15px; box-shadow: 0 2px 8px rgba(44,62,80,0.15); object-fit: cover; background: #fff;"
+                        <img
+                            src="../../uploads/siswa/<?= htmlspecialchars($siswa['photo']) ?>"
+                            alt="Foto <?= htmlspecialchars($siswa['name']) ?>"
                             loading="lazy"
-                            onerror="this.onerror=null;this.src='../../uploads/siswa/default.png';"
+                            onerror="this.onerror=null;this.src='https://placehold.co/60x60/cccccc/333333?text=No+Foto';"
                         >
                         <div class="siswa-text">
-                        <span class="siswa-nama"><?= htmlspecialchars($siswa['name']) ?></span>
-                        <span class="siswa-email"><?= htmlspecialchars($siswa['email']) ?></span>
+                            <span class="siswa-nama"><?= htmlspecialchars($siswa['name']) ?></span>
+                            <?php if (!empty($siswa['nama_kelas'])): ?>
+                                <span class="siswa-kelas-nama"> (<?= htmlspecialchars($siswa['nama_kelas']) ?>)</span>
+                            <?php endif; ?>
+                            <span class="siswa-email"><?= htmlspecialchars($siswa['email']) ?></span>
                         </div>
                     </div>
                     <div class="siswa-actions">
-                        <button class="btn-edit">Edit</button>
-                        <button href="hapus.php?NIS=<?= urlencode($siswa['NIS']) ?>" onclick="return confirm('Yakin hapus data?')" class="btn-hapus">Hapus</button>
+                        <button class="action-link edit btn-edit">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="action-link delete btn-hapus" data-nis="<?= urlencode($siswa['NIS']) ?>">
+                            <i class="fas fa-trash-alt"></i> Hapus
+                        </button>
                     </div>
                 </li>
                 <?php endforeach; ?>
             </ul>
         </div>
     </div>
+
     <div id="siswa-modal" class="modal">
         <div class="modal-content">
-            <h3 id="modal-title">Edit Data siswa</h3>
+            <h3 id="modal-title">Edit Data Siswa</h3>
             <form id="siswa-form" enctype="multipart/form-data">
-                <label for="namasiswa">Nama siswa:</label>
+                <label for="namasiswa">Nama Siswa:</label>
                 <input type="text" id="namasiswa" name="namasiswa" required>
+
                 <label for="NISsiswa">NIS:</label>
                 <input type="text" id="NISsiswa" name="NISsiswa" required>
-                <label>JeNIS Kelamin:</label>
+
+                <label for="class_id">Kelas:</label>
+                <select id="class_id" name="class_id">
+                    <option value="">Pilih Kelas</option>
+                    <?php foreach ($kelas_list as $kelas): ?>
+                    <option value="<?= htmlspecialchars($kelas['id']) ?>">
+                        <?= htmlspecialchars($kelas['nama_kelas']) ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+
+                <label>Jenis Kelamin:</label>
                 <div class="gender-group">
                     <input type="radio" id="male" name="gender" value="Laki-Laki">
                     <label for="male">Laki-Laki</label>
                     <input type="radio" id="female" name="gender" value="Perempuan">
                     <label for="female">Perempuan</label>
                 </div>
+
                 <label for="dobsiswa">Tanggal Lahir:</label>
                 <input type="date" id="dobsiswa" name="dobsiswa">
-                <label for="photosiswa">Foto siswa:</label>
+
+                <label for="photosiswa">Foto Siswa:</label>
                 <input type="file" id="photosiswa" name="photosiswa">
+
                 <label for="nohpsiswa">Nomor HP:</label>
                 <input type="text" id="nohpsiswa" name="nohpsiswa">
+
                 <label for="emailsiswa">Email:</label>
                 <input type="email" id="emailsiswa" name="emailsiswa">
+
                 <label for="passwordsiswa" id="labelPasswordsiswa" style="display:none;">Password:</label>
                 <input type="password" id="passwordsiswa" name="passwordsiswa" style="display:none;">
+
                 <label for="alamatsiswa">Alamat:</label>
                 <input type="text" id="alamatsiswa" name="alamatsiswa">
+
                 <div class="modal-buttons">
                     <button type="submit" class="btn-save">Simpan</button>
                     <button type="button" class="btn-close" id="btn-cancel">Batal</button>
@@ -491,17 +290,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </form>
         </div>
     </div>
+
+    <div id="custom-alert-modal" class="custom-modal-overlay">
+        <div class="custom-modal-content">
+            <h4 id="custom-alert-message"></h4>
+            <div class="modal-buttons">
+                <button type="button" class="btn-save" id="custom-alert-ok">OK</button>
+                <button type="button" class="btn-close" id="custom-alert-cancel" style="display:none;">Batal</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Sidebar toggle
+        // Sidebar toggle logic
         const sidebar = document.getElementById("sidebar");
         const mainContent = document.getElementById("mainContent");
         const header = document.getElementById("header");
-        const toggleBtn = document.getElementById("toggle-btn");
-        toggleBtn.addEventListener("click", () => {
+
+        function toggleSidebar() {
             sidebar.classList.toggle("collapsed");
             mainContent.classList.toggle("shifted");
             header.classList.toggle("shifted");
-        });
+        }
 
         // Modal logic
         const siswaModal = document.getElementById("siswa-modal");
@@ -510,64 +320,137 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         const modalTitle = document.getElementById("modal-title");
         const siswaForm = document.getElementById("siswa-form");
         const btnCancel = document.getElementById("btn-cancel");
+
         let isEditMode = false;
         let currentsiswaItem = null;
 
-        btnTambahsiswa.addEventListener("click", () => {
-            isEditMode = false;
-            modalTitle.textContent = "Tambah Data siswa";
-            siswaForm.reset();
-            // Show password field
-            document.getElementById("passwordsiswa").style.display = "block";
-            document.getElementById("labelPasswordsiswa").style.display = "block";
-            siswaModal.style.display = "block";
+        // Custom Alert/Confirmation functions
+        const customAlertModal = document.getElementById("custom-alert-modal");
+        const customAlertMessage = document.getElementById("custom-alert-message");
+        const customAlertOkBtn = document.getElementById("custom-alert-ok");
+        const customAlertCancelBtn = document.getElementById("custom-alert-cancel");
+        let customAlertResolve;
+
+        function showCustomAlert(message) {
+            return new Promise(resolve => {
+                customAlertMessage.textContent = message;
+                customAlertOkBtn.style.display = 'block';
+                customAlertCancelBtn.style.display = 'none';
+                customAlertModal.style.display = 'flex';
+                customAlertResolve = resolve;
+            });
+        }
+
+        function showCustomConfirm(message) {
+            return new Promise(resolve => {
+                customAlertMessage.textContent = message;
+                customAlertOkBtn.style.display = 'block';
+                customAlertCancelBtn.style.display = 'block';
+                customAlertModal.style.display = 'flex';
+                customAlertResolve = resolve;
+            });
+        }
+
+        function showLogoutConfirm() {
+            Swal.fire({
+                title: 'Konfirmasi Logout',
+                text: 'Apakah kamu yakin ingin logout?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Logout!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = "../../logout.php"; // redirect logout
+                }
+            });
+        }
+
+        customAlertOkBtn.addEventListener('click', () => {
+            customAlertModal.style.display = 'none';
+            customAlertResolve(true);
         });
 
+        customAlertCancelBtn.addEventListener('click', () => {
+            customAlertModal.style.display = 'none';
+            customAlertResolve(false);
+        });
+
+        // Event listener for "Tambah Siswa" button
+        btnTambahsiswa.addEventListener("click", () => {
+            isEditMode = false;
+            modalTitle.textContent = "Tambah Data Siswa";
+            siswaForm.reset();
+            document.getElementById("NISsiswa").readOnly = false;
+            document.getElementById("passwordsiswa").style.display = "block";
+            document.getElementById("labelPasswordsiswa").style.display = "block";
+            siswaModal.style.display = "flex";
+        });
+
+        // Event listener for "Edit" buttons
         siswaList.addEventListener("click", (e) => {
-            if (e.target.classList.contains("btn-edit")) {
+            if (e.target.classList.contains("btn-edit") || e.target.closest(".btn-edit")) {
                 isEditMode = true;
-                modalTitle.textContent = "Edit Data siswa";
+                modalTitle.textContent = "Edit Data Siswa";
                 currentsiswaItem = e.target.closest("li");
+
+                // Populate form fields
                 document.getElementById("namasiswa").value = currentsiswaItem.dataset.nama;
                 document.getElementById("NISsiswa").value = currentsiswaItem.dataset.nis;
-                document.getElementById("NISsiswa").readOnly = true; // Prevent editing NIS
+                document.getElementById("NISsiswa").readOnly = true;
                 document.getElementById("dobsiswa").value = currentsiswaItem.dataset.dob;
                 document.getElementById("nohpsiswa").value = currentsiswaItem.dataset.nohp;
                 document.getElementById("emailsiswa").value = currentsiswaItem.dataset.email;
                 document.getElementById("alamatsiswa").value = currentsiswaItem.dataset.alamat;
+                document.getElementById("class_id").value = currentsiswaItem.dataset.classId;
+
+                // Set gender radio button
                 if (currentsiswaItem.dataset.gender && currentsiswaItem.dataset.gender.trim().toLowerCase() === "laki-laki") {
                     document.getElementById("male").checked = true;
                 } else if (currentsiswaItem.dataset.gender && currentsiswaItem.dataset.gender.trim().toLowerCase() === "perempuan") {
                     document.getElementById("female").checked = true;
                 }
-                // Hide password field
+
+                // Hide password field for edit mode
                 document.getElementById("passwordsiswa").style.display = "none";
                 document.getElementById("labelPasswordsiswa").style.display = "none";
-                siswaModal.style.display = "block";
+                siswaModal.style.display = "flex";
             }
         });
 
-        btnTambahsiswa.addEventListener("click", () => {
-            isEditMode = false;
-            modalTitle.textContent = "Tambah Data siswa";
-            siswaForm.reset();
-            document.getElementById("NISsiswa").readOnly = false; // Allow editing NIS when adding
-            document.getElementById("passwordsiswa").style.display = "block";
-            document.getElementById("labelPasswordsiswa").style.display = "block";
-            siswaModal.style.display = "block";
+        // Event listener for "Hapus" buttons
+        siswaList.addEventListener("click", async (e) => {
+            if (e.target.classList.contains("btn-hapus") || e.target.closest(".btn-hapus")) {
+                const btnHapus = e.target.closest(".btn-hapus");
+                const nis = btnHapus.dataset.nis;
+                const confirmed = await showCustomConfirm('Yakin ingin menghapus data siswa ini?');
+
+                if (confirmed) {
+                    window.location.href = `hapus.php?NIS=${nis}`;
+                }
+            }
         });
 
+
+        // Event listener for "Batal" button in modal
         btnCancel.addEventListener("click", () => {
             siswaModal.style.display = "none";
         });
 
+        // Close modal when clicking outside of it
+        window.onclick = function (event) {
+            if (event.target == siswaModal) {
+                siswaModal.style.display = "none";
+            }
+        };
 
+        // Form submission logic
         siswaForm.addEventListener("submit", function(e) {
             e.preventDefault();
             const formData = new FormData(siswaForm);
             if (isEditMode) {
                 formData.append('action', 'edit_siswa');
-                formData.append('NISsiswa', currentsiswaItem.dataset.NIS); // Use NIS as identifier
+                formData.append('NISsiswa', currentsiswaItem.dataset.nis);
             } else {
                 formData.append('action', 'tambah_siswa');
             }
@@ -577,24 +460,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 body: formData
             })
             .then(response => response.text())
-            .then(result => {
+            .then(async result => {
                 if (result.trim() === "success") {
-                    alert(isEditMode ? "siswa berhasil diupdate!" : "siswa berhasil ditambahkan!");
+                    await showCustomAlert(isEditMode ? "Siswa berhasil diupdate!" : "Siswa berhasil ditambahkan!");
                     window.location.reload();
                 } else {
-                    alert("Gagal: " + result);
+                    await showCustomAlert("Gagal: " + result);
                 }
             })
-            .catch(error => {
-                alert("Terjadi kesalahan: " + error);
+            .catch(async error => {
+                await showCustomAlert("Terjadi kesalahan: " + error);
             });
         });
-
-        window.onclick = function (event) {
-            if (event.target == siswaModal) {
-                siswaModal.style.display = "none";
-            }
-        };
     </script>
 </body>
 </html>

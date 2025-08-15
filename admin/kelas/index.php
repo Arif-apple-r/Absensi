@@ -79,136 +79,201 @@ try {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Daftar Kelas</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #1abc9c;
+            --secondary-color: #34495e;
+            --background-color: #f0f2f5;
+            --card-background: #ffffff;
+            --text-color: #2c3e50;
+            --light-text-color: #7f8c8d;
+            --border-color: #e0e0e0;
+            --shadow-color: rgba(0, 0, 0, 0.08);
+            --sidebar-width: 250px;
+            --sidebar-collapsed-width: 70px;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: Arial, sans-serif;
         }
 
         body {
-            background-color: #f4f4f4;
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
             display: flex;
             min-height: 100vh;
+            color: var(--text-color);
+            overflow-x: hidden;
         }
 
+        /* Sidebar dan Header */
         .sidebar {
-            width: 250px;
-            background-color: #2c3e50;
+            width: var(--sidebar-width);
+            background-color: var(--secondary-color);
             position: fixed;
             top: 0;
             left: 0;
             height: 100%;
             transition: width 0.3s ease;
             z-index: 1000;
-            padding-top: 60px;
-            overflow-x: hidden;
+            padding-top: 70px;
+            overflow: hidden;
         }
 
         .sidebar.collapsed {
-            width: 70px;
-        }
-
-        .sidebar a {
-            display: flex;
-            align-items: center;
-            padding: 15px 20px;
-            color: white;
-            text-decoration: none;
-            transition: background-color 0.3s ease;
-        }
-
-        .sidebar a i {
-            margin-right: 15px;
-            min-width: 20px;
-            text-align: center;
-        }
-
-        .sidebar.collapsed a span {
-            display: none;
-        }
-
-        .sidebar a:hover {
-            background-color: #34495e;
+            width: var(--sidebar-collapsed-width);
         }
 
         .sidebar .logo {
-            color: white;
+            color: #fff;
             font-size: 24px;
+            font-weight: 700;
             text-align: center;
+            padding: 15px 0;
             position: absolute;
-            top: 10px;
+            top: 0;
             left: 0;
             width: 100%;
+            background: var(--primary-color);
         }
 
+        .sidebar nav a {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            color: #fff;
+            text-decoration: none;
+            transition: background-color 0.2s ease, padding-left 0.2s ease;
+        }
+
+        .sidebar nav a i {
+            width: 25px;
+            text-align: center;
+            margin-right: 20px;
+            font-size: 18px;
+        }
+
+        .sidebar.collapsed nav a i {
+            margin-right: 0;
+        }
+
+        .sidebar.collapsed nav a span {
+            display: none;
+        }
+
+        .sidebar nav a:hover,
+        .sidebar nav a.active {
+            background-color: #3e566d;
+            padding-left: 25px;
+        }
+
+        .sidebar nav a.active i {
+            color: var(--primary-color);
+        }        
+
         .header {
-            height: 60px;
-            background-color: #1abc9c;
-            color: white;
+            height: 65.5px;
+            background-color: var(--card-background);
+            box-shadow: 0 2px 10px var(--shadow-color);
             display: flex;
             align-items: center;
             padding: 0 20px;
             position: fixed;
             top: 0;
-            left: 250px;
-            width: calc(100% - 250px);
+            left: var(--sidebar-width);
+            width: calc(100% - var(--sidebar-width));
             z-index: 999;
             transition: left 0.3s ease, width 0.3s ease;
         }
 
         .header.shifted {
-            left: 70px;
-            width: calc(100% - 70px);
+            left: var(--sidebar-collapsed-width);
+            width: calc(100% - var(--sidebar-collapsed-width));
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 0;
         }
 
         .content {
-            padding: 80px 20px 20px 20px;
-            margin-left: 250px;
+            flex-grow: 1;
+            padding: 90px 30px 30px 30px;
+            margin-left: var(--sidebar-width);
             transition: margin-left 0.3s ease;
-            width: 100%;
+            max-width: 100%;
         }
 
         .content.shifted {
-            margin-left: 70px;
+            margin-left: var(--sidebar-collapsed-width);
         }
 
+        /* Tombol Toggle Sidebar */
+        .toggle-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            margin-right: 20px;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-btn:hover {
+            background-color: #16a085;
+        }
+
+        /* Konten Utama */
         .card {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            max-width: 1000px;
-            margin-inline: auto;
+            background: var(--card-background);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            margin-bottom: 25px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .card h2 {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-color);
         }
 
-        .card-header {
-            display: flex;
+        .add-link {
+            display: inline-flex;
             align-items: center;
-            justify-content: space-between;
-            margin-bottom: 25px; /* supaya ada jarak sebelum isi card */
+            gap: 8px;
+            margin-bottom: 25px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background-color 0.3s, transform 0.2s;
         }
 
-        .card-header h2 {
-            margin: 0; /* Hilangkan margin default supaya posisinya rapi */
+        .add-link:hover {
+            background-color: #16a085;
+            transform: translateY(-2px);
         }
 
-        .card-header .btn-tambah {
-            margin-bottom: 0; /* Override margin bawah dari default */
-        }
-
-        textarea {
-            width: 100%; /* Set the width */
-            height: 150px; /* Set the height */
-            resize: none; /* Optional: Prevent resizing by the user */
-        }
-
+        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -219,106 +284,129 @@ try {
             height: 100%;
             overflow: auto;
             background-color: rgba(0, 0, 0, 0.5);
+            padding-top: 60px;
         }
 
         .modal-content {
-            background-color: #fff;
-            margin: 10% auto;
-            padding: 20px;
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 30px;
             border-radius: 10px;
             width: 90%;
             max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
             position: relative;
         }
 
-        .close {
+        .close-btn {
             color: #aaa;
             position: absolute;
-            right: 20px;
             top: 10px;
+            right: 25px;
             font-size: 28px;
             font-weight: bold;
+        }
+        .close-btn:hover,
+        .close-btn:focus {
+            color: #000;
+            text-decoration: none;
             cursor: pointer;
         }
 
-        .modal-content input,
-        .modal-content label {
+        .modal form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal label {
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .modal input[type="text"],
+        .modal input[type="file"],
+        .modal textarea {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
             width: 100%;
         }
-        
-        .modal-content input {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-            border: 1px solid #ccc;
+
+        .modal textarea {
+            height: 100px;
+            resize: vertical;
         }
 
         .modal-buttons {
             display: flex;
             justify-content: space-between;
+            gap: 15px;
             margin-top: 15px;
         }
 
         .modal-buttons button {
-            padding: 10px 15px;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 20px;
             border: none;
             border-radius: 5px;
-            cursor: pointer;
-            background-color: #3498db;
-            color: white;
             font-size: 16px;
-            flex: 1;
-            margin: 0 5px;
             cursor: pointer;
+            transition: background-color 0.3s;
+            flex: 1;
         }
 
         .modal-buttons button:hover {
-            background-color: #2980b9;
+            background-color: #16a085;
         }
 
-        .image-container {
-            text-align: center;
-            margin-bottom: 15px;
-        }
-
-        .image-container img {
-            width: 120px;
-            height: 120px;
-            border-radius: 12px;
-            cursor: pointer;
-            object-fit: cover;
-            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s ease;
-        }
-
-        .image-container img:hover {
-            transform: scale(1.05);
-        }
-
-        .btn-edit {
-            background-color: #1abc9c;
-        }
-
-        .btn-delete {
+        .modal-buttons .btn-cancel {
             background-color: #e74c3c;
         }
 
-        .btn-tambah {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
+        .modal-buttons .btn-cancel:hover {
+            background-color: #c0392b;
+        }
+
+        .image-preview {
             margin-bottom: 15px;
-            text-decoration: none; /* Tambahkan ini untuk link */
-            display: inline-block;
+            text-align: center;
         }
 
-        .btn-tambah:hover {
-            background-color: #2980b9;
+        .image-preview img {
+            max-width: 150px;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
+        @media (max-width: 768px) {
+            .sidebar:not(.collapsed) {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.collapsed {
+                transform: translateX(0);
+            }
+
+            .content,
+            .header {
+                margin-left: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                padding-left: 20px !important;
+            }
+
+            .sidebar.collapsed + .header,
+            .sidebar.collapsed ~ .content {
+                margin-left: var(--sidebar-collapsed-width) !important;
+                left: var(--sidebar-collapsed-width) !important;
+                width: calc(100% - var(--sidebar-collapsed-width)) !important;
+            }
+        }
+        
         .element-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -362,15 +450,18 @@ try {
         
         .action-buttons {
             margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
         }
 
         .action-buttons a {
             padding: 8px 12px;
-            margin: 0 5px;
             border-radius: 5px;
             text-decoration: none;
             color: white;
             font-size: 0.9em;
+            transition: background-color 0.3s;
         }
 
         .action-buttons .btn-edit {
@@ -402,27 +493,56 @@ try {
     ?>
 
     <div class="sidebar" id="sidebar">
-        <div class="logo">Admin</div>
-        <a href="#" id="toggle-btn"><i>☰</i><span>ㅤToggle</span></a>
-        <a href="../dashboard_admin.php">📊<span>ㅤDashboard</span></a>
-        <a href="../guru/index.php">👨‍🏫<span>ㅤGuru</span></a>
-        <a href="../siswa/index.php">👨‍🎓<span>ㅤSiswa</span></a>
-        <a href="../jadwal/index.php">📅<span>ㅤJadwal</span></a>
-        <a href="index.php">🏫<span>ㅤKelas</span></a>
-        <a href="../mapel/index.php">📚<span>ㅤMata Pelajaran</span></a>
+        <div class="logo">AdminCoy</div>
+        <nav>
+            <a href="../dashboard_admin.php">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="../guru/index.php">
+                <i class="fas fa-chalkboard-teacher"></i>
+                <span>Guru</span>
+            </a>
+            <a href="../siswa/index.php">
+                <i class="fas fa-user-graduate"></i>
+                <span>Siswa</span>
+            </a>
+            <a href="../jadwal/index.php">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Jadwal</span>
+            </a>
+            <a href="index.php" class="active">
+                <i class="fas fa-school"></i>
+                <span>Kelas</span>
+            </a>
+            <a href="../mapel/index.php">
+                <i class="fas fa-book"></i>
+                <span>Mata Pelajaran</span>
+            </a>
+            <div class="logout-button-container">
+                <a onclick="showLogoutConfirm(event)">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </nav>
     </div>
 
     <div class="header" id="header">
+        <button class="toggle-btn" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
         <h1>Daftar Kelas</h1>
     </div>
 
     <div class="content" id="mainContent">
         <div class="card">
-            <div class="card-header">
-                <h2>Daftar Kelas</h2>
-                <button class="btn-tambah" onclick="openModal('tambah')"><b>+</b> Tambah Kelas</button>
-            </div>
-            <div style="clear: both;"></div> <div class="element-grid">
+            <h2>Data Kelas</h2>
+            <a href="#" onclick="openModal('tambah')" class="add-link">
+                <i class="fas fa-plus"></i> Tambah Kelas
+            </a>
+            
+            <div class="element-grid">
                 <?php foreach ($kelas as $row): ?>
                     <div class="element-item">
                         <img src="../../uploads/kelas/<?= htmlspecialchars($row['photo']) ?>" alt="<?= htmlspecialchars($row['nama_kelas']) ?>">
@@ -440,52 +560,52 @@ try {
 
     <div id="kelasModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
+            <span class="close-btn" onclick="closeModal()">&times;</span>
             <h2 id="modalTitle"></h2>
             <form id="kelasForm" action="index.php" method="post" enctype="multipart/form-data">
                 <input type="hidden" name="id" id="kelasId">
-                <label>Nama Kelas: <input type="text" name="nama_kelas" id="nama_kelas" required></label><br>
-                <label>Tahun Ajaran: <input type="text" name="tahun_ajaran" id="tahun_ajaran" placeholder="contoh: 2025/2026"></label><br>
-                <label>Deskripsi: <textarea name="deskripsi" id="deskripsi"></textarea></label><br>
-                <div id="fotoLamaContainer" style="display:none;">
+                <label>Nama Kelas: <input type="text" name="nama_kelas" id="nama_kelas" required></label>
+                <label>Tahun Ajaran: <input type="text" name="tahun_ajaran" id="tahun_ajaran" placeholder="contoh: 2025/2026"></label>
+                <label>Deskripsi: <textarea name="deskripsi" id="deskripsi"></textarea></label>
+                <div id="fotoLamaContainer" class="image-preview" style="display:none;">
                     <label>Foto Lama:<br>
-                        <img id="fotoLama" src="" width="80">
-                    </label><br>
+                        <img id="fotoLama" src="" alt="Foto Lama">
+                    </label>
                 </div>
-                <label>Foto Kelas: <input type="file" name="photo" id="photo"></label><br>
+                <label>Foto Kelas: <input type="file" name="photo" id="photo"></label>
                 <div class="modal-buttons">
                     <button type="submit" id="submitButton"></button>
-                    <button type="button" onclick="closeModal()">Batal</button>
+                    <button type="button" class="btn-cancel" onclick="closeModal()">Batal</button>
                 </div>
             </form>
         </div>
     </div>
         
     <script>
+        const sidebar = document.getElementById("sidebar");
+        const mainContent = document.getElementById("mainContent");
+        const header = document.getElementById("header");
+
         function toggleSidebar() {
-            const sidebar = document.getElementById("sidebar");
-            const content = document.getElementById("mainContent");
-            const header = document.getElementById("header");
             sidebar.classList.toggle("collapsed");
-            content.classList.toggle("shifted");
+            mainContent.classList.toggle("shifted");
             header.classList.toggle("shifted");
         }
 
-        function openModal(action, id = '', nama = '', tahun = '', deskripsi = '', foto = '') {
-            const modal = document.getElementById('kelasModal');
-            const modalTitle = document.getElementById('modalTitle');
-            const form = document.getElementById('kelasForm');
-            const submitButton = document.getElementById('submitButton');
-            const fotoLamaContainer = document.getElementById('fotoLamaContainer');
-            const fotoLama = document.getElementById('fotoLama');
-            const photoInput = document.getElementById('photo');
+        const modal = document.getElementById('kelasModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const form = document.getElementById('kelasForm');
+        const submitButton = document.getElementById('submitButton');
+        const fotoLamaContainer = document.getElementById('fotoLamaContainer');
+        const fotoLama = document.getElementById('fotoLama');
+        const photoInput = document.getElementById('photo');
 
+        function openModal(action, id = '', nama = '', tahun = '', deskripsi = '', foto = '') {
             modal.style.display = 'block';
 
             if (action === 'tambah') {
                 modalTitle.textContent = 'Tambah Kelas';
                 form.action = 'index.php';
-                form.name = 'tambah_kelas';
                 document.getElementById('kelasId').value = '';
                 document.getElementById('nama_kelas').value = '';
                 document.getElementById('tahun_ajaran').value = '';
@@ -498,7 +618,6 @@ try {
             } else if (action === 'edit') {
                 modalTitle.textContent = 'Edit Kelas';
                 form.action = 'index.php';
-                form.name = 'edit_kelas';
                 document.getElementById('kelasId').value = id;
                 document.getElementById('nama_kelas').value = nama;
                 document.getElementById('tahun_ajaran').value = tahun;
@@ -512,13 +631,26 @@ try {
         }
 
         function closeModal() {
-            const modal = document.getElementById('kelasModal');
             modal.style.display = 'none';
+        }
+
+        function showLogoutConfirm() {
+            Swal.fire({
+                title: 'Konfirmasi Logout',
+                text: 'Apakah kamu yakin ingin logout?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Logout!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = "../../logout.php"; // redirect logout
+                }
+            });
         }
 
         // Tutup modal jika user klik di luar area modal
         window.onclick = function(event) {
-            const modal = document.getElementById('kelasModal');
             if (event.target === modal) {
                 closeModal();
             }
