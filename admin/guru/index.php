@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 </head>
 <body>
     <div class="sidebar" id="sidebar">
-        <div class="logo">AdminCoy</div>
+        <div class="logo"><span>AdminCoy</span></div>
         <nav>
             <a href="../dashboard_admin.php">
                 <i class="fas fa-tachometer-alt"></i>
@@ -138,10 +138,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 <i class="fas fa-book"></i>
                 <span>Mata Pelajaran</span>
             </a>
-            <a onclick="showLogoutConfirm()">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Logout</span>
-            </a>
+            <div class="logout-button-container">
+                <a href="../logout.php">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
         </nav>
     </div>
 

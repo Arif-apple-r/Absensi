@@ -79,6 +79,7 @@ $total_mapel = getCount($conn, "SELECT COUNT(*) AS count FROM mapel");
         .sidebar.collapsed {
             width: var(--sidebar-collapsed-width);
         }
+
         .sidebar .logo {
             color: #fff;
             font-size: 24px;
@@ -90,6 +91,15 @@ $total_mapel = getCount($conn, "SELECT COUNT(*) AS count FROM mapel");
             left: 0;
             width: 100%;
             background: var(--primary-color);
+        }
+
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
         }
         .sidebar nav a {
             display: flex;
@@ -334,7 +344,7 @@ $total_mapel = getCount($conn, "SELECT COUNT(*) AS count FROM mapel");
 <body>
 <body>
     <div class="sidebar" id="sidebar">
-        <div class="logo">AdminCoy</div>
+        <div class="logo"><span>AdminCoy</span></div>
         <nav>
             <a href="#" class="active"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>            
             <a href="guru/index.php"><i class="fas fa-chalkboard-teacher"></i><span>Guru</span></a>
@@ -342,7 +352,12 @@ $total_mapel = getCount($conn, "SELECT COUNT(*) AS count FROM mapel");
             <a href="jadwal/index.php"><i class="fas fa-calendar-alt"></i><span>Jadwal</span></a>
             <a href="kelas/index.php"><i class="fas fa-school"></i><span>Kelas</span></a>
             <a href="mapel/index.php"><i class="fas fa-book"></i><span>Mata Pelajaran</span></a>
-            <a onclick="showLogoutConfirmation()"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+            <div class="logout-button-container">
+                <a href="../logout.php">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
         </nav>
     </div>
 

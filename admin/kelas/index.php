@@ -144,6 +144,15 @@ try {
             background: var(--primary-color);
         }
 
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
+        }
+
         .sidebar nav a {
             display: flex;
             align-items: center;
@@ -479,6 +488,39 @@ try {
         .action-buttons .btn-delete:hover {
             background-color: #c0392b;
         }
+
+        /* --- Penambahan CSS untuk Tombol Logout --- */
+        .sidebar .logout-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .sidebar .logout-button-container a {
+            background-color: #e74c3c; /* Warna merah untuk Logout */
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar .logout-button-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .sidebar.collapsed .logout-button-container {
+            padding: 0;
+        }
+
+        .sidebar.collapsed .logout-button-container a span {
+            display: none;
+        }
     </style>
 </head>
 
@@ -493,7 +535,7 @@ try {
     ?>
 
     <div class="sidebar" id="sidebar">
-        <div class="logo">AdminCoy</div>
+        <div class="logo"><span>AdminCoy</span></div>
         <nav>
             <a href="../dashboard_admin.php">
                 <i class="fas fa-tachometer-alt"></i>
@@ -520,7 +562,7 @@ try {
                 <span>Mata Pelajaran</span>
             </a>
             <div class="logout-button-container">
-                <a onclick="showLogoutConfirm(event)">
+                <a href="../logout.php">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Logout</span>
                 </a>
