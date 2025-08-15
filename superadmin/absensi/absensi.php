@@ -1,23 +1,23 @@
 <?php
-    session_start();
-    if (!isset($_SESSION['superadmin'])) {
-        header("Location: ../../login.php");
-        exit;
-    }
+session_start();
+if (!isset($_SESSION['superadmin'])) {
+    header("Location: ../../login.php");
+    exit;
+}
 
-    require '../../koneksi.php';
+require '../../koneksi.php';
 
-    $id_pertemuan = $_GET['id_pertemuan'] ?? null;
-    $success = '';
-    $error = '';
+$id_pertemuan = $_GET['id_pertemuan'] ?? null;
+$success = '';
+$error = '';
 
-    if (!$id_pertemuan) {
-        header("Location: ../jadwal/index.php");
-        exit;
-    }
+if (!$id_pertemuan) {
+    header("Location: ../jadwal/index.php");
+    exit;
+}
 
-    // Ambil data pertemuan dan jadwal
-    $stmt_pertemuan = $pdo->prepare("
+// Ambil data pertemuan dan jadwal
+$stmt_pertemuan = $pdo->prepare("
         SELECT 
             pertemuan.*,
             jadwal.class_id,
@@ -30,70 +30,70 @@
         JOIN class ON jadwal.class_id = class.id
         WHERE pertemuan.id = ?
     ");
-    $stmt_pertemuan->execute([$id_pertemuan]);
-    $pertemuan_info = $stmt_pertemuan->fetch(PDO::FETCH_ASSOC);
+$stmt_pertemuan->execute([$id_pertemuan]);
+$pertemuan_info = $stmt_pertemuan->fetch(PDO::FETCH_ASSOC);
 
-    if (!$pertemuan_info) {
-        die("Data pertemuan tidak ditemukan.");
-    }
-    
-    $id_jadwal = $pertemuan_info['id_jadwal'];
-    $class_id = $pertemuan_info['class_id'];
-    
-    // Ambil daftar siswa dari kelas yang terkait
-    $stmt_siswa = $pdo->prepare("SELECT id, name FROM siswa WHERE class_id = ? ORDER BY name ASC");
-    $stmt_siswa->execute([$class_id]);
-    $siswa_list = $stmt_siswa->fetchAll(PDO::FETCH_ASSOC);
+if (!$pertemuan_info) {
+    die("Data pertemuan tidak ditemukan.");
+}
 
-    // Ambil data absensi yang sudah ada, termasuk keterangan
-    $stmt_absensi = $pdo->prepare("SELECT id_siswa, status, keterangan FROM absensi WHERE id_pertemuan = ?");
-    $stmt_absensi->execute([$id_pertemuan]);
-    
-    $absensi_data = [];
-    while ($row = $stmt_absensi->fetch(PDO::FETCH_ASSOC)) {
-        $absensi_data[$row['id_siswa']] = ['status' => $row['status'], 'keterangan' => $row['keterangan']];
-    }
+$id_jadwal = $pertemuan_info['id_jadwal'];
+$class_id = $pertemuan_info['class_id'];
 
-    // Handle Form Submission
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $statuses = $_POST['status'] ?? [];
-        $keterangans = $_POST['keterangan'] ?? [];
+// Ambil daftar siswa dari kelas yang terkait
+$stmt_siswa = $pdo->prepare("SELECT id, name FROM siswa WHERE class_id = ? ORDER BY name ASC");
+$stmt_siswa->execute([$class_id]);
+$siswa_list = $stmt_siswa->fetchAll(PDO::FETCH_ASSOC);
 
-        try {
-            $pdo->beginTransaction();
-            foreach ($siswa_list as $siswa) {
-                $siswa_id = $siswa['id'];
-                $status = $statuses[$siswa_id] ?? 'Alpha';
-                $keterangan = $keterangans[$siswa_id] ?? null;
+// Ambil data absensi yang sudah ada, termasuk keterangan
+$stmt_absensi = $pdo->prepare("SELECT id_siswa, status, keterangan FROM absensi WHERE id_pertemuan = ?");
+$stmt_absensi->execute([$id_pertemuan]);
 
-                if (isset($absensi_data[$siswa_id])) {
-                    // Update existing record
-                    $stmt = $pdo->prepare("UPDATE absensi SET status = ?, keterangan = ? WHERE id_pertemuan = ? AND id_siswa = ?");
-                    $stmt->execute([$status, $keterangan, $id_pertemuan, $siswa_id]);
-                } else {
-                    // Insert new record
-                    $stmt = $pdo->prepare("INSERT INTO absensi (id_pertemuan, id_siswa, status, keterangan) VALUES (?, ?, ?, ?)");
-                    $stmt->execute([$id_pertemuan, $siswa_id, $status, $keterangan]);
-                }
+$absensi_data = [];
+while ($row = $stmt_absensi->fetch(PDO::FETCH_ASSOC)) {
+    $absensi_data[$row['id_siswa']] = ['status' => $row['status'], 'keterangan' => $row['keterangan']];
+}
+
+// Handle Form Submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $statuses = $_POST['status'] ?? [];
+    $keterangans = $_POST['keterangan'] ?? [];
+
+    try {
+        $pdo->beginTransaction();
+        foreach ($siswa_list as $siswa) {
+            $siswa_id = $siswa['id'];
+            $status = $statuses[$siswa_id] ?? 'Alpha';
+            $keterangan = $keterangans[$siswa_id] ?? null;
+
+            if (isset($absensi_data[$siswa_id])) {
+                // Update existing record
+                $stmt = $pdo->prepare("UPDATE absensi SET status = ?, keterangan = ? WHERE id_pertemuan = ? AND id_siswa = ?");
+                $stmt->execute([$status, $keterangan, $id_pertemuan, $siswa_id]);
+            } else {
+                // Insert new record
+                $stmt = $pdo->prepare("INSERT INTO absensi (id_pertemuan, id_siswa, status, keterangan) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$id_pertemuan, $siswa_id, $status, $keterangan]);
             }
-            $pdo->commit();
-            $success = "Absensi berhasil disimpan!";
-        } catch (PDOException $e) {
-            $pdo->rollBack();
-            $error = "Gagal menyimpan absensi: " . $e->getMessage();
         }
-
-        header("Location: absensi.php?id_pertemuan=" . urlencode($id_pertemuan) . "&success=" . urlencode($success) . "&error=" . urlencode($error));
-        exit;
+        $pdo->commit();
+        $success = "Absensi berhasil disimpan!";
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        $error = "Gagal menyimpan absensi: " . $e->getMessage();
     }
 
-    // Check for success/error messages from redirect
-    if (isset($_GET['success'])) {
-        $success = htmlspecialchars($_GET['success']);
-    }
-    if (isset($_GET['error'])) {
-        $error = htmlspecialchars($_GET['error']);
-    }
+    header("Location: absensi.php?id_pertemuan=" . urlencode($id_pertemuan) . "&success=" . urlencode($success) . "&error=" . urlencode($error));
+    exit;
+}
+
+// Check for success/error messages from redirect
+if (isset($_GET['success'])) {
+    $success = htmlspecialchars($_GET['success']);
+}
+if (isset($_GET['error'])) {
+    $error = htmlspecialchars($_GET['error']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -167,6 +167,15 @@
             background: var(--primary-color);
         }
 
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
+        }
+
         .sidebar nav a {
             display: flex;
             align-items: center;
@@ -196,10 +205,10 @@
             background-color: #3e566d;
             padding-left: 25px;
         }
-        
+
         .sidebar nav a.active i {
             color: var(--primary-color);
-        }        
+        }
 
         .header {
             height: 65.5px;
@@ -288,6 +297,7 @@
             font-weight: 600;
             transition: background-color 0.3s, transform 0.2s;
         }
+
         .add-link:hover {
             background-color: #27ae60;
             transform: translateY(-2px);
@@ -297,6 +307,7 @@
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
+
         .absensi-table {
             width: 100%;
             border-collapse: separate;
@@ -305,22 +316,27 @@
             overflow: hidden;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
+
         .absensi-table thead {
             background-color: var(--secondary-color);
             color: white;
         }
+
         .absensi-table th,
         .absensi-table td {
             padding: 16px;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
         }
+
         .absensi-table tbody tr:last-child td {
             border-bottom: none;
         }
+
         .absensi-table tbody tr:nth-child(even) {
             background-color: #f9f9f9;
         }
+
         .absensi-table tbody tr:hover {
             background-color: #f2f2f2;
             transition: background-color 0.2s ease;
@@ -333,9 +349,11 @@
             color: var(--light-text-color);
             font-weight: 600;
         }
+
         .back-link:hover {
             color: var(--primary-color);
         }
+
         .info-header {
             background: #f0f2f5;
             padding: 15px;
@@ -343,132 +361,186 @@
             margin-bottom: 25px;
             border-left: 5px solid var(--primary-color);
         }
+
         .info-header p {
             margin: 5px 0;
             font-size: 16px;
             color: var(--text-color);
         }
+
         .alert {
             padding: 15px;
             margin-bottom: 20px;
             border-radius: 5px;
             font-weight: 600;
         }
+
         .alert-success {
             background-color: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
+
         .alert-error {
             background-color: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
-        
-      /* Modal for Absensi Form */
-      .modal {
-          display: none;
-          position: fixed;
-          z-index: 1001;
-          left: 0;
-          top: 0;
-          width: 100%;
-          height: 100%;
-          overflow: auto;
-          background-color: rgba(0, 0, 0, 0.4);
-          padding-top: 60px;
-      }
-      .modal-content {
-          background-color: #fefefe;
-          margin: 5% auto;
-          padding: 30px;
-          border-radius: 10px;
-          width: 90%;
-          max-width: 600px;
-          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-          position: relative;
-          overflow-y: auto; /* Tambahkan ini agar modal bisa di-scroll */
-          max-height: 85vh; /* Batasi tinggi modal */
-      }
-      .close-btn {
-          color: #aaa;
-          position: absolute;
-          top: 10px;
-          right: 25px;
-          font-size: 28px;
-          font-weight: bold;
-      }
-      .close-btn:hover,
-      .close-btn:focus {
-          color: #000;
-          text-decoration: none;
-          cursor: pointer;
-      }
-      .modal-header {
-          border-bottom: 2px solid var(--border-color);
-          padding-bottom: 15px;
-          margin-bottom: 20px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-      }
-      .modal-header h2 {
-          margin: 0;
-          font-size: 24px;
-      }
-      .modal form {
-          display: flex;
-          flex-direction: column;
-      }
-      .student-item {
-        
-          display: grid;
-          grid-template-columns: 1fr 1fr; /* Layout menjadi 2 kolom */
-          align-items: center;
-          gap: 15px;
-          padding: 10px 0;
-          border-bottom: 1px solid #eee;
-      }
-      .student-item:last-child {
-          border-bottom: none;
-      }
-      .student-item select {
-        padding: 10px;
-          width: 100%;
-      }
-      .student-item .keterangan-container {
-          grid-column: 1 / -1; /* Ini membuat div keterangan mengambil seluruh lebar */
-      }
 
-      .student-item textarea {
-          min-height: 70px;
-          width: 100%;
-          border-radius: 5px;
-          padding: 8px;
-          border: 1px solid #ccc;
-          font-family: inherit;
-      }
-      .modal button[type="submit"] {
-          background-color: var(--primary-color);
-          color: white;
-          padding: 12px 20px;
-          border: none;
-          border-radius: 5px;
-          font-size: 18px;
-          cursor: pointer;
-          transition: background-color 0.3s;
-          margin-top: 20px;
-          width: 100%;
-      }
-      .modal button[type="submit"]:hover {
-          background-color: #16a085;
-      }
+        /* Modal for Absensi Form */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow-y: auto;
+            /* Tambahkan ini agar modal bisa di-scroll */
+            max-height: 85vh;
+            /* Batasi tinggi modal */
+        }
+
+        .close-btn {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 25px;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close-btn:hover,
+        .close-btn:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .modal-header {
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .modal form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .student-item {
+
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            /* Layout menjadi 2 kolom */
+            align-items: center;
+            gap: 15px;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .student-item:last-child {
+            border-bottom: none;
+        }
+
+        .student-item select {
+            padding: 10px;
+            width: 100%;
+        }
+
+        .student-item .keterangan-container {
+            grid-column: 1 / -1;
+            /* Ini membuat div keterangan mengambil seluruh lebar */
+        }
+
+        .student-item textarea {
+            min-height: 70px;
+            width: 100%;
+            border-radius: 5px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            font-family: inherit;
+        }
+
+        .modal button[type="submit"] {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .modal button[type="submit"]:hover {
+            background-color: #16a085;
+        }
+
+        /* --- Penambahan CSS untuk Tombol Logout --- */
+        .sidebar .logout-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .sidebar .logout-button-container a {
+            background-color: #e74c3c;
+            /* Warna merah untuk Logout */
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar .logout-button-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .sidebar.collapsed .logout-button-container {
+            padding: 0;
+        }
+
+        .sidebar.collapsed .logout-button-container a span {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
     <div class="sidebar" id="sidebar">
-        <div class="logo">SuperadminCoy</div>
+        <div class="logo"><span>SuperAdminCoy</span></div>
         <nav>
             <a href="../dashboard_superadmin.php">
                 <i class="fas fa-tachometer-alt"></i>
@@ -498,10 +570,12 @@
                 <i class="fas fa-book"></i>
                 <span>Mata Pelajaran</span>
             </a>
-            <a href="../logout.php" onclick="showLogoutConfirm(event)">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Logout</span>
-            </a>
+            <div class="logout-button-container">
+                <a onclick="showLogoutConfirm(event)">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
         </nav>
     </div>
 
@@ -578,7 +652,7 @@
             <form method="POST" autocomplete="off" id="absensiForm">
                 <input type="hidden" name="id_pertemuan" value="<?= htmlspecialchars($id_pertemuan) ?>">
                 <input type="hidden" name="id_jadwal" value="<?= htmlspecialchars($id_jadwal) ?>">
-                
+
                 <?php foreach ($siswa_list as $siswa): ?>
                     <div class="student-item">
                         <strong><?= htmlspecialchars($siswa['name']) ?></strong>
@@ -594,7 +668,7 @@
                         </div>
                     </div>
                 <?php endforeach; ?>
-                
+
                 <button type="submit">Simpan Absensi</button>
             </form>
         </div>
@@ -609,7 +683,7 @@
         function toggleKeterangan(selectElement) {
             const keteranganContainer = selectElement.closest('.student-item').querySelector('.keterangan-container');
             const keteranganTextarea = keteranganContainer.querySelector('textarea');
-            
+
             if (selectElement.value === 'Izin' || selectElement.value === 'Sakit') {
                 keteranganContainer.style.display = 'block';
                 keteranganTextarea.disabled = false;
@@ -622,7 +696,7 @@
 
         function openModal() {
             absensiModal.style.display = "block";
-            
+
             // Panggil fungsi toggleKeterangan untuk setiap select saat modal dibuka
             const selectElements = absensiModal.querySelectorAll('select[name^="status"]');
             selectElements.forEach(select => {
@@ -655,7 +729,6 @@
                 }
             });
         }
-
     </script>
 </body>
 

@@ -1,89 +1,88 @@
 <?php
-    session_start();
-    if (!isset($_SESSION['superadmin'])) {
-        header("Location: ../../login.php");
-        exit;
+session_start();
+if (!isset($_SESSION['superadmin'])) {
+    header("Location: ../../login.php");
+    exit;
+}
+
+require '../../koneksi.php';
+
+$jadwal_to_edit = null;
+$success = '';
+$error = '';
+
+// Ambil data untuk dropdown
+$kelas = $pdo->query("SELECT * FROM class ORDER BY nama_kelas ASC")->fetchAll();
+$mapel = $pdo->query("SELECT * FROM mapel ORDER BY nama_mapel ASC")->fetchAll();
+$guru = $pdo->query("SELECT * FROM guru ORDER BY name ASC")->fetchAll();
+
+// Handle Form Submission (Tambah & Edit)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // CSRF token validation
+    if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) {
+        die('Invalid CSRF token');
     }
 
-    require '../../koneksi.php';
+    $id = $_POST['id'] ?? '';
+    $class_id = $_POST['class_id'] ?? '';
+    $mapel_id = $_POST['mapel_id'] ?? '';
+    $hari = $_POST['hari'] ?? '';
+    $jam_mulai = $_POST['jam_mulai'] ?? '';
+    $jam_selesai = $_POST['jam_selesai'] ?? '';
+    $teacher_id = $_POST['teacher_id'] ?? '';
 
-    $jadwal_to_edit = null;
-    $success = '';
-    $error = '';
+    if ($class_id && $mapel_id && $hari && $jam_mulai && $jam_selesai && $teacher_id) {
+        try {
+            // Get mapel name
+            $stmt_mapel = $pdo->prepare("SELECT nama_mapel FROM mapel WHERE id = ?");
+            $stmt_mapel->execute([$mapel_id]);
+            $mapel_name = $stmt_mapel->fetchColumn();
 
-    // Ambil data untuk dropdown
-    $kelas = $pdo->query("SELECT * FROM class ORDER BY nama_kelas ASC")->fetchAll();
-    $mapel = $pdo->query("SELECT * FROM mapel ORDER BY nama_mapel ASC")->fetchAll();
-    $guru = $pdo->query("SELECT * FROM guru ORDER BY name ASC")->fetchAll();
-
-    // Handle Form Submission (Tambah & Edit)
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // CSRF token validation
-        if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) {
-            die('Invalid CSRF token');
-        }
-
-        $id = $_POST['id'] ?? '';
-        $class_id = $_POST['class_id'] ?? '';
-        $mapel_id = $_POST['mapel_id'] ?? '';
-        $hari = $_POST['hari'] ?? '';
-        $jam_mulai = $_POST['jam_mulai'] ?? '';
-        $jam_selesai = $_POST['jam_selesai'] ?? '';
-        $teacher_id = $_POST['teacher_id'] ?? '';
-
-        if ($class_id && $mapel_id && $hari && $jam_mulai && $jam_selesai && $teacher_id) {
-            try {
-                // Get mapel name
-                $stmt_mapel = $pdo->prepare("SELECT nama_mapel FROM mapel WHERE id = ?");
-                $stmt_mapel->execute([$mapel_id]);
-                $mapel_name = $stmt_mapel->fetchColumn();
-
-                if ($id) {
-                    // Update existing schedule
-                    $stmt = $pdo->prepare("UPDATE jadwal SET class_id=?, id_mapel=?, mata_pelajaran=?, hari=?, jam_mulai=?, jam_selesai=?, teacher_id=? WHERE id=?");
-                    $stmt->execute([$class_id, $mapel_id, $mapel_name, $hari, $jam_mulai, $jam_selesai, $teacher_id, $id]);
-                    $success = "Jadwal berhasil diupdate!";
-                } else {
-                    // Insert new schedule
-                    $stmt = $pdo->prepare("INSERT INTO jadwal (class_id, id_mapel, mata_pelajaran, hari, jam_mulai, jam_selesai, teacher_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                    $stmt->execute([$class_id, $mapel_id, $mapel_name, $hari, $jam_mulai, $jam_selesai, $teacher_id]);
-                    $success = "Jadwal berhasil ditambahkan!";
-                }
-                
-                header("Location: index.php?success=" . urlencode($success));
-                exit;
-
-            } catch (PDOException $e) {
-                $error = "Gagal memproses jadwal: " . $e->getMessage();
+            if ($id) {
+                // Update existing schedule
+                $stmt = $pdo->prepare("UPDATE jadwal SET class_id=?, id_mapel=?, mata_pelajaran=?, hari=?, jam_mulai=?, jam_selesai=?, teacher_id=? WHERE id=?");
+                $stmt->execute([$class_id, $mapel_id, $mapel_name, $hari, $jam_mulai, $jam_selesai, $teacher_id, $id]);
+                $success = "Jadwal berhasil diupdate!";
+            } else {
+                // Insert new schedule
+                $stmt = $pdo->prepare("INSERT INTO jadwal (class_id, id_mapel, mata_pelajaran, hari, jam_mulai, jam_selesai, teacher_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$class_id, $mapel_id, $mapel_name, $hari, $jam_mulai, $jam_selesai, $teacher_id]);
+                $success = "Jadwal berhasil ditambahkan!";
             }
-        } else {
-            $error = "Semua field wajib diisi!";
+
+            header("Location: index.php?success=" . urlencode($success));
+            exit;
+        } catch (PDOException $e) {
+            $error = "Gagal memproses jadwal: " . $e->getMessage();
         }
+    } else {
+        $error = "Semua field wajib diisi!";
     }
+}
 
-    // CSRF token generation
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    }
+// CSRF token generation
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 
-    // Handle Edit action
-    if (isset($_GET['action']) && $_GET['action'] == 'edit' && isset($_GET['id'])) {
-        $id = $_GET['id'];
-        $stmt = $pdo->prepare("SELECT * FROM jadwal WHERE id = ?");
-        $stmt->execute([$id]);
-        $jadwal_to_edit = $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-    
-    // Check for success/error messages from redirect
-    if (isset($_GET['success'])) {
-        $success = htmlspecialchars($_GET['success']);
-    }
-    if (isset($_GET['error'])) {
-        $error = htmlspecialchars($_GET['error']);
-    }
+// Handle Edit action
+if (isset($_GET['action']) && $_GET['action'] == 'edit' && isset($_GET['id'])) {
+    $id = $_GET['id'];
+    $stmt = $pdo->prepare("SELECT * FROM jadwal WHERE id = ?");
+    $stmt->execute([$id]);
+    $jadwal_to_edit = $stmt->fetch(PDO::FETCH_ASSOC);
+}
 
-    // Fetch all schedule data
-    $query = "
+// Check for success/error messages from redirect
+if (isset($_GET['success'])) {
+    $success = htmlspecialchars($_GET['success']);
+}
+if (isset($_GET['error'])) {
+    $error = htmlspecialchars($_GET['error']);
+}
+
+// Fetch all schedule data
+$query = "
         SELECT 
             jadwal.*, 
             guru.name AS nama_guru, 
@@ -94,9 +93,9 @@
         JOIN class ON jadwal.class_id = class.id
         JOIN mapel ON jadwal.id_mapel = mapel.id
     ";
-    $stmt = $pdo->query($query);
+$stmt = $pdo->query($query);
 
-    // Pastikan parameter 'id' ada di URL
+// Pastikan parameter 'id' ada di URL
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -170,6 +169,15 @@
             background: var(--primary-color);
         }
 
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
+        }
+
         .sidebar nav a {
             display: flex;
             align-items: center;
@@ -202,7 +210,7 @@
 
         .sidebar nav a.active i {
             color: var(--primary-color);
-        }        
+        }
 
         .header {
             height: 65.5px;
@@ -363,7 +371,7 @@
             gap: 10px;
             flex-wrap: wrap;
         }
-        
+
         .action-link {
             padding: 8px 12px;
             border-radius: 6px;
@@ -376,14 +384,16 @@
             background-color: #3498db;
             color: white;
         }
+
         .action-link.edit:hover {
             background-color: #2980b9;
         }
-        
+
         .action-link.delete {
             background-color: #e74c3c;
             color: white;
         }
+
         .action-link.delete:hover {
             background-color: #c0392b;
         }
@@ -392,6 +402,7 @@
             background-color: #f39c12;
             color: white;
         }
+
         .action-link.view:hover {
             background-color: #e67e22;
         }
@@ -425,8 +436,8 @@
                 padding-left: 20px !important;
             }
 
-            .sidebar.collapsed + .header,
-            .sidebar.collapsed ~ .content {
+            .sidebar.collapsed+.header,
+            .sidebar.collapsed~.content {
                 margin-left: var(--sidebar-collapsed-width) !important;
                 left: var(--sidebar-collapsed-width) !important;
                 width: calc(100% - var(--sidebar-collapsed-width)) !important;
@@ -446,6 +457,7 @@
             background-color: rgba(0, 0, 0, 0.4);
             padding-top: 60px;
         }
+
         .modal-content {
             background-color: #fefefe;
             margin: 5% auto;
@@ -456,6 +468,7 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
             position: relative;
         }
+
         .close-btn {
             color: #aaa;
             position: absolute;
@@ -464,27 +477,33 @@
             font-size: 28px;
             font-weight: bold;
         }
+
         .close-btn:hover,
         .close-btn:focus {
             color: #000;
             text-decoration: none;
             cursor: pointer;
         }
+
         .modal form {
             display: flex;
             flex-direction: column;
         }
+
         .modal label {
             margin-bottom: 5px;
             font-weight: 600;
         }
-        .modal select, .modal input[type="time"] {
+
+        .modal select,
+        .modal input[type="time"] {
             margin-bottom: 15px;
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
             font-size: 16px;
         }
+
         .modal button[type="submit"] {
             background-color: var(--primary-color);
             color: white;
@@ -495,20 +514,24 @@
             cursor: pointer;
             transition: background-color 0.3s;
         }
+
         .modal button[type="submit"]:hover {
             background-color: #16a085;
         }
+
         .alert {
             padding: 15px;
             margin-bottom: 20px;
             border-radius: 5px;
             font-weight: 600;
         }
+
         .alert-success {
             background-color: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
+
         .alert-error {
             background-color: #f8d7da;
             color: #721c24;
@@ -621,12 +644,46 @@
         #reset-filter-btn:hover {
             background-color: #16a085;
         }
-        </style>
+
+        /* --- Penambahan CSS untuk Tombol Logout --- */
+        .sidebar .logout-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .sidebar .logout-button-container a {
+            background-color: #e74c3c;
+            /* Warna merah untuk Logout */
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar .logout-button-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .sidebar.collapsed .logout-button-container {
+            padding: 0;
+        }
+
+        .sidebar.collapsed .logout-button-container a span {
+            display: none;
+        }
+    </style>
 </head>
 
 <body>
     <div class="sidebar" id="sidebar">
-        <div class="logo">SuperadminCoy</div>
+        <div class="logo"><span>SuperAdminCoy</span></div>
         <nav>
             <a href="../dashboard_superadmin.php">
                 <i class="fas fa-tachometer-alt"></i>
@@ -656,7 +713,6 @@
                 <i class="fas fa-book"></i>
                 <span>Mata Pelajaran</span>
             </a>
-
             <div class="logout-button-container">
                 <a onclick="showLogoutConfirm(event)">
                     <i class="fas fa-sign-out-alt"></i>
@@ -771,7 +827,7 @@
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal()">&times;</span>
             <h2 id="modalTitle">Tambah Jadwal</h2>
-            
+
             <?php if ($success): ?>
                 <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
             <?php endif; ?>
@@ -803,7 +859,7 @@
                 <select name="hari" id="hari" required>
                     <option value="">--Pilih Hari--</option>
                     <?php
-                    $days = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+                    $days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
                     foreach ($days as $d): ?>
                         <option value="<?= $d ?>"><?= $d ?></option>
                     <?php endforeach; ?>
@@ -983,7 +1039,7 @@
                 applyFilters();
             }
 
-            
+
 
             // Event listeners untuk setiap dropdown filter
             filterKelas.addEventListener('change', applyFilters);
@@ -993,8 +1049,6 @@
             // Event listener untuk tombol reset
             resetBtn.addEventListener('click', resetFilters);
         });
-
-        
     </script>
 </body>
 

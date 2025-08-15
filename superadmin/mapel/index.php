@@ -167,6 +167,15 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
             background: var(--primary-color);
         }
 
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
+        }
+
         .sidebar nav a {
             display: flex;
             align-items: center;
@@ -199,7 +208,7 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
 
         .sidebar nav a.active i {
             color: var(--primary-color);
-        }        
+        }
 
         .header {
             height: 65.5px;
@@ -332,6 +341,7 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
             font-size: 28px;
             font-weight: bold;
         }
+
         .close-btn:hover,
         .close-btn:focus {
             color: #000;
@@ -420,14 +430,14 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
                 padding-left: 20px !important;
             }
 
-            .sidebar.collapsed + .header,
-            .sidebar.collapsed ~ .content {
+            .sidebar.collapsed+.header,
+            .sidebar.collapsed~.content {
                 margin-left: var(--sidebar-collapsed-width) !important;
                 left: var(--sidebar-collapsed-width) !important;
                 width: calc(100% - var(--sidebar-collapsed-width)) !important;
             }
         }
-        
+
         .element-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -447,7 +457,7 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
         .element-item:hover {
             transform: translateY(-5px);
         }
-        
+
         .element-item img {
             width: 100%;
             height: 180px;
@@ -468,7 +478,7 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
             font-size: 0.9em;
             color: #777;
         }
-        
+
         .action-buttons {
             margin-top: 15px;
             display: flex;
@@ -500,12 +510,46 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
         .action-buttons .btn-delete:hover {
             background-color: #c0392b;
         }
+
+        /* --- Penambahan CSS untuk Tombol Logout --- */
+        .sidebar .logout-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .sidebar .logout-button-container a {
+            background-color: #e74c3c;
+            /* Warna merah untuk Logout */
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar .logout-button-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .sidebar.collapsed .logout-button-container {
+            padding: 0;
+        }
+
+        .sidebar.collapsed .logout-button-container a span {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
     <div class="sidebar" id="sidebar">
-        <div class="logo">SuperadminCoy</div>
+        <div class="logo"><span>SuperAdminCoy</span></div>
         <nav>
             <a href="../dashboard_superadmin.php">
                 <i class="fas fa-tachometer-alt"></i>
@@ -576,7 +620,7 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
                     <p>Belum ada data mata pelajaran.</p>
                 <?php endif; ?>
             </div>
-            
+
             <div id="mapelModal" class="modal">
                 <div class="modal-content">
                     <span class="close-btn" onclick="closeModal()">&times;</span>
@@ -595,7 +639,7 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
 
                         <label>Foto: <input type="file" name="photo" id="photoInput" accept="image/*"></label>
 
-                        <label>Kurikulum: 
+                        <label>Kurikulum:
                             <select name="kurikulum" id="kurikulum" required>
                                 <option value="K13">K13</option>
                                 <option value="KTSP">KTSP</option>
@@ -691,4 +735,5 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
         }
     </script>
 </body>
+
 </html>

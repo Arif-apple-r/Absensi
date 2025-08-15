@@ -75,6 +75,7 @@ try {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -144,6 +145,15 @@ try {
             background: var(--primary-color);
         }
 
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
+        }
+
         .sidebar nav a {
             display: flex;
             align-items: center;
@@ -176,7 +186,7 @@ try {
 
         .sidebar nav a.active i {
             color: var(--primary-color);
-        }        
+        }
 
         .header {
             height: 65.5px;
@@ -306,6 +316,7 @@ try {
             font-size: 28px;
             font-weight: bold;
         }
+
         .close-btn:hover,
         .close-btn:focus {
             color: #000;
@@ -399,14 +410,14 @@ try {
                 padding-left: 20px !important;
             }
 
-            .sidebar.collapsed + .header,
-            .sidebar.collapsed ~ .content {
+            .sidebar.collapsed+.header,
+            .sidebar.collapsed~.content {
                 margin-left: var(--sidebar-collapsed-width) !important;
                 left: var(--sidebar-collapsed-width) !important;
                 width: calc(100% - var(--sidebar-collapsed-width)) !important;
             }
         }
-        
+
         .element-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -426,7 +437,7 @@ try {
         .element-item:hover {
             transform: translateY(-5px);
         }
-        
+
         .element-item img {
             width: 100%;
             height: 180px;
@@ -447,7 +458,7 @@ try {
             font-size: 0.9em;
             color: #777;
         }
-        
+
         .action-buttons {
             margin-top: 15px;
             display: flex;
@@ -479,6 +490,40 @@ try {
         .action-buttons .btn-delete:hover {
             background-color: #c0392b;
         }
+
+        /* --- Penambahan CSS untuk Tombol Logout --- */
+        .sidebar .logout-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .sidebar .logout-button-container a {
+            background-color: #e74c3c;
+            /* Warna merah untuk Logout */
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar .logout-button-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .sidebar.collapsed .logout-button-container {
+            padding: 0;
+        }
+
+        .sidebar.collapsed .logout-button-container a span {
+            display: none;
+        }
     </style>
 </head>
 
@@ -493,7 +538,7 @@ try {
     ?>
 
     <div class="sidebar" id="sidebar">
-        <div class="logo">SuperadminCoy</div>
+        <div class="logo"><span>SuperAdminCoy</span></div>
         <nav>
             <a href="../dashboard_superadmin.php">
                 <i class="fas fa-tachometer-alt"></i>
@@ -545,7 +590,7 @@ try {
             <a href="#" onclick="openModal('tambah')" class="add-link">
                 <i class="fas fa-plus"></i> Tambah Kelas
             </a>
-            
+
             <div class="element-grid">
                 <?php foreach ($kelas as $row): ?>
                     <div class="element-item">
@@ -584,7 +629,7 @@ try {
             </form>
         </div>
     </div>
-        
+
     <script>
         const sidebar = document.getElementById("sidebar");
         const mainContent = document.getElementById("mainContent");
@@ -661,4 +706,5 @@ try {
         }
     </script>
 </body>
+
 </html>

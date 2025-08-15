@@ -13,7 +13,8 @@ $superadmin_name = htmlspecialchars($_SESSION['superadmin_name'] ?? 'SuperAdmin'
 $superadmin_photo = 'default_superadmin.jpg'; // Default photo
 
 // Fungsi getCount universal
-function getCount($conn, $sql) {
+function getCount($conn, $sql)
+{
     $result = mysqli_query($conn, $sql);
     $count = $result ? mysqli_fetch_assoc($result)['count'] : 0;
     return $count;
@@ -28,6 +29,7 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
 ?>
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -50,11 +52,13 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             --sidebar-width: 250px;
             --sidebar-collapsed-width: 70px;
         }
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
+
         body {
             font-family: 'Poppins', sans-serif;
             background-color: var(--background-color);
@@ -63,6 +67,7 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             color: var(--text-color);
             overflow-x: hidden;
         }
+
         .sidebar {
             width: var(--sidebar-width);
             background-color: var(--secondary-color);
@@ -75,9 +80,11 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             padding-top: 70px;
             overflow: hidden;
         }
+
         .sidebar.collapsed {
             width: var(--sidebar-collapsed-width);
         }
+
         .sidebar .logo {
             color: #fff;
             font-size: 24px;
@@ -90,6 +97,16 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             width: 100%;
             background: var(--primary-color);
         }
+
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
+        }
+
         .sidebar nav a {
             display: flex;
             align-items: center;
@@ -98,18 +115,22 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             text-decoration: none;
             transition: background-color 0.2s ease, padding-left 0.2s ease;
         }
+
         .sidebar nav a i {
             width: 25px;
             text-align: center;
             margin-right: 20px;
             font-size: 18px;
         }
+
         .sidebar.collapsed nav a i {
             margin-right: 0;
         }
+
         .sidebar.collapsed nav a span {
             display: none;
         }
+
         .sidebar nav a:hover,
         .sidebar nav a.active {
             background-color: #3e566d;
@@ -119,7 +140,7 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
         .sidebar nav a.active i {
             color: var(--primary-color);
         }
-        
+
         .header {
             height: 65.5px;
             background-color: var(--card-background);
@@ -135,10 +156,12 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             transition: left 0.3s ease, width 0.3s ease;
             justify-content: space-between;
         }
+
         .header.shifted {
             left: var(--sidebar-collapsed-width);
             width: calc(100% - var(--sidebar-collapsed-width));
         }
+
         .header h1 {
             font-size: 22px;
             font-weight: 600;
@@ -146,6 +169,7 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             display: flex;
             align-items: center;
         }
+
         .header h1 i {
             margin-right: 10px;
         }
@@ -163,9 +187,11 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             border-radius: 8px;
             transition: background-color 0.2s ease;
         }
+
         .user-info:hover {
             background-color: #f0f0f0;
         }
+
         .user-info img {
             width: 35px;
             height: 35px;
@@ -173,14 +199,17 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             object-fit: cover;
             border: 2px solid var(--primary-color);
         }
+
         .user-info span {
             font-weight: 600;
         }
+
         .user-info .last-login {
             color: var(--light-text-color);
             font-size: 12px;
             margin-left: 10px;
         }
+
         .user-info i.fa-caret-down {
             margin-left: 5px;
         }
@@ -191,13 +220,14 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             top: 100%;
             right: 0;
             background-color: var(--card-background);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
             z-index: 1002;
             min-width: 160px;
             border-radius: 8px;
             overflow: hidden;
             margin-top: 10px;
         }
+
         .dropdown-menu a {
             color: var(--text-color);
             padding: 12px 16px;
@@ -206,9 +236,11 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             font-weight: 500;
             transition: background-color 0.2s ease;
         }
+
         .dropdown-menu a:hover {
             background-color: var(--background-color);
         }
+
         .dropdown-menu a i {
             margin-right: 10px;
             width: 20px;
@@ -221,9 +253,11 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             transition: margin-left 0.3s ease;
             max-width: 100%;
         }
+
         .content.shifted {
             margin-left: var(--sidebar-collapsed-width);
         }
+
         .toggle-btn {
             background-color: var(--primary-color);
             color: white;
@@ -237,9 +271,11 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             margin-right: 20px;
             transition: background-color 0.3s;
         }
+
         .toggle-btn:hover {
             background-color: #16a085;
         }
+
         .card {
             background: var(--card-background);
             border-radius: 12px;
@@ -250,18 +286,21 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             margin-left: auto;
             margin-right: auto;
         }
+
         .card h2 {
             margin-bottom: 20px;
             font-size: 24px;
             font-weight: 600;
             color: var(--text-color);
         }
+
         .dashboard-stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
+
         .stat-card {
             background: #f8f8f8;
             border-radius: 12px;
@@ -271,36 +310,73 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             transition: transform 0.2s ease-in-out;
             border-left: 5px solid;
         }
+
         .stat-card:hover {
             transform: translateY(-5px);
         }
-        .stat-card.green { border-color: #27ae60; }
-        .stat-card.blue { border-color: #3498db; }
-        .stat-card.orange { border-color: #f39c12; }
-        .stat-card.red { border-color: #e74c3c; }
-        .stat-card.purple { border-color: #8e44ad; } /* New color for Admin card */
+
+        .stat-card.green {
+            border-color: #27ae60;
+        }
+
+        .stat-card.blue {
+            border-color: #3498db;
+        }
+
+        .stat-card.orange {
+            border-color: #f39c12;
+        }
+
+        .stat-card.red {
+            border-color: #e74c3c;
+        }
+
+        .stat-card.purple {
+            border-color: #8e44ad;
+        }
+
+        /* New color for Admin card */
         .stat-card .icon {
             font-size: 2.5rem;
             margin-bottom: 15px;
             color: var(--secondary-color);
         }
-        .stat-card.green .icon { color: #27ae60; }
-        .stat-card.blue .icon { color: #3498db; }
-        .stat-card.orange .icon { color: #f39c12; }
-        .stat-card.red .icon { color: #e74c3c; }
-        .stat-card.purple .icon { color: #8e44ad; } /* New color for Admin card */
+
+        .stat-card.green .icon {
+            color: #27ae60;
+        }
+
+        .stat-card.blue .icon {
+            color: #3498db;
+        }
+
+        .stat-card.orange .icon {
+            color: #f39c12;
+        }
+
+        .stat-card.red .icon {
+            color: #e74c3c;
+        }
+
+        .stat-card.purple .icon {
+            color: #8e44ad;
+        }
+
+        /* New color for Admin card */
         .stat-card .value {
             font-size: 2.2em;
             font-weight: 700;
             color: var(--text-color);
             margin-bottom: 5px;
         }
+
         .stat-card .label {
             font-size: 0.9em;
             color: var(--light-text-color);
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
+
         .action-button {
             display: inline-flex;
             align-items: center;
@@ -316,18 +392,22 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             border: none;
             cursor: pointer;
         }
+
         .action-button:hover {
             background-color: #16a085;
             transform: translateY(-2px);
         }
+
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
             }
+
             .sidebar.collapsed {
                 transform: translateX(0);
                 width: var(--sidebar-collapsed-width);
             }
+
             .content,
             .header {
                 margin-left: 0 !important;
@@ -335,31 +415,72 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
                 width: 100% !important;
                 padding-left: 20px !important;
             }
+
             .header .user-info {
                 display: none;
             }
-            .sidebar.collapsed + .header,
-            .sidebar.collapsed ~ .content {
+
+            .sidebar.collapsed+.header,
+            .sidebar.collapsed~.content {
                 margin-left: var(--sidebar-collapsed-width) !important;
                 left: var(--sidebar-collapsed-width) !important;
                 width: calc(100% - var(--sidebar-collapsed-width)) !important;
             }
         }
 
+        /* --- Penambahan CSS untuk Tombol Logout --- */
+        .sidebar .logout-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .sidebar .logout-button-container a {
+            background-color: #e74c3c;
+            /* Warna merah untuk Logout */
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar .logout-button-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .sidebar.collapsed .logout-button-container {
+            padding: 0;
+        }
+
+        .sidebar.collapsed .logout-button-container a span {
+            display: none;
+        }
     </style>
 </head>
+
 <body>
     <div class="sidebar" id="sidebar">
-        <div class="logo">SuperAdmin</div>
+        <div class="logo"><span>SuperAdminCoy</span></div>
         <nav>
             <a href="#" class="active"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
-            <a href="admin/index.php"><i class="fas fa-users-cog"></i><span>Admin</span></a>            
+            <a href="admin/index.php"><i class="fas fa-users-cog"></i><span>Admin</span></a>
             <a href="guru/index.php"><i class="fas fa-chalkboard-teacher"></i><span>Guru</span></a>
             <a href="siswa/index.php"><i class="fas fa-user-graduate"></i><span>Siswa</span></a>
             <a href="jadwal/index.php"><i class="fas fa-calendar-alt"></i><span>Jadwal</span></a>
             <a href="kelas/index.php"><i class="fas fa-school"></i><span>Kelas</span></a>
             <a href="mapel/index.php"><i class="fas fa-book"></i><span>Mata Pelajaran</span></a>
-            <a onclick="showLogoutConfirmation()"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+            <div class="logout-button-container">
+                <a onclick="showLogoutConfirm(event)">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
         </nav>
     </div>
 
@@ -435,7 +556,7 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
                 }
             }
         }
-        
+
         // SweetAlert for Logout Confirmation (retained from your original file)
         function showLogoutConfirmation() {
             Swal.fire({
@@ -451,7 +572,7 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
                 }
             });
         }
-        
+
         // Bind logout button in sidebar to SweetAlert
         const logoutButtonSidebar = document.getElementById('logoutButton');
         if (logoutButtonSidebar) {
@@ -466,4 +587,5 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
         // I've removed that to keep the script clean and relevant to the dashboard.
     </script>
 </body>
+
 </html>

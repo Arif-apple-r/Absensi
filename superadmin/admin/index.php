@@ -84,6 +84,7 @@ if (isset($_GET['success'])) {
 
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -108,11 +109,13 @@ if (isset($_GET['success'])) {
             --sidebar-width: 250px;
             --sidebar-collapsed-width: 70px;
         }
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
+
         body {
             font-family: 'Poppins', sans-serif;
             background-color: var(--background-color);
@@ -121,6 +124,7 @@ if (isset($_GET['success'])) {
             color: var(--text-color);
             overflow-x: hidden;
         }
+
         .sidebar {
             width: var(--sidebar-width);
             background-color: var(--secondary-color);
@@ -133,9 +137,11 @@ if (isset($_GET['success'])) {
             padding-top: 70px;
             overflow: hidden;
         }
+
         .sidebar.collapsed {
             width: var(--sidebar-collapsed-width);
         }
+
         .sidebar .logo {
             color: #fff;
             font-size: 24px;
@@ -148,6 +154,16 @@ if (isset($_GET['success'])) {
             width: 100%;
             background: var(--primary-color);
         }
+
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
+        }
+
         .sidebar nav a {
             display: flex;
             align-items: center;
@@ -156,26 +172,32 @@ if (isset($_GET['success'])) {
             text-decoration: none;
             transition: background-color 0.2s ease, padding-left 0.2s ease;
         }
+
         .sidebar nav a i {
             width: 25px;
             text-align: center;
             margin-right: 20px;
             font-size: 18px;
         }
+
         .sidebar.collapsed nav a i {
             margin-right: 0;
         }
+
         .sidebar.collapsed nav a span {
             display: none;
         }
+
         .sidebar nav a:hover,
         .sidebar nav a.active {
             background-color: #3e566d;
             padding-left: 25px;
         }
+
         .sidebar nav a.active i {
             color: var(--primary-color);
         }
+
         .header {
             height: 65.5px;
             background-color: var(--card-background);
@@ -191,10 +213,12 @@ if (isset($_GET['success'])) {
             transition: left 0.3s ease, width 0.3s ease;
             justify-content: space-between;
         }
+
         .header.shifted {
             left: var(--sidebar-collapsed-width);
             width: calc(100% - var(--sidebar-collapsed-width));
         }
+
         .header h1 {
             font-size: 22px;
             font-weight: 600;
@@ -202,6 +226,7 @@ if (isset($_GET['success'])) {
             display: flex;
             align-items: center;
         }
+
         .header h1 i {
             margin-right: 10px;
         }
@@ -219,15 +244,19 @@ if (isset($_GET['success'])) {
             border-radius: 8px;
             transition: background-color 0.2s ease;
         }
+
         .user-info:hover {
             background-color: #f0f0f0;
         }
+
         .user-info span {
             font-weight: 600;
         }
+
         .user-info i.fa-caret-down {
             margin-left: 5px;
         }
+
         .content {
             flex-grow: 1;
             padding: 90px 30px 30px 30px;
@@ -235,9 +264,11 @@ if (isset($_GET['success'])) {
             transition: margin-left 0.3s ease;
             max-width: 100%;
         }
+
         .content.shifted {
             margin-left: var(--sidebar-collapsed-width);
         }
+
         .toggle-btn {
             background-color: var(--primary-color);
             color: white;
@@ -251,9 +282,11 @@ if (isset($_GET['success'])) {
             margin-right: 20px;
             transition: background-color 0.3s;
         }
+
         .toggle-btn:hover {
             background-color: #16a085;
         }
+
         .card {
             background: var(--card-background);
             border-radius: 12px;
@@ -264,39 +297,47 @@ if (isset($_GET['success'])) {
             margin-left: auto;
             margin-right: auto;
         }
+
         .card h2 {
             margin-bottom: 20px;
             font-size: 24px;
             font-weight: 600;
             color: var(--text-color);
         }
+
         .table-responsive {
             width: 100%;
             overflow-x: auto;
         }
+
         .data-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 15px;
         }
+
         .data-table th,
         .data-table td {
             padding: 15px;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
         }
+
         .data-table th {
             background-color: #f8f8f8;
             font-weight: 600;
             color: var(--text-color);
             text-transform: uppercase;
         }
+
         .data-table tbody tr:nth-child(even) {
             background-color: #f9f9f9;
         }
+
         .data-table tr:hover {
             background-color: #fafafa;
         }
+
         .action-link {
             padding: 8px 12px;
             border-radius: 6px;
@@ -304,21 +345,26 @@ if (isset($_GET['success'])) {
             font-weight: 600;
             transition: background-color 0.2s, color 0.2s;
         }
+
         .action-link.view {
             background-color: #3498db;
             color: white;
         }
+
         .action-link.view:hover {
             background-color: #2980b9;
         }
+
         .action-link.delete {
             background-color: #e74c3c;
             color: white;
             margin-left: 5px;
         }
+
         .action-link.delete:hover {
             background-color: #c0392b;
         }
+
         .add-link {
             display: inline-flex;
             align-items: center;
@@ -332,10 +378,12 @@ if (isset($_GET['success'])) {
             font-weight: 600;
             transition: background-color 0.3s, transform 0.2s;
         }
+
         .add-link:hover {
             background-color: #16a085;
             transform: translateY(-2px);
         }
+
         /* Alerts */
         .alert {
             padding: 15px;
@@ -343,11 +391,13 @@ if (isset($_GET['success'])) {
             border-radius: 8px;
             font-weight: 600;
         }
+
         .alert-success {
             background-color: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
+
         .alert-error {
             background-color: #f8d7da;
             color: #721c24;
@@ -356,18 +406,26 @@ if (isset($_GET['success'])) {
 
         /* Modal Styles */
         .modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 1001; /* Sit on top */
+            display: none;
+            /* Hidden by default */
+            position: fixed;
+            /* Stay in place */
+            z-index: 1001;
+            /* Sit on top */
             left: 0;
             top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            overflow: auto; /* Enable scroll if needed */
-            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            width: 100%;
+            /* Full width */
+            height: 100%;
+            /* Full height */
+            overflow: auto;
+            /* Enable scroll if needed */
+            background-color: rgba(0, 0, 0, 0.4);
+            /* Black w/ opacity */
             justify-content: center;
             align-items: center;
-            padding-top: 50px; /* Jarak dari atas */
+            padding-top: 50px;
+            /* Jarak dari atas */
         }
 
         .modal-content {
@@ -375,7 +433,7 @@ if (isset($_GET['success'])) {
             margin: auto;
             padding: 30px;
             border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
             width: 90%;
             max-width: 500px;
             position: relative;
@@ -384,8 +442,15 @@ if (isset($_GET['success'])) {
         }
 
         @keyframes animatetop {
-            from {top: -300px; opacity: 0}
-            to {top: 0; opacity: 1}
+            from {
+                top: -300px;
+                opacity: 0
+            }
+
+            to {
+                top: 0;
+                opacity: 1
+            }
         }
 
         .close-button {
@@ -472,53 +537,99 @@ if (isset($_GET['success'])) {
             .sidebar {
                 transform: translateX(-100%);
             }
+
             .sidebar.collapsed {
                 transform: translateX(0);
                 width: var(--sidebar-collapsed-width);
             }
-            .content, .header {
+
+            .content,
+            .header {
                 margin-left: 0 !important;
                 left: 0 !important;
                 width: 100% !important;
                 padding-left: 20px !important;
             }
+
             .header .user-info {
-                display: none; /* Hide user info for small screens in header */
+                display: none;
+                /* Hide user info for small screens in header */
             }
-            .sidebar.collapsed + .header, .sidebar.collapsed ~ .content {
+
+            .sidebar.collapsed+.header,
+            .sidebar.collapsed~.content {
                 margin-left: var(--sidebar-collapsed-width) !important;
                 left: var(--sidebar-collapsed-width) !important;
                 width: calc(100% - var(--sidebar-collapsed-width)) !important;
             }
-            .data-table th, .data-table td {
+
+            .data-table th,
+            .data-table td {
                 padding: 10px;
                 font-size: 0.85em;
             }
+
             .modal-content {
-                width: 95%; /* Adjust width for smaller screens */
+                width: 95%;
+                /* Adjust width for smaller screens */
                 padding: 20px;
             }
         }
+
+        /* --- Penambahan CSS untuk Tombol Logout --- */
+        .sidebar .logout-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .sidebar .logout-button-container a {
+            background-color: #e74c3c;
+            /* Warna merah untuk Logout */
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar .logout-button-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .sidebar.collapsed .logout-button-container {
+            padding: 0;
+        }
+
+        .sidebar.collapsed .logout-button-container a span {
+            display: none;
+        }
     </style>
 </head>
+
 <body>
     <div class="sidebar" id="sidebar">
-        <div class="logo">SuperAdmin</div>
-        <nav>
+        <div class="logo"><span>SuperAdminCoy</span></div>
         <nav>
             <a href="../dashboard_superadmin.php"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
-            <a href="#" class="active"><i class="fas fa-users-cog"></i><span>Admin</span></a>            
+            <a href="#" class="active"><i class="fas fa-users-cog"></i><span>Admin</span></a>
             <a href="../guru/index.php"><i class="fas fa-chalkboard-teacher"></i><span>Guru</span></a>
             <a href="../siswa/index.php"><i class="fas fa-user-graduate"></i><span>Siswa</span></a>
             <a href="../jadwal/index.php"><i class="fas fa-calendar-alt"></i><span>Jadwal</span></a>
             <a href="../kelas/index.php"><i class="fas fa-school"></i><span>Kelas</span></a>
             <a href="../mapel/index.php"><i class="fas fa-book"></i><span>Mata Pelajaran</span></a>
-            <a onclick="showLogoutConfirmation()"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+            <div class="logout-button-container">
+                <a onclick="showLogoutConfirm(event)">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
         </nav>
-        </nav>
-        <div class="logout-button-container">
-            <a href="../../logout.php" id="logoutButton"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
-        </div>
     </div>
 
 
@@ -571,7 +682,7 @@ if (isset($_GET['success'])) {
                     </tbody>
                 </table>
             </div>
-            
+
         </div>
     </div>
 
@@ -668,7 +779,7 @@ if (isset($_GET['success'])) {
                 }
             }
         }
-        
+
         // SweetAlert for Logout Confirmation (untuk tombol di sidebar)
         function showLogoutConfirmation() {
             Swal.fire({
@@ -684,7 +795,7 @@ if (isset($_GET['success'])) {
                 }
             });
         }
-        
+
         // Bind logout button in sidebar to SweetAlert
         const logoutButtonSidebar = document.getElementById('logoutButton');
         if (logoutButtonSidebar) {
@@ -702,4 +813,5 @@ if (isset($_GET['success'])) {
         }
     </script>
 </body>
+
 </html>
