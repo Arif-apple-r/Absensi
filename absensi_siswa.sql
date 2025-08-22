@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 15, 2025 at 03:28 AM
+-- Generation Time: Aug 22, 2025 at 03:40 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -44,8 +44,8 @@ INSERT INTO `absensi` (`id`, `id_pertemuan`, `id_siswa`, `status`, `keterangan`,
 (3, 1, 35, 'Izin', NULL, '2025-07-30 13:36:49'),
 (33, 15, 37, 'Hadir', NULL, NULL),
 (34, 15, 41, 'Hadir', NULL, NULL),
-(39, 20, 37, 'Sakit', 'Agnes Tachyon\r\n12\r\nSign in to edit\r\nProfile\r\nImage Gallery\r\nReal Life\r\n\r\nAgnes Tachyon\r\nUniform\r\nSecondary\r\nStage\r\nUniform\r\nName\r\nAgnes Tachyon\r\nKana\r\nアグネスタキオン\r\nRomaji\r\nAgunesu Takion\r\nT. Chn.\r\n愛麗速子\r\nS. Chn.\r\n爱丽速子\r\nOther Names\r\nSuperluminal Princess\r\nCharacteristics\r\nSpecies\r\nUmamusume\r\nBirthday\r\nApril 13\r\nGender\r\nFemale\r\nHeight\r\n159cm\r\nWeight\r\nRefused measurement\r\nThree Sizes\r\nB83 W55 H81\r\nOccupation\r\nStudent\r\nAffiliation\r\nRitto Dormitory\r\nVoice Actor\r\nJapanese\r\nSumire Uesaka\r\n“Life is an experiment, and we its guinea pigs. You, me, the other Umamusume—everyone!”\r\n―Agnes Tachyon\r\n\r\nAgnes Tachyon (アグネスタキオン, Agunesu Takion) is a character in Umamusume: Pretty Derby.\r\n\r\n\r\nContents\r\n1	Profile\r\n2	Personality\r\n3	Appearance\r\n4	Relationships\r\n5	Songs\r\n6	Special commentary\r\n6.1	Notes\r\n7	Trivia\r\nProfile\r\nEqual parts researcher and runner, Agnes Tachyon pursues the limits of speed with the power of science. She will stop at nothing to quench her pure thirst for knowledge, performing all manner of experiments on living subjects—unauthorized, dangerous experiments, at that. Her extreme tunnel vision means that without someone to support her, day-to-day necessities quickly fall to the wayside.\r\n\r\nPersonality\r\nAgnes is a very intelligent, educated and curious girl.[1] Her main passion is her research project, “finding the outer limits of speed”. She spends most of the time on her research project, sometimes she can get even obsessed about it. Agnes regularly misses out on races or classes to prioritize her research.[2][3] She is not willing to sacrifice any time for other activities, such as cooking or training. Agnes is also very excited and determined about her scientific experiments.[1][2][4] She values her research project so much that she is even willing to accept severe sanctions from the school.\r\n\r\nAgnes is direct, honest and speaks her mind freely.[2] She can be disagreeable and tells others what she truly thinks of them. She doesn’t shy away of being blunt or even a bit rude occasionally.[2][5] Sometimes she laughs outs loud, even in inappropriate situations. Agnes is a free spirit and does as she pleases. She acts non-conforming and doesn’t go with the crowd. She seems to care little about what others think of her.\r\n\r\nWith the trainer, Agnes is direct, honest, blunt. Sometimes, she is a bit playful or even teases them. She calls them \"guinea pig\", as the trainer volunteers to be Agnes’ test subject for her experiments. She places high demands on the trainer and sometimes acts dominant.[4][6]', '2025-08-14 13:16:01'),
-(40, 20, 41, 'Alpha', NULL, '2025-08-14 13:16:01'),
+(39, 20, 37, 'Alpha', NULL, '2025-08-15 09:44:16'),
+(40, 20, 41, 'Alpha', NULL, '2025-08-15 09:44:16'),
 (71, 22, 35, 'Sakit', 'Alabama has made some changes since the late 20th century and has used new types of voting to increase representation. In the 1980s, an omnibus redistricting case, Dillard v. Crenshaw County, challenged the at-large voting for representative seats of 180 Alabama jurisdictions, including counties and school boards. At-large voting had diluted the votes of any minority in a county, as the majority tended to take all seats. Despite African Americans making up a significant minority in the state, they had been unable to elect any representatives in most of the at-large jurisdictions.[72]', '2025-08-14 15:02:47');
 
 -- --------------------------------------------------------
@@ -67,7 +67,8 @@ CREATE TABLE `admin` (
 --
 
 INSERT INTO `admin` (`id`, `username`, `email`, `pass`, `role`) VALUES
-(1, 'Pak tani', 'admin@gmail.com', '$2y$10$bISNqZMJplmat9O2rykB.e8Gv0.R0wn.5uJsdLmuBMaA96tIGOWCK', 'admin');
+(1, 'Pak tani', 'admin@gmail.com', '$2y$10$bISNqZMJplmat9O2rykB.e8Gv0.R0wn.5uJsdLmuBMaA96tIGOWCK', 'admin'),
+(2, 'jawa', 'rajajawa@gmail.com', '$2y$10$QoG3peVrjOFRCKuw.1Pzx..cgyAV65Bf.2S9f8Jstu.BgwCduPP8G', 'admin');
 
 -- --------------------------------------------------------
 
@@ -89,9 +90,9 @@ CREATE TABLE `class` (
 --
 
 INSERT INTO `class` (`id`, `nama_kelas`, `teacher_id`, `photo`, `tahun_ajaran`, `deskripsi`) VALUES
-(3, 'Mukbang', 0, 'Fat Meduka.jpeg', '2025/2089', 'hfajfjvfvqfwgwgwg'),
+(3, 'Udara', 0, 'Orang_debat.png', '2025/2026', 'Kelas Ghoib ayoyoyooyoyoyoyoyoyoyoyooyoyoyyiyiyoiyoiyoyoyoyoyoyoyoyo'),
 (4, 'umazing', 0, '1751326776_new_yquvvHq - Imgur.gif', '2026/2027', 'hashire hashire hashire'),
-(5, 'Jambi', 0, 'mumei-kronii.gif', '2045/emasemas', 'Kuda jatuhh'),
+(5, 'Jambi', 0, 'harikitei ikou.webp', '1998/1999', 'Kuda jatuhh'),
 (7, 'Sega', 0, 'nbaa5g6c7bye1.gif', '2012/2013', 'Uwoooooooghhhhhhhghhhhhhhhhh');
 
 -- --------------------------------------------------------
@@ -121,7 +122,9 @@ CREATE TABLE `guru` (
 
 INSERT INTO `guru` (`id`, `nip`, `name`, `gender`, `email`, `pass`, `dob`, `no_hp`, `photo`, `alamat`, `mapel`, `admission_date`) VALUES
 (1, '19811002', 'PakGaga', 'laki-laki', 'rudi@gmail.com', '$2y$10$bqaGg4ApoUJ0zUbg3inKZuV.2n2QfOfGRJ.y/YwCdoQzPfZLznT6e', '1889-03-13', '08123456788', '68996f68b586b.webp', 'Jl. Kenanga No. 5', 'Fisika', '2025-07-24 03:22:44'),
-(2, '572523', 'kurnia', 'laki-laki', 'kurni@gmail.com', '$2y$10$fUl6VUbx2M59Vy56YZuVqO3wq/o7.wBFoMlZzvJWMb4.rhDuGimuC', '1945-08-17', '8658544848', 'foto_1753678824.gif', 'trikora', NULL, '2025-07-27 21:03:38');
+(2, '572523', 'kurnia', 'laki-laki', 'kurni@gmail.com', '$2y$10$fUl6VUbx2M59Vy56YZuVqO3wq/o7.wBFoMlZzvJWMb4.rhDuGimuC', '1945-08-17', '8658544848', 'foto_1753678824.gif', 'trikora', NULL, '2025-07-27 21:03:38'),
+(9, '111222333', 'Joko', 'laki-laki', 'joko@gmail.com', '$2y$10$CCte.zoyZn7zZLz7z/e1MejJmpWyAaPwC5svb2N7dWTOWyeh93JGC', '1900-01-01', '016521809365', '68a6d4a3ce53b.jpg', 'kembali ke solo menjadi rakyat biasa', NULL, '2025-08-21 03:11:15'),
+(10, '13912424', 'Marinir', 'Perempuan', 'marinir@gmail.com', '$2y$10$QO3QiojH5z.Eb5cNwj4RPeMRcOyw6b3KgLP7JC2PWl2.IMY3i7JQ2', '1980-07-01', '0127439561352', '68a6d539cc0c9.jpeg', 'jl marinir jaya raya merdeka bebas dari ancaman asing', NULL, '2025-08-21 03:13:45');
 
 -- --------------------------------------------------------
 
@@ -150,7 +153,16 @@ INSERT INTO `jadwal` (`id`, `class_id`, `hari`, `jam_mulai`, `jam_selesai`, `mat
 (9, 4, 'Rabu', '15:30:00', '17:30:00', 'jompang', 2, 8),
 (12, 3, 'Selasa', '16:08:00', '18:10:00', 'BluArsip', 2, 1),
 (16, 4, 'Jumat', '23:32:00', '11:31:00', 'jambu', 2, 10),
-(18, 7, 'Sabtu', '11:45:00', '15:45:00', 'jompang', 1, 8);
+(18, 7, 'Sabtu', '11:45:00', '15:45:00', 'jompang', 1, 8),
+(20, 5, 'Senin', '07:30:00', '10:00:00', 'BluArsip', 2, 1),
+(21, 5, 'Selasa', '10:50:00', '12:30:00', 'Gambling', 10, 11),
+(22, 5, 'Rabu', '13:15:00', '14:30:00', 'Hijau', 1, 7),
+(23, 5, 'Kamis', '07:30:00', '09:30:00', 'jambu', 2, 10),
+(24, 5, 'Jumat', '08:40:00', '09:40:00', 'jompang', 1, 8),
+(25, 7, 'Selasa', '08:20:00', '09:20:00', 'Gambling', 9, 11),
+(26, 7, 'Rabu', '12:45:00', '14:45:00', 'Hijau', 10, 7),
+(27, 7, 'Kamis', '12:25:00', '14:30:00', 'jambu', 10, 10),
+(28, 7, 'Jumat', '10:30:00', '11:30:00', 'jompang', 1, 8);
 
 -- --------------------------------------------------------
 
@@ -170,9 +182,9 @@ CREATE TABLE `mapel` (
 --
 
 INSERT INTO `mapel` (`id`, `nama_mapel`, `photo`, `kurikulum`) VALUES
-(1, 'BluArsip', 'mapel_688b19cd539b73.34166883.jpeg', 'K13'),
+(1, 'BluArsip', 'mapel_68a6d9581b8256.61476217.jpeg', 'K13'),
 (7, 'Hijau', 'mapel_688b1d45e0e5b3.79645031.jpeg', 'Merdeka'),
-(8, 'jompang', 'mapel_688c40c61f02b8.49404682.jpeg', 'K13'),
+(8, 'jompang', 'mapel_68a6d97ed315d6.41795415.jpeg', 'K13'),
 (10, 'jambu', 'mapel_6892ddc3b91825.86222836.gif', 'KTSP'),
 (11, 'Gambling', 'mapel_689585202d5f34.87656153.gif', 'Merdeka');
 
@@ -234,7 +246,8 @@ INSERT INTO `siswa` (`id`, `NIS`, `name`, `gender`, `dob`, `photo`, `no_hp`, `em
 (35, 4636426, 'tere', 'perempuan', '1983-05-01', 'foto_1753677676.gif', 4294967295, 'tere@gmail.com', '$2y$10$qtR9w2HxBh/gUeIc8av24eWCQoXKomsPrYiijob5kUK29/2yVRrJW', 'kazdel', '2025-07-24 06:18:29', 3),
 (37, 875925, 'ala kadar', 'laki-laki', '1986-05-25', 'foto_1753687033.jpeg', 4294967295, 'kadar@gmail.com', '$2y$10$l4ZsTjQv4znYsaSbCBCZP.UiBKvbOTXgnTO8w3E.HRcEWwpPGnwL6', 'abydos', '2025-07-25 06:39:00', 4),
 (41, 86473573, 'ayam', 'laki-laki', '2025-06-10', 'foto_1753759148.jpeg', 234746185, 'ayam@gmail.com', '$2y$10$YgEebhUpkraWA9IkiBmQC.baOE91aXmLxB4thbg25fxBwR65h9AWy', 'Jl. Pattimura', '2025-07-28 06:34:01', 4),
-(43, 2147483647, 'johan', 'laki-laki', '1665-06-15', '689443f6c2bfc.gif', 2527460234, 'johan@gmail.com', '$2y$10$LgaHojafaPF7sbv1C.AAR.PPofX46bq1Q7iuj3SWxtWogS13uR6WS', 'german', '2025-08-07 08:13:10', 5);
+(43, 2147483647, 'johan', 'laki-laki', '1665-06-15', '689443f6c2bfc.gif', 2527460234, 'johan@gmail.com', '$2y$10$LgaHojafaPF7sbv1C.AAR.PPofX46bq1Q7iuj3SWxtWogS13uR6WS', 'german', '2025-08-07 08:13:10', 5),
+(44, 893451209, 'faffa', 'laki-laki', '1978-12-31', '68a6d03689ec0.webp', 234746185, 'fwfw@gmail.com', '$2y$10$y4h.ZPloYo1tDnSSCxdZcupDF13XuLGeIvp2zObptz8Ep1H2W8THG', 'Jl. Pattimura', '2025-08-21 09:52:22', 7);
 
 -- --------------------------------------------------------
 
@@ -360,13 +373,13 @@ ALTER TABLE `user`
 -- AUTO_INCREMENT for table `absensi`
 --
 ALTER TABLE `absensi`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=72;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=84;
 
 --
 -- AUTO_INCREMENT for table `admin`
 --
 ALTER TABLE `admin`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `class`
@@ -378,13 +391,13 @@ ALTER TABLE `class`
 -- AUTO_INCREMENT for table `guru`
 --
 ALTER TABLE `guru`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `jadwal`
 --
 ALTER TABLE `jadwal`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT for table `mapel`
@@ -402,7 +415,7 @@ ALTER TABLE `pertemuan`
 -- AUTO_INCREMENT for table `siswa`
 --
 ALTER TABLE `siswa`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
 
 --
 -- AUTO_INCREMENT for table `superadmin`
