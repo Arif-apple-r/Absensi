@@ -562,6 +562,10 @@ if (isset($_GET['error'])) {
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal</span>
             </a>
+            <a href="../Tahun_Akademik/index.php">
+                <i class="fas fa-calendar"></i>
+                <span>Tahun Akademik</span>
+            </a>
             <a href="../kelas/index.php">
                 <i class="fas fa-school"></i>
                 <span>Kelas</span>
@@ -679,6 +683,13 @@ if (isset($_GET['error'])) {
         const mainContent = document.getElementById("mainContent");
         const header = document.getElementById("header");
         const absensiModal = document.getElementById("absensiModal");
+        
+        // Add this function
+        function toggleSidebar() {
+        sidebar.classList.toggle("collapsed");
+        mainContent.classList.toggle("shifted");
+        header.classList.toggle("shifted");
+        }
 
         function toggleKeterangan(selectElement) {
             const keteranganContainer = selectElement.closest('.student-item').querySelector('.keterangan-container');

@@ -571,6 +571,10 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal</span>
             </a>
+            <a href="../Tahun_Akademik/index.php">
+                <i class="fas fa-calendar"></i>
+                <span>Tahun Akademik</span>
+            </a>
             <a href="../kelas/index.php">
                 <i class="fas fa-school"></i>
                 <span>Kelas</span>

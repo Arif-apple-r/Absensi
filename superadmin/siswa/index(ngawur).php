@@ -17,7 +17,7 @@ $message = '';
 $alert_type = '';
 
 // Ambil daftar Tahun Akademik untuk filter dan dropdown form
-$stmt_tahun_akademik = $pdo->query("SELECT id, nama_tahun, is_active FROM tahun_akademik ORDER BY nama_tahun DESC");
+$stmt_tahun_akademik = $pdo->query("SELECT id, nama_tahun FROM tahun_akademik ORDER BY nama_tahun DESC");
 $tahun_akademik_options = $stmt_tahun_akademik->fetchAll(PDO::FETCH_ASSOC);
 
 $selected_tahun_akademik_id = $_GET['tahun_akademik_id'] ?? null;
@@ -47,32 +47,34 @@ if ($selected_tahun_akademik_id) {
 
 
 // --- Handle AJAX POST untuk menambah atau mengedit siswa ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] !== 'promote_siswa') {
-    $response_status = 'error';
-    $response_message = 'Terjadi kesalahan tidak dikenal.';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    ob_start(); // Mulai output buffering untuk mencegah output PHP yang tidak terduga merusak JSON
+    $response = ['status' => 'error', 'message' => 'Terjadi kesalahan tidak dikenal.'];
 
     try { 
-        $NIS_baru      = $_POST['NISsiswa'] ?? null; 
-        $NIS_lama_for_update = $_POST['NIS_lama_for_update'] ?? null; 
+        $NIS      = $_POST['NISsiswa'] ?? null; 
+        $NIS_for_update = $_POST['siswaNISHidden'] ?? null; 
         $name     = $_POST['namasiswa'] ?? '';
         $email    = $_POST['emailsiswa'] ?? '';
         $gender   = $_POST['gender'] ?? ''; 
-        $dob_raw  = $_POST['dobsiswa'] ?? '';
+        $dob      = $_POST['dobsiswa'] ?? '';
         $alamat   = $_POST['alamatsiswa'] ?? '';
         $class_id = $_POST['class_id'] ?? null;
         $password = $_POST['passwordsiswa'] ?? null; 
+        $current_tahun_akademik_id = $_POST['tahun_akademik_id'] ?? $selected_tahun_akademik_id;
 
-        $dob = !empty($dob_raw) ? $dob_raw : null;
-
+        // --- Penanganan no_hp dengan validasi dan casting eksplisit ---
         $no_hp_raw = $_POST['nohpsiswa'] ?? '';
-        $no_hp = null; 
+        $no_hp = 0; 
         if (is_numeric($no_hp_raw) && $no_hp_raw !== '') {
             $no_hp = (int)$no_hp_raw;
             if ($no_hp < 0 || $no_hp > 4294967295) { 
-                throw new Exception("Nomor HP terlalu besar atau negatif untuk disimpan.");
+                $response['message'] = "Nomor HP terlalu besar atau negatif untuk disimpan.";
+                throw new Exception("Nomor HP tidak valid.");
             }
         } else if (!empty($no_hp_raw)) { 
-            throw new Exception("Nomor HP harus berupa angka.");
+            $response['message'] = "Nomor HP harus berupa angka.";
+            throw new Exception("Nomor HP tidak valid.");
         }
 
         $foto_path_db = null;
@@ -93,51 +95,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             if (move_uploaded_file($foto_tmp, $dest_path)) {
                 $foto_path_db = $nama_foto_baru;
             } else {
-                throw new Exception("Gagal mengunggah foto siswa. Coba lagi atau pastikan folder 'uploads/siswa/' dapat ditulis.");
+                $response['message'] = "Gagal mengunggah foto siswa. Coba lagi atau pastikan folder 'uploads/siswa/' dapat ditulis.";
+                $upload_succeeded = false;
             }
         } else if (isset($_POST['old_photosiswa']) && !empty($_POST['old_photosiswa'])) {
             $foto_path_db = $_POST['old_photosiswa'];
         }
 
         if ($upload_succeeded) {
-            if ($_POST['action'] === 'tambah') {
-                if ($NIS_baru && $name && $email && $gender && $class_id && $password && $dob) { 
+            if ($_POST['action'] === 'tambah_siswa') {
+                if ($NIS && $name && $email && $gender && $dob && $alamat && $class_id && $password) { 
                     try {
                         $stmt_check_nis = $pdo->prepare("SELECT COUNT(*) FROM siswa WHERE NIS = ?");
-                        $stmt_check_nis->execute([$NIS_baru]);
+                        $stmt_check_nis->execute([$NIS]);
                         if ($stmt_check_nis->fetchColumn() > 0) {
-                            $response_message = "Gagal menambahkan siswa: NIS sudah terdaftar.";
+                            $response['message'] = "Gagal menambahkan siswa: NIS sudah terdaftar.";
                         } else {
                             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                             $admission_date = date('Y-m-d H:i:s'); 
                             
                             $stmt = $pdo->prepare("INSERT INTO siswa (NIS, name, email, gender, dob, no_hp, alamat, class_id, photo, pass, admission_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                            $stmt->execute([$NIS_baru, $name, $email, $gender, $dob, $no_hp, $alamat, $class_id, $foto_path_db, $hashed_password, $admission_date]);
-                            $response_status = 'success';
-                            $response_message = "Siswa berhasil ditambahkan!";
+                            $stmt->execute([$NIS, $name, $email, $gender, $dob, $no_hp, $alamat, $class_id, $foto_path_db, $hashed_password, $admission_date]);
+                            $response['status'] = 'success';
+                            $response['message'] = "Siswa berhasil ditambahkan!";
                         }
                     } catch (PDOException $e) {
-                        $response_message = "Gagal menambahkan siswa (DB Error): " . $e->getMessage();
+                        $response['message'] = "Gagal menambahkan siswa (DB Error): " . $e->getMessage();
                     }
                 } else {
-                    $response_message = "Mohon lengkapi semua field yang diperlukan (NIS, Nama, Email, Gender, Tanggal Lahir, Kelas, Password) untuk menambah siswa.";
+                    $response['message'] = "Mohon lengkapi semua field yang diperlukan (termasuk password) untuk menambah siswa.";
                 }
-            } elseif ($_POST['action'] === 'edit') {
-                if ($NIS_lama_for_update && $NIS_baru && $name && $email && $gender && $dob && $alamat && $class_id) { 
+            } elseif ($_POST['action'] === 'edit_siswa') {
+                if ($NIS_for_update && $name && $email && $gender && $dob && $alamat && $class_id) { 
                     try {
-                        if ($NIS_baru !== $NIS_lama_for_update) {
-                            $stmt_check_nis_exist = $pdo->prepare("SELECT COUNT(*) FROM siswa WHERE NIS = ? AND NIS != ?");
-                            $stmt_check_nis_exist->execute([$NIS_baru, $NIS_lama_for_update]);
-                            if ($stmt_check_nis_exist->fetchColumn() > 0) {
-                                $response_message = "Gagal mengupdate siswa: NIS baru sudah terdaftar untuk siswa lain.";
-                                throw new Exception($response_message); 
-                            }
-                        }
-
                         if ($foto_path_db && isset($_POST['old_photosiswa']) && $_POST['old_photosiswa'] !== $foto_path_db && file_exists($folder_upload . $_POST['old_photosiswa'])) {
                             unlink($folder_upload . $_POST['old_photosiswa']);
                         }
-        
+
                         $update_pass_sql = '';
                         $update_pass_params = [];
                         if (!empty($password)) {
@@ -145,98 +139,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             $update_pass_sql = ', pass = ?';
                             $update_pass_params = [$hashed_password];
                         }
-        
-                        $stmt = $pdo->prepare("UPDATE siswa SET NIS = ?, name = ?, email = ?, gender = ?, dob = ?, no_hp = ?, alamat = ?, class_id = ?, photo = ? " . $update_pass_sql . " WHERE NIS = ?");
-                        $stmt->execute(array_merge([$NIS_baru, $name, $email, $gender, $dob, $no_hp, $alamat, $class_id, $foto_path_db], $update_pass_params, [$NIS_lama_for_update]));
+
+                        $stmt = $pdo->prepare("UPDATE siswa SET name = ?, email = ?, gender = ?, dob = ?, no_hp = ?, alamat = ?, class_id = ?, photo = ? " . $update_pass_sql . " WHERE NIS = ?");
+                        $stmt->execute(array_merge([$name, $email, $gender, $dob, $no_hp, $alamat, $class_id, $foto_path_db], $update_pass_params, [$NIS_for_update]));
                         
-                        $response_status = 'success';
-                        $response_message = "Siswa berhasil diupdate!";
+                        $response['status'] = 'success';
+                        $response['message'] = "Siswa berhasil diupdate!";
                     } catch (PDOException $e) {
-                        $response_message = "Gagal mengupdate siswa (DB Error): " . $e->getMessage();
-                    } catch (Exception $e) { 
-                        $response_message = $e->getMessage();
+                        $response['message'] = "Gagal mengupdate siswa (DB Error): " . $e->getMessage();
                     }
                 } else {
-                    $response_message = "Mohon lengkapi semua field yang diperlukan untuk mengupdate siswa. (NIS, Nama, Email, Gender, Tanggal Lahir, Alamat, Kelas)";
+                    $response['message'] = "Mohon lengkapi semua field yang diperlukan untuk mengupdate siswa.";
                 }
             }
         }
     } catch (Throwable $e) { 
-        $response_message = "Kesalahan fatal di server: " . $e->getMessage() . " (Line: " . $e->getLine() . " in " . basename($e->getFile()) . ")";
+        $response['message'] = "Kesalahan fatal di server: " . $e->getMessage() . " (Line: " . $e->getLine() . " in " . basename($e->getFile()) . ")";
         error_log("Fatal error in siswa AJAX POST: " . $e->getMessage() . " on line " . $e->getLine() . " in file " . $e->getFile() . "\n" . $e->getTraceAsString());
     }
     
-    if ($response_status === 'success') {
-        echo "success";
-    } else {
-        echo "error: " . $response_message;
-    }
+    ob_end_clean(); // Hapus semua output yang ditangkap
+    header('Content-Type: application/json'); // Set header ke JSON
+    echo json_encode($response);
     exit; 
-} 
-// --- END Handle AJAX POST untuk menambah atau mengedit siswa ---
-
-
-// --- Handle AJAX POST untuk promosi siswa ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'promote_siswa') {
-    $response_status = 'error';
-    $response_message = 'Terjadi kesalahan saat promosi siswa.';
-
-    try {
-        $id_tahun_akademik_asal = $_POST['id_tahun_akademik_asal'] ?? null;
-        $id_kelas_asal = $_POST['id_kelas_asal'] ?? null;
-        $id_tahun_akademik_tujuan = $_POST['id_tahun_akademik_tujuan'] ?? null;
-        $id_kelas_tujuan = $_POST['id_kelas_tujuan'] ?? null;
-
-        // Validasi input
-        if (empty($id_tahun_akademik_asal) || empty($id_kelas_asal) || empty($id_tahun_akademik_tujuan) || empty($id_kelas_tujuan)) {
-            throw new Exception("Semua field promosi harus diisi.");
-        }
-        if ($id_tahun_akademik_asal == $id_tahun_akademik_tujuan) {
-            throw new Exception("Tahun Akademik Asal dan Tujuan harus berbeda untuk promosi.");
-        }
-        // Tambahan validasi: cek apakah tahun tujuan setelah tahun asal (opsional tapi bagus)
-        $stmt_check_tahun = $pdo->prepare("SELECT ta1.nama_tahun AS asal, ta2.nama_tahun AS tujuan FROM tahun_akademik ta1 JOIN tahun_akademik ta2 ON ta1.id = ? AND ta2.id = ?");
-        $stmt_check_tahun->execute([$id_tahun_akademik_asal, $id_tahun_akademik_tujuan]);
-        $tahun_data = $stmt_check_tahun->fetch(PDO::FETCH_ASSOC);
-
-        if (!$tahun_data || ($tahun_data['asal'] >= $tahun_data['tujuan'])) { // Asumsi nama_tahun '2024/2025' > '2023/2024'
-             throw new Exception("Tahun Akademik Tujuan harus lebih baru dari Tahun Akademik Asal.");
-        }
-
-
-        // Ambil ID siswa dari kelas asal
-        $stmt_siswa_asal = $pdo->prepare("SELECT id FROM siswa WHERE class_id = ?");
-        $stmt_siswa_asal->execute([$id_kelas_asal]);
-        $siswa_ids = $stmt_siswa_asal->fetchAll(PDO::FETCH_COLUMN);
-
-        if (empty($siswa_ids)) {
-            throw new Exception("Tidak ada siswa di kelas asal yang dipilih.");
-        }
-
-        // Perbarui class_id untuk siswa yang dipromosikan
-        $placeholders = implode(',', array_fill(0, count($siswa_ids), '?'));
-        $stmt_update_siswa = $pdo->prepare("UPDATE siswa SET class_id = ? WHERE id IN ($placeholders)");
-        $stmt_update_siswa->execute(array_merge([$id_kelas_tujuan], $siswa_ids));
-
-        $response_status = 'success';
-        $response_message = count($siswa_ids) . " siswa berhasil dipromosikan!";
-
-    } catch (Throwable $e) {
-        $response_message = $e->getMessage();
-        error_log("Error Promosi Siswa: " . $e->getMessage() . " on line " . $e->getLine() . " in file " . $e->getFile());
-    }
-
-    if ($response_status === 'success') {
-        echo "success: " . $response_message;
-    } else {
-        echo "error: " . $response_message;
-    }
-    exit;
 }
-// --- END Handle AJAX POST untuk promosi siswa ---
 
-
-// --- Handle GET requests (delete siswa) ---
+// --- Handle Delete Siswa ---
 if (isset($_GET['action']) && $_GET['action'] === 'hapus_siswa' && isset($_GET['NIS'])) {
     $nis_to_delete = $_GET['NIS'];
     $current_tahun_akademik_id = $_GET['tahun_akademik_id'] ?? $selected_tahun_akademik_id;
@@ -280,8 +208,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus_siswa' && isset($_GET['
     }
 }
 
-
-// --- Ambil daftar Siswa untuk ditampilkan (difilter berdasarkan selected_tahun_akademik_id) ---
 $query_siswa = "
     SELECT 
         s.*, 
@@ -290,20 +216,13 @@ $query_siswa = "
     FROM siswa AS s
     JOIN class AS c ON s.class_id = c.id
     JOIN tahun_akademik AS ta ON c.id_tahun_akademik = ta.id
+    WHERE ta.id = ? 
+    ORDER BY c.nama_kelas ASC, s.name ASC
 ";
-$params = [];
-if ($selected_tahun_akademik_id !== 0) { // Filter hanya jika bukan 'all' atau 0
-    $query_siswa .= " WHERE ta.id = ?";
-    $params[] = $selected_tahun_akademik_id;
-}
-$query_siswa .= " ORDER BY c.nama_kelas ASC, s.name ASC";
-
 $stmt_siswa = $pdo->prepare($query_siswa);
-$stmt_siswa->execute($params);
+$stmt_siswa->execute([$selected_tahun_akademik_id]);
 $siswa_list = $stmt_siswa->fetchAll(PDO::FETCH_ASSOC);
 
-
-// Ambil pesan dari URL jika ada
 if (isset($_GET['success'])) {
     $message = htmlspecialchars($_GET['success']);
     $alert_type = 'alert-success';
@@ -594,7 +513,7 @@ if (isset($_GET['success'])) {
         .action-link.delete:hover {
             background-color: #c0392b;
         }
-        .add-link, .promote-link { /* Added promote-link */
+        .add-link {
             display: inline-flex;
             align-items: center;
             gap: 8px;
@@ -606,9 +525,8 @@ if (isset($_GET['success'])) {
             border-radius: 8px;
             font-weight: 600;
             transition: background-color 0.3s, transform 0.2s;
-            margin-right: 15px; /* Spacing between add and promote buttons */
         }
-        .add-link:hover, .promote-link:hover { /* Added promote-link */
+        .add-link:hover {
             background-color: #16a085;
             transform: translateY(-2px);
         }
@@ -655,10 +573,10 @@ if (isset($_GET['success'])) {
         }
         .filter-section .filter-group select,
         .filter-section .filter-group button {
-            width: 100%; 
-            padding: 10px;
+            width: 100%; /* Changed to 100% */
+            padding: 10px; /* Increased padding */
+            border-radius: 8px; /* More rounded corners */
             border: 1px solid var(--border-color);
-            border-radius: 8px;
             background-color: var(--card-background);
             color: var(--text-color);
             font-size: 0.95em;
@@ -668,7 +586,7 @@ if (isset($_GET['success'])) {
             color: white;
             cursor: pointer;
             transition: background-color 0.3s;
-            height: 42px;
+            height: 42px; /* Match height of select with new padding */
         }
         .filter-section .filter-group button:hover {
             background-color: #16a085;
@@ -1021,15 +939,13 @@ if (isset($_GET['success'])) {
                 <div class="filter-group">
                     <label for="filter_tahun_akademik">Tahun Akademik:</label>
                     <select id="filter_tahun_akademik" onchange="applyTahunAkademikFilter()">
-                        <option value="0">Semua Tahun Akademik</option> <!-- Value 0 for "All" -->
                         <?php if (empty($tahun_akademik_options)): ?>
-                            <option value="" disabled>Tidak ada Tahun Akademik</option>
+                            <option value="">Tidak ada Tahun Akademik</option>
                         <?php else: ?>
                             <?php foreach ($tahun_akademik_options as $ta_option): ?>
                                 <option value="<?php echo htmlspecialchars($ta_option['id']); ?>"
                                     <?php echo ($ta_option['id'] == $selected_tahun_akademik_id) ? 'selected' : ''; ?>>
                                     <?php echo htmlspecialchars($ta_option['nama_tahun']); ?>
-                                    <?php echo ($ta_option['is_active']) ? ' (Aktif)' : ''; ?>
                                 </option>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -1039,9 +955,6 @@ if (isset($_GET['success'])) {
 
             <a href="#" class="add-link" onclick="openSiswaModal('tambah'); return false;">
                 <i class="fas fa-plus-circle"></i> Tambah Siswa
-            </a>
-            <a href="#" class="promote-link" onclick="openPromoteSiswaModal(); return false;">
-                <i class="fas fa-level-up-alt"></i> Promosikan Siswa
             </a>
 
             <div class="table-responsive">
@@ -1075,7 +988,7 @@ if (isset($_GET['success'])) {
                                     </td>
                                     <td><?php echo htmlspecialchars($siswa['name']); ?></td>
                                     <td><?php echo htmlspecialchars($siswa['email']); ?></td>
-                                    <td><?php echo htmlspecialchars($siswa['no_hp'] ?? '-'); ?></td>
+                                    <td><?php echo htmlspecialchars($siswa['no_hp']); ?></td>
                                     <td><?php echo htmlspecialchars($siswa['nama_kelas']); ?></td>
                                     <td><?php echo htmlspecialchars($siswa['nama_tahun']); ?></td>
                                     <td>
@@ -1085,8 +998,8 @@ if (isset($_GET['success'])) {
                                                 '<?php echo htmlspecialchars($siswa['email']); ?>', 
                                                 '<?php echo htmlspecialchars($siswa['gender']); ?>', 
                                                 '<?php echo htmlspecialchars($siswa['dob']); ?>', 
-                                                '<?php echo htmlspecialchars($siswa['no_hp'] ?? ''); ?>', 
-                                                '<?php echo htmlspecialchars($siswa['alamat'] ?? ''); ?>', 
+                                                '<?php echo htmlspecialchars($siswa['no_hp']); ?>', 
+                                                '<?php echo htmlspecialchars($siswa['alamat']); ?>', 
                                                 '<?php echo htmlspecialchars($siswa['class_id']); ?>', 
                                                 '<?php echo htmlspecialchars($siswa['photo'] ?? ''); ?>'
                                             ); return false;">
@@ -1112,9 +1025,9 @@ if (isset($_GET['success'])) {
             <h2 id="siswaModalTitle">Tambah Siswa</h2>
             <form id="siswaForm" method="POST" action="index.php" enctype="multipart/form-data">
                 <input type="hidden" name="action" id="siswaAction">
-                <input type="hidden" name="NIS_lama_for_update" id="siswaNISHidden"> <!-- NIS lama untuk UPDATE -->
+                <input type="hidden" name="NISsiswa" id="siswaNISHidden">
                 <input type="hidden" name="old_photosiswa" id="siswaOldPhotoHidden">
-                <!-- Tidak perlu tahun_akademik_id di sini, karena class_id sudah cukup -->
+                <input type="hidden" name="tahun_akademik_id" value="<?= htmlspecialchars($selected_tahun_akademik_id); ?>">
 
                 <div class="form-group">
                     <label for="NISsiswa">NIS:</label>
@@ -1182,69 +1095,9 @@ if (isset($_GET['success'])) {
         </div>
     </div>
 
-    <!-- Modal Promosi Siswa -->
-    <div id="promoteSiswaModal" class="modal">
-        <div class="modal-content">
-            <span class="close-button" onclick="closePromoteSiswaModal()">&times;</span>
-            <h2>Promosikan Siswa ke Kelas Baru</h2>
-            <form id="promoteSiswaForm" method="POST" action="index.php">
-                <input type="hidden" name="action" value="promote_siswa">
-                
-                <div class="form-group">
-                    <label for="id_tahun_akademik_asal">Tahun Akademik Asal:</label>
-                    <select id="id_tahun_akademik_asal" name="id_tahun_akademik_asal" required>
-                        <option value="">Pilih Tahun Akademik Asal</option>
-                        <?php foreach ($tahun_akademik_options as $ta_option): ?>
-                            <option value="<?php echo htmlspecialchars($ta_option['id']); ?>">
-                                <?php echo htmlspecialchars($ta_option['nama_tahun']); ?>
-                                <?php echo ($ta_option['is_active']) ? ' (Aktif)' : ''; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="id_kelas_asal">Kelas Asal:</label>
-                    <select id="id_kelas_asal" name="id_kelas_asal" required>
-                        <option value="">Pilih Kelas Asal</option>
-                        <!-- Options will be loaded via JavaScript -->
-                    </select>
-                </div>
-
-                <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-color);">
-
-                <div class="form-group">
-                    <label for="id_tahun_akademik_tujuan">Tahun Akademik Tujuan:</label>
-                    <select id="id_tahun_akademik_tujuan" name="id_tahun_akademik_tujuan" required>
-                        <option value="">Pilih Tahun Akademik Tujuan</option>
-                        <?php foreach ($tahun_akademik_options as $ta_option): ?>
-                            <option value="<?php echo htmlspecialchars($ta_option['id']); ?>">
-                                <?php echo htmlspecialchars($ta_option['nama_tahun']); ?>
-                                <?php echo ($ta_option['is_active']) ? ' (Aktif)' : ''; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="id_kelas_tujuan">Kelas Tujuan:</label>
-                    <select id="id_kelas_tujuan" name="id_kelas_tujuan" required>
-                        <option value="">Pilih Kelas Tujuan</option>
-                        <!-- Options will be loaded via JavaScript -->
-                    </select>
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn-primary">Promosikan</button>
-                    <button type="button" class="btn-secondary" onclick="closePromoteSiswaModal()">Batal</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
 
     <!-- Script JavaScript -->
     <script>
-        let isEditMode = false; // Deklarasi global
-
         const siswaModal = document.getElementById("siswaModal");
         const siswaModalTitle = document.getElementById("siswaModalTitle");
         const siswaForm = document.getElementById("siswaForm");
@@ -1267,39 +1120,29 @@ if (isset($_GET['success'])) {
         const submitSiswaBtn = document.getElementById("submitSiswaBtn");
         const filterTahunAkademik = document.getElementById("filter_tahun_akademik");
 
-        // Variabel untuk modal promosi siswa
-        const promoteSiswaModal = document.getElementById("promoteSiswaModal");
-        const promoteSiswaForm = document.getElementById("promoteSiswaForm");
-        const idTahunAkademikAsalSelect = document.getElementById("id_tahun_akademik_asal");
-        const idKelasAsalSelect = document.getElementById("id_kelas_asal");
-        const idTahunAkademikTujuanSelect = document.getElementById("id_tahun_akademik_tujuan");
-        const idKelasTujuanSelect = document.getElementById("id_kelas_tujuan");
 
         function openSiswaModal(action, NIS = '', name = '', email = '', gender = '', dob = '', no_hp = '', alamat = '', class_id = '', photo = '') {
             siswaForm.reset(); 
             siswaActionInput.value = action;
-            isEditMode = (action === 'edit'); 
-            
             if (action === 'tambah') {
                 siswaModalTitle.textContent = "Tambah Siswa";
                 submitSiswaBtn.textContent = "Simpan";
-                NISsiswaInput.readOnly = false; 
+                NISsiswaInput.readOnly = false;
                 NISsiswaInput.value = '';
-                siswaNISHiddenInput.value = ''; 
+                siswaNISHiddenInput.value = '';
                 siswaOldPhotoHiddenInput.value = '';
                 photosiswaPreview.src = "https://placehold.co/100x100/cccccc/333333?text=NO+IMG";
                 classIdModalSelect.value = '';
                 
                 passwordGroup.style.display = 'block';
                 passwordsiswaInput.required = true;
-                dobsiswaInput.required = true; 
             } else if (action === 'edit') {
                 siswaModalTitle.textContent = "Edit Siswa";
                 submitSiswaBtn.textContent = "Update";
-                NISsiswaInput.readOnly = false; 
+                NISsiswaInput.readOnly = true;
                 
-                NISsiswaInput.value = NIS; 
-                siswaNISHiddenInput.value = NIS; 
+                NISsiswaInput.value = NIS;
+                siswaNISHiddenInput.value = NIS;
                 namasiswaInput.value = name;
                 emailsiswaInput.value = email;
                 
@@ -1316,10 +1159,9 @@ if (isset($_GET['success'])) {
                 siswaOldPhotoHiddenInput.value = photo;
                 photosiswaPreview.src = photo ? `../../uploads/siswa/${photo}` : "https://placehold.co/100x100/cccccc/333333?text=NO+IMG";
 
-                passwordGroup.style.display = 'none'; 
-                passwordsiswaInput.required = false; 
-                passwordsiswaInput.value = ''; 
-                dobsiswaInput.required = true; 
+                passwordGroup.style.display = 'none';
+                passwordsiswaInput.required = false;
+                passwordsiswaInput.value = '';
             }
             siswaModal.style.display = "flex";
         }
@@ -1335,9 +1177,6 @@ if (isset($_GET['success'])) {
         window.onclick = function (event) {
             if (event.target == siswaModal) {
                 closeSiswaModal();
-            }
-            if (event.target == promoteSiswaModal) { // Close promote modal too
-                closePromoteSiswaModal();
             }
         };
 
@@ -1363,46 +1202,47 @@ if (isset($_GET['success'])) {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.text()) 
-            .then(async result => {
-                const actionMode = siswaActionInput.value;
-
-                if (result.trim().startsWith("success")) {
-                    await Swal.fire({
+            .then(response => {
+                // Selalu coba baca sebagai teks dulu
+                return response.text().then(text => {
+                    // Cek apakah output adalah JSON yang valid
+                    try {
+                        const json = JSON.parse(text);
+                        return json;
+                    } catch (error) {
+                        console.error("Server responded with non-JSON output:", text); // Log the full raw text to console
+                        // Tampilkan sebagian kecil dari output mentah PHP di SweetAlert
+                        throw new Error("Respons server bukan JSON. Output PHP Mentah (awal): " + text.substring(0, 300) + "...");
+                    }
+                });
+            })
+            .then(result => {
+                if (result.status === "success") {
+                    Swal.fire({
                         icon: 'success',
                         title: 'Berhasil!',
-                        text: result.trim().substring(7) || (actionMode === 'edit' ? "Siswa berhasil diupdate!" : "Siswa berhasil ditambahkan!"),
+                        text: result.message,
                         showConfirmButton: false,
                         timer: 1500
                     }).then(() => {
                         const currentTahunAkademikId = filterTahunAkademik.value;
-                        window.location.href = `index.php?success=${encodeURIComponent(result.trim().substring(7) || (actionMode === 'edit' ? "Siswa berhasil diupdate!" : "Siswa berhasil ditambahkan!"))}&tahun_akademik_id=${currentTahunAkademikId}`;
+                        window.location.href = `index.php?success=${encodeURIComponent(result.message)}&tahun_akademik_id=${currentTahunAkademikId}`;
                     });
-                } 
-                else if (result.trim().startsWith("error:")) {
-                    await Swal.fire({
+                } else {
+                    Swal.fire({
                         icon: 'error',
                         title: 'Gagal!',
-                        text: result.trim().substring(6), 
-                        confirmButtonText: 'OK'
-                    });
-                }
-                else {
-                    console.error("Server responded with unexpected output:", result);
-                    await Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        text: 'Respons server tidak terduga. Output PHP: ' + result.substring(0, 300) + '...',
+                        text: result.message, 
                         confirmButtonText: 'OK'
                     });
                 }
             })
-            .catch(async error => {
-                console.error("Fetch error:", error);
-                await Swal.fire({
+            .catch(error => {
+                console.error("Fetch error:", error); // Log error lebih detail ke console
+                Swal.fire({
                     icon: 'error',
                     title: 'Error!',
-                    text: 'Terjadi kesalahan jaringan atau client: ' + error.message,
+                    text: 'Terjadi kesalahan saat memproses data: ' + error.message,
                     confirmButtonText: 'OK'
                 });
             });
@@ -1454,9 +1294,6 @@ if (isset($_GET['success'])) {
             window.onclick = function(event) {
                 if (event.target == siswaModal) { 
                     closeSiswaModal();
-                }
-                if (event.target == promoteSiswaModal) { // Close promote modal too
-                    closePromoteSiswaModal();
                 }
                 if (!event.target.matches('#userInfoDropdown') && !event.target.closest('#userInfoDropdown')) {
                     if (userDropdownContent.style.display === 'block') {
@@ -1528,120 +1365,6 @@ if (isset($_GET['success'])) {
                 }
             });
         });
-
-        // --- Fungsi untuk Modal Promosi Siswa ---
-        function openPromoteSiswaModal() {
-            promoteSiswaForm.reset();
-            idKelasAsalSelect.innerHTML = '<option value="">Pilih Kelas Asal</option>';
-            idKelasTujuanSelect.innerHTML = '<option value="">Pilih Kelas Tujuan</option>';
-            promoteSiswaModal.style.display = "flex";
-        }
-
-        function closePromoteSiswaModal() {
-            promoteSiswaModal.style.display = "none";
-        }
-
-        // Fungsi AJAX untuk mendapatkan daftar kelas berdasarkan Tahun Akademik
-        async function getKelasByTahunAkademik(tahunAkademikId, targetSelectElement) {
-            targetSelectElement.innerHTML = '<option value="">Memuat Kelas...</option>'; // Loading state
-            if (!tahunAkademikId) {
-                targetSelectElement.innerHTML = '<option value="">Pilih Tahun Akademik terlebih dahulu</option>';
-                return;
-            }
-
-            try {
-                const response = await fetch(`../../api/get_kelas_by_tahun_akademik.php?id_tahun_akademik=${tahunAkademikId}`);
-                const data = await response.json();
-                
-                targetSelectElement.innerHTML = '<option value="">Pilih Kelas</option>';
-                if (data.status === 'success' && data.kelas.length > 0) {
-                    data.kelas.forEach(kelas => {
-                        const option = document.createElement('option');
-                        option.value = kelas.id;
-                        option.textContent = kelas.nama_kelas;
-                        targetSelectElement.appendChild(option);
-                    });
-                } else {
-                    targetSelectElement.innerHTML = '<option value="" disabled>Tidak ada kelas tersedia</option>';
-                }
-            } catch (error) {
-                console.error('Error fetching classes:', error);
-                targetSelectElement.innerHTML = '<option value="" disabled>Gagal memuat kelas</option>';
-            }
-        }
-
-        // Event Listeners untuk dropdown Tahun Akademik di modal promosi
-        idTahunAkademikAsalSelect.addEventListener('change', function() {
-            getKelasByTahunAkademik(this.value, idKelasAsalSelect);
-        });
-
-        idTahunAkademikTujuanSelect.addEventListener('change', function() {
-            getKelasByTahunAkademik(this.value, idKelasTujuanSelect);
-        });
-
-        // Event Listener untuk submit form promosi
-        promoteSiswaForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(promoteSiswaForm);
-
-            Swal.fire({
-                title: 'Konfirmasi Promosi Siswa',
-                text: 'Anda akan mempromosikan semua siswa dari Kelas Asal ke Kelas Tujuan. Lanjutkan?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Ya, Promosikan!',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch('index.php', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => response.text())
-                    .then(async result => {
-                        if (result.trim().startsWith("success:")) {
-                            await Swal.fire({
-                                icon: 'success',
-                                title: 'Berhasil!',
-                                text: result.trim().substring(8),
-                                showConfirmButton: false,
-                                timer: 2000
-                            }).then(() => {
-                                const currentTahunAkademikId = filterTahunAkademik.value;
-                                window.location.href = `index.php?success=${encodeURIComponent(result.trim().substring(8))}&tahun_akademik_id=${currentTahunAkademikId}`;
-                            });
-                        } else if (result.trim().startsWith("error:")) {
-                            await Swal.fire({
-                                icon: 'error',
-                                title: 'Gagal!',
-                                text: result.trim().substring(6),
-                                confirmButtonText: 'OK'
-                            });
-                        } else {
-                            console.error("Server responded with unexpected output:", result);
-                            await Swal.fire({
-                                icon: 'error',
-                                title: 'Error!',
-                                text: 'Respons server tidak terduga. Output PHP: ' + result.substring(0, 300) + '...',
-                                confirmButtonText: 'OK'
-                            });
-                        }
-                    })
-                    .catch(async error => {
-                        console.error("Fetch error:", error);
-                        await Swal.fire({
-                            icon: 'error',
-                            title: 'Error!',
-                            text: 'Terjadi kesalahan jaringan atau client: ' + error.message,
-                            confirmButtonText: 'OK'
-                        });
-                    });
-                }
-            });
-        });
-
     </script>
 </body>
 </html>

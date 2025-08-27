@@ -473,6 +473,7 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
             <a href="guru/index.php"><i class="fas fa-chalkboard-teacher"></i><span>Guru</span></a>
             <a href="siswa/index.php"><i class="fas fa-user-graduate"></i><span>Siswa</span></a>
             <a href="jadwal/index.php"><i class="fas fa-calendar-alt"></i><span>Jadwal</span></a>
+            <a href="tahun_akademik/index.php"><i class="fas fa-calendar"></i><span>Tahun Akademik</span></a>
             <a href="kelas/index.php"><i class="fas fa-school"></i><span>Kelas</span></a>
             <a href="mapel/index.php"><i class="fas fa-book"></i><span>Mata Pelajaran</span></a>
             <div class="logout-button-container">
@@ -558,7 +559,7 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
         }
 
         // SweetAlert for Logout Confirmation (retained from your original file)
-        function showLogoutConfirmation() {
+        function showLogoutConfirm() {
             Swal.fire({
                 title: 'Konfirmasi Logout',
                 text: 'Apakah kamu yakin ingin logout?',
@@ -568,7 +569,7 @@ $total_admin = getCount($conn, "SELECT COUNT(*) AS count FROM admin"); // <<< BA
                 cancelButtonText: 'Batal'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = "../../logout.php"; // redirect logout
+                    window.location.href = "../logout.php"; // redirect logout
                 }
             });
         }

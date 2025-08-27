@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../../assets/admin.css">
+    <link rel="stylesheet" href="../../assets/admin1.css">
     <title>Daftar Guru</title>
 </head>
 <body>
@@ -133,6 +133,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             <a href="../jadwal/index.php">
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal</span>
+            </a>
+            <a href="../Tahun_Akademik/index.php">
+                <i class="fas fa-calendar"></i>
+                <span>Tahun Akademik</span>
             </a>
             <a href="../kelas/index.php">
                 <i class="fas fa-school"></i>

@@ -1,27 +1,59 @@
 <?php
 session_start();
-if (!isset($_SESSION['superadmin'])) {
+if (!isset($_SESSION['superadmin_id'])) { // Ganti ke admin_id jika ini untuk admin/jadwal/index.php
     header("Location: ../../login.php");
     exit;
 }
 
 require '../../koneksi.php';
 
-$jadwal_to_edit = null;
+$superadmin_name = htmlspecialchars($_SESSION['superadmin_name'] ?? 'SuperAdmin'); // Ganti ke admin_name
+$superadmin_photo = 'https://placehold.co/40x40/cccccc/333333?text=SA'; 
+
 $success = '';
 $error = '';
 
-// Ambil data untuk dropdown
-$kelas = $pdo->query("SELECT * FROM class ORDER BY nama_kelas ASC")->fetchAll();
-$mapel = $pdo->query("SELECT * FROM mapel ORDER BY nama_mapel ASC")->fetchAll();
-$guru = $pdo->query("SELECT * FROM guru ORDER BY name ASC")->fetchAll();
+// Ambil daftar Tahun Akademik untuk filter
+$stmt_tahun_akademik = $pdo->query("SELECT id, nama_tahun FROM tahun_akademik ORDER BY nama_tahun DESC");
+$tahun_akademik_options = $stmt_tahun_akademik->fetchAll(PDO::FETCH_ASSOC);
+
+// Tentukan tahun akademik yang sedang dipilih (dari GET atau default ke yang aktif)
+$selected_tahun_akademik_id = $_GET['tahun_akademik_id'] ?? null;
+
+if ($selected_tahun_akademik_id === null) {
+    // Jika tidak ada parameter tahun_akademik_id di URL, ambil yang aktif
+    $stmt_active_tahun = $pdo->query("SELECT id FROM tahun_akademik WHERE is_active = 1 LIMIT 1");
+    $active_tahun = $stmt_active_tahun->fetch(PDO::FETCH_ASSOC);
+    $selected_tahun_akademik_id = $active_tahun['id'] ?? ($tahun_akademik_options[0]['id'] ?? null); // Fallback ke tahun pertama jika tidak ada yang aktif
+}
+
+// Pastikan $selected_tahun_akademik_id adalah integer, jika null, set 0 atau handle error
+if ($selected_tahun_akademik_id === null) {
+    $error = "Tidak ada Tahun Akademik yang ditemukan atau diatur aktif.";
+    $selected_tahun_akademik_id = 0; // Set ke 0 agar query tidak crash, tapi data akan kosong
+} else {
+    $selected_tahun_akademik_id = (int)$selected_tahun_akademik_id;
+}
+
+
+// Ambil data untuk dropdown di form (Kelas, Mapel, Guru)
+// Penting: Kelas difilter berdasarkan selected_tahun_akademik_id
+$kelas_form_options = [];
+if ($selected_tahun_akademik_id) { // Hanya ambil kelas jika ada tahun akademik yang dipilih
+    $stmt_kelas_form = $pdo->prepare("SELECT id, nama_kelas FROM class WHERE id_tahun_akademik = ? ORDER BY nama_kelas ASC");
+    $stmt_kelas_form->execute([$selected_tahun_akademik_id]);
+    $kelas_form_options = $stmt_kelas_form->fetchAll(PDO::FETCH_ASSOC);
+}
+$mapel_options = $pdo->query("SELECT id, nama_mapel FROM mapel ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+$guru_options = $pdo->query("SELECT id, name FROM guru ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+
 
 // Handle Form Submission (Tambah & Edit)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // CSRF token validation
-    if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) {
-        die('Invalid CSRF token');
-    }
+    // CSRF token validation (Jika Anda menggunakannya, sertakan kembali di sini)
+    // if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) {
+    //     die('Invalid CSRF token');
+    // }
 
     $id = $_POST['id'] ?? '';
     $class_id = $_POST['class_id'] ?? '';
@@ -30,10 +62,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $jam_mulai = $_POST['jam_mulai'] ?? '';
     $jam_selesai = $_POST['jam_selesai'] ?? '';
     $teacher_id = $_POST['teacher_id'] ?? '';
+    $submitted_tahun_akademik_id = $_POST['tahun_akademik_id'] ?? $selected_tahun_akademik_id; // Ambil dari hidden input
 
     if ($class_id && $mapel_id && $hari && $jam_mulai && $jam_selesai && $teacher_id) {
         try {
-            // Get mapel name
+            // Get mapel name (Tetap menggunakan ini jika kolom 'mata_pelajaran' masih ada di tabel jadwal)
             $stmt_mapel = $pdo->prepare("SELECT nama_mapel FROM mapel WHERE id = ?");
             $stmt_mapel->execute([$mapel_id]);
             $mapel_name = $stmt_mapel->fetchColumn();
@@ -50,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success = "Jadwal berhasil ditambahkan!";
             }
 
-            header("Location: index.php?success=" . urlencode($success));
+            header("Location: index.php?success=" . urlencode($success) . "&tahun_akademik_id=" . $submitted_tahun_akademik_id);
             exit;
         } catch (PDOException $e) {
             $error = "Gagal memproses jadwal: " . $e->getMessage();
@@ -60,18 +93,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// CSRF token generation
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+// Handle Delete action
+if (isset($_GET['action']) && $_GET['action'] == 'hapus' && isset($_GET['id'])) {
+    $id_jadwal = $_GET['id'];
+    $current_tahun_akademik_id = $_GET['tahun_akademik_id'] ?? $selected_tahun_akademik_id;
+
+    try {
+        // Cek apakah ada pertemuan terkait jadwal ini (dan absensi terkait pertemuan)
+        $stmt_check_pertemuan = $pdo->prepare("SELECT COUNT(*) FROM pertemuan WHERE id_jadwal = ?");
+        $stmt_check_pertemuan->execute([$id_jadwal]);
+        if ($stmt_check_pertemuan->fetchColumn() > 0) {
+            $error = "Tidak dapat menghapus Jadwal ini karena masih ada pertemuan yang terkait. Harap hapus pertemuan terlebih dahulu.";
+            header("Location: index.php?error=" . urlencode($error) . "&tahun_akademik_id=" . $current_tahun_akademik_id);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("DELETE FROM jadwal WHERE id = ?");
+        $stmt->execute([$id_jadwal]);
+        $success = "Jadwal berhasil dihapus!";
+        header("Location: index.php?success=" . urlencode($success) . "&tahun_akademik_id=" . $current_tahun_akademik_id);
+        exit;
+    } catch (PDOException $e) {
+        $error = "Gagal menghapus jadwal: " . $e->getMessage();
+    }
 }
 
-// Handle Edit action
-if (isset($_GET['action']) && $_GET['action'] == 'edit' && isset($_GET['id'])) {
-    $id = $_GET['id'];
-    $stmt = $pdo->prepare("SELECT * FROM jadwal WHERE id = ?");
-    $stmt->execute([$id]);
-    $jadwal_to_edit = $stmt->fetch(PDO::FETCH_ASSOC);
-}
+// Fetch all schedule data filtered by selected_tahun_akademik_id
+$query = "
+        SELECT 
+            jadwal.*, 
+            guru.name AS nama_guru, 
+            class.nama_kelas,
+            class.photo,
+            tahun_akademik.nama_tahun
+        FROM jadwal
+        JOIN guru ON jadwal.teacher_id = guru.id
+        JOIN class ON jadwal.class_id = class.id
+        JOIN mapel ON jadwal.id_mapel = mapel.id
+        JOIN tahun_akademik ON class.id_tahun_akademik = tahun_akademik.id
+        WHERE tahun_akademik.id = ?
+        ORDER BY FIELD(jadwal.hari, 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'), jadwal.jam_mulai ASC
+    ";
+$stmt = $pdo->prepare($query);
+$stmt->execute([$selected_tahun_akademik_id]);
+$jadwal_list = $stmt->fetchAll(PDO::FETCH_ASSOC); // Fetch all results to be filtered by JS
 
 // Check for success/error messages from redirect
 if (isset($_GET['success'])) {
@@ -81,21 +146,20 @@ if (isset($_GET['error'])) {
     $error = htmlspecialchars($_GET['error']);
 }
 
-// Fetch all schedule data
-$query = "
-        SELECT 
-            jadwal.*, 
-            guru.name AS nama_guru, 
-            class.nama_kelas,
-            class.photo
-        FROM jadwal
-        JOIN guru ON jadwal.teacher_id = guru.id
-        JOIN class ON jadwal.class_id = class.id
-        JOIN mapel ON jadwal.id_mapel = mapel.id
-    ";
-$stmt = $pdo->query($query);
+// CSRF token generation
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 
-// Pastikan parameter 'id' ada di URL
+// Data untuk openEditModal (jika ada edit action dari redirect)
+$jadwal_to_edit = null;
+if (isset($_GET['action']) && $_GET['action'] == 'edit' && isset($_GET['id'])) {
+    $id = $_GET['id'];
+    $stmt_edit = $pdo->prepare("SELECT * FROM jadwal WHERE id = ?");
+    $stmt_edit->execute([$id]);
+    $jadwal_to_edit = $stmt_edit->fetch(PDO::FETCH_ASSOC);
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -225,6 +289,7 @@ $stmt = $pdo->query($query);
             width: calc(100% - var(--sidebar-width));
             z-index: 999;
             transition: left 0.3s ease, width 0.3s ease;
+            justify-content: space-between; /* Added for user-info */
         }
 
         .header.shifted {
@@ -622,7 +687,8 @@ $stmt = $pdo->query($query);
             margin-bottom: 5px;
         }
 
-        .filter-group select {
+        .filter-group select,
+        .filter-group input { /* Added input for consistency */
             padding: 8px 12px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
@@ -678,6 +744,64 @@ $stmt = $pdo->query($query);
         .sidebar.collapsed .logout-button-container a span {
             display: none;
         }
+
+        /* User Info Dropdown Styling - From previous files */
+        .user-info {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--text-color);
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+        }
+        .user-info:hover {
+            background-color: #f0f0f0;
+        }
+        .user-info img {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary-color);
+        }
+        .user-info span {
+            font-weight: 600;
+        }
+        .user-info i.fa-caret-down {
+            margin-left: 5px;
+        }
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: var(--card-background);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            z-index: 1002;
+            min-width: 160px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .dropdown-menu a {
+            color: var(--text-color);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+        .dropdown-menu a:hover {
+            background-color: var(--background-color);
+        }
+        .dropdown-menu a i {
+            margin-right: 10px;
+            width: 20px;
+        }
     </style>
 </head>
 
@@ -701,9 +825,13 @@ $stmt = $pdo->query($query);
                 <i class="fas fa-user-graduate"></i>
                 <span>Siswa</span>
             </a>
-            <a href="../jadwal/index.php" class="active">
+            <a href="index.php">
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal</span>
+            </a>
+            <a href="../Tahun_Akademik/index.php">
+                <i class="fas fa-calendar"></i>
+                <span>Tahun Akademik</span>
             </a>
             <a href="../kelas/index.php">
                 <i class="fas fa-school"></i>
@@ -713,13 +841,13 @@ $stmt = $pdo->query($query);
                 <i class="fas fa-book"></i>
                 <span>Mata Pelajaran</span>
             </a>
-            <div class="logout-button-container">
-                <a onclick="showLogoutConfirm(event)">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                </a>
-            </div>
         </nav>
+        <div class="logout-button-container">
+            <a onclick="showLogoutConfirm(event)" id="logoutButtonSidebar">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </a>
+        </div>
     </div>
 
     <div class="header" id="header">
@@ -727,17 +855,60 @@ $stmt = $pdo->query($query);
             <i class="fas fa-bars"></i>
         </button>
         <h1>Jadwal Kelas</h1>
+        <div class="user-info" id="userInfoDropdown">
+            <span><?= $superadmin_name ?></span>
+            <img src="<?= $superadmin_photo ?>" alt="User Avatar"
+                loading="lazy"
+                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=SA';"
+            >
+            <i class="fas fa-caret-down"></i>
+            <div class="dropdown-menu" id="userDropdownContent">
+                <!-- <a href="profil_superadmin.php"><i class="fas fa-user-circle"></i> Profil</a> -->
+                <a href="../../logout.php" id="logoutDropdownLink"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </div>
     </div>
 
     <div class="content" id="mainContent">
         <div class="card">
             <h2>Data Jadwal</h2>
+            
+            <?php if (!empty($success)): ?>
+                <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
+            <?php endif; ?>
+            <?php if (!empty($error)): ?>
+                <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
+
             <div class="filter-container">
+                <div class="filter-group">
+                    <label for="filter-tahun-akademik">Tahun Akademik:</label>
+                    <select id="filter-tahun-akademik" onchange="applyTahunAkademikFilter()">
+                        <?php if (empty($tahun_akademik_options)): ?>
+                            <option value="">Tidak ada Tahun Akademik</option>
+                        <?php else: ?>
+                            <?php foreach ($tahun_akademik_options as $ta_option): ?>
+                                <option value="<?php echo htmlspecialchars($ta_option['id']); ?>"
+                                    <?php echo ($ta_option['id'] == $selected_tahun_akademik_id) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($ta_option['nama_tahun']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </select>
+                </div>
                 <div class="filter-group">
                     <label for="filter-kelas">Kelas:</label>
                     <select id="filter-kelas">
                         <option value="all">Semua Kelas</option>
-                        <?php foreach ($kelas as $k) : ?>
+                        <?php 
+                        // Ambil semua kelas dari tahun akademik yang dipilih untuk filter client-side
+                        $all_kelas_for_filter = [];
+                        if ($selected_tahun_akademik_id) {
+                            $stmt_all_kelas = $pdo->prepare("SELECT id, nama_kelas FROM class WHERE id_tahun_akademik = ? ORDER BY nama_kelas ASC");
+                            $stmt_all_kelas->execute([$selected_tahun_akademik_id]);
+                            $all_kelas_for_filter = $stmt_all_kelas->fetchAll(PDO::FETCH_ASSOC);
+                        }
+                        foreach ($all_kelas_for_filter as $k) : ?>
                             <option value="<?= htmlspecialchars($k['nama_kelas']) ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -746,7 +917,7 @@ $stmt = $pdo->query($query);
                     <label for="filter-mapel">Mata Pelajaran:</label>
                     <select id="filter-mapel">
                         <option value="all">Semua Mapel</option>
-                        <?php foreach ($mapel as $m) : ?>
+                        <?php foreach ($mapel_options as $m) : // Menggunakan mapel_options yang sudah ada ?>
                             <option value="<?= htmlspecialchars($m['nama_mapel']) ?>"><?= htmlspecialchars($m['nama_mapel']) ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -756,7 +927,7 @@ $stmt = $pdo->query($query);
                     <select id="filter-hari">
                         <option value="all">Semua Hari</option>
                         <?php
-                        $days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                        $days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']; // Tambah Minggu untuk konsistensi
                         foreach ($days as $d) : ?>
                             <option value="<?= $d ?>"><?= $d ?></option>
                         <?php endforeach; ?>
@@ -766,6 +937,7 @@ $stmt = $pdo->query($query);
                     <button id="reset-filter-btn">Reset Filter</button>
                 </div>
             </div>
+
             <a href="#" onclick="openModal()" class="add-link">
                 <i class="fas fa-plus"></i> Tambah Jadwal
             </a>
@@ -784,35 +956,47 @@ $stmt = $pdo->query($query);
                         </tr>
                     </thead>
                     <tbody>
-                        <?php while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) : ?>
-                            <tr data-hari="<?= htmlspecialchars($row['hari']) ?>" data-kelas="<?= htmlspecialchars($row['nama_kelas']) ?>" data-mapel="<?= htmlspecialchars($row['mata_pelajaran']) ?>">
-                                <td><?= htmlspecialchars($row['hari']) ?></td>
-                                <td><?= htmlspecialchars($row['jam_mulai']) ?> - <?= htmlspecialchars($row['jam_selesai']) ?></td>
-                                <td><?= htmlspecialchars($row['mata_pelajaran']) ?></td>
-                                <td><?= htmlspecialchars($row['nama_guru']) ?></td>
-                                <td><?= htmlspecialchars($row['nama_kelas']) ?></td>
-                                <td>
-                                    <?php if (!empty($row['photo'])) : ?>
-                                        <img src="../../uploads/kelas/<?= htmlspecialchars($row['photo']) ?>" alt="Foto Kelas">
-                                    <?php else : ?>
-                                        Tidak ada foto
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <div class="action-links">
-                                        <a href="#" onclick="openEditModal(<?= htmlspecialchars(json_encode($row)) ?>)" class="action-link edit" title="Edit">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <a href="#" onclick="handleDeleteClick(event, '<?= $row['id'] ?>')" class="action-link delete" title="Hapus">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </a>
-                                        <a href="pertemuan.php?id_jadwal=<?= $row['id'] ?>" class="action-link view" title="Lihat Pertemuan">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                    </div>
-                                </td>
+                        <?php if (empty($jadwal_list)): ?>
+                            <tr>
+                                <td colspan="7" style="text-align: center;">Tidak ada jadwal untuk tahun akademik ini.</td>
                             </tr>
-                        <?php endwhile; ?>
+                        <?php else: ?>
+                            <?php foreach ($jadwal_list as $row) : ?>
+                                <tr data-hari="<?= htmlspecialchars($row['hari']) ?>" data-kelas="<?= htmlspecialchars($row['nama_kelas']) ?>" data-mapel="<?= htmlspecialchars($row['mata_pelajaran']) ?>">
+                                    <td><?= htmlspecialchars($row['hari']) ?></td>
+                                    <td><?= htmlspecialchars($row['jam_mulai']) ?> - <?= htmlspecialchars($row['jam_selesai']) ?></td>
+                                    <td><?= htmlspecialchars($row['mata_pelajaran']) ?></td>
+                                    <td><?= htmlspecialchars($row['nama_guru']) ?></td>
+                                    <td><?= htmlspecialchars($row['nama_kelas']) ?></td>
+                                    <td>
+                                        <?php if (!empty($row['photo'])) : ?>
+                                            <img src="../../uploads/kelas/<?= htmlspecialchars($row['photo']) ?>" alt="Foto Kelas"
+                                                loading="lazy"
+                                                onerror="this.onerror=null;this.src='https://placehold.co/100x80/cccccc/333333?text=NO+IMG';"
+                                            >
+                                        <?php else : ?>
+                                            <img src="https://placehold.co/100x80/cccccc/333333?text=NO+IMG" alt="Tidak ada foto"
+                                                loading="lazy"
+                                                onerror="this.onerror=null;this.src='https://placehold.co/100x80/cccccc/333333?text=NO+IMG';"
+                                            >
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div class="action-links">
+                                            <a href="#" onclick="openEditModal(<?= htmlspecialchars(json_encode($row)) ?>)" class="action-link edit" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="#" onclick="handleDeleteClick(event, '<?= $row['id'] ?>')" class="action-link delete" title="Hapus">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
+                                            <a href="pertemuan.php?id_jadwal=<?= $row['id'] ?>" class="action-link view" title="Lihat Pertemuan">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -838,43 +1022,48 @@ $stmt = $pdo->query($query);
             <form method="POST" autocomplete="off" id="scheduleForm">
                 <input type="hidden" name="id" id="jadwal_id">
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                <input type="hidden" name="tahun_akademik_id" value="<?= htmlspecialchars($selected_tahun_akademik_id); ?>">
 
-                <label for="class_id">Kelas:</label>
-                <select name="class_id" id="class_id" required>
+                <label for="class_id_modal">Kelas:</label>
+                <select name="class_id" id="class_id_modal" required>
                     <option value="">--Pilih--</option>
-                    <?php foreach ($kelas as $k): ?>
-                        <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
-                    <?php endforeach; ?>
+                    <?php if (empty($kelas_form_options)): ?>
+                        <option value="" disabled>Tidak ada kelas untuk tahun akademik ini.</option>
+                    <?php else: ?>
+                        <?php foreach ($kelas_form_options as $k): ?>
+                            <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </select>
 
-                <label for="mapel_id">Mapel:</label>
-                <select name="mapel_id" id="mapel_id" required>
+                <label for="mapel_id_modal">Mapel:</label>
+                <select name="mapel_id" id="mapel_id_modal" required>
                     <option value="">--Pilih--</option>
-                    <?php foreach ($mapel as $m): ?>
+                    <?php foreach ($mapel_options as $m): ?>
                         <option value="<?= $m['id'] ?>"><?= htmlspecialchars($m['nama_mapel']) ?></option>
                     <?php endforeach; ?>
                 </select>
 
-                <label for="hari">Hari:</label>
-                <select name="hari" id="hari" required>
+                <label for="hari_modal">Hari:</label>
+                <select name="hari" id="hari_modal" required>
                     <option value="">--Pilih Hari--</option>
                     <?php
-                    $days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                    $days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
                     foreach ($days as $d): ?>
                         <option value="<?= $d ?>"><?= $d ?></option>
                     <?php endforeach; ?>
                 </select>
 
-                <label for="jam_mulai">Jam Mulai:</label>
-                <input type="time" name="jam_mulai" id="jam_mulai" required>
+                <label for="jam_mulai_modal">Jam Mulai:</label>
+                <input type="time" name="jam_mulai" id="jam_mulai_modal" required>
 
-                <label for="jam_selesai">Jam Selesai:</label>
-                <input type="time" name="jam_selesai" id="jam_selesai" required>
+                <label for="jam_selesai_modal">Jam Selesai:</label>
+                <input type="time" name="jam_selesai" id="jam_selesai_modal" required>
 
-                <label for="teacher_id">Guru:</label>
-                <select name="teacher_id" id="teacher_id" required>
+                <label for="teacher_id_modal">Guru:</label>
+                <select name="teacher_id" id="teacher_id_modal" required>
                     <option value="">--Pilih--</option>
-                    <?php foreach ($guru as $g): ?>
+                    <?php foreach ($guru_options as $g): ?>
                         <option value="<?= $g['id'] ?>"><?= htmlspecialchars($g['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -909,15 +1098,29 @@ $stmt = $pdo->query($query);
         const modal = document.getElementById("scheduleModal");
         const modalTitle = document.getElementById("modalTitle");
         const form = document.getElementById("scheduleForm");
+        const jadwal_id_input = document.getElementById("jadwal_id");
+        const class_id_modal_select = document.getElementById("class_id_modal"); // Updated ID
+        const mapel_id_modal_select = document.getElementById("mapel_id_modal"); // Updated ID
+        const hari_modal_select = document.getElementById("hari_modal"); // Updated ID
+        const jam_mulai_modal_input = document.getElementById("jam_mulai_modal"); // Updated ID
+        const jam_selesai_modal_input = document.getElementById("jam_selesai_modal"); // Updated ID
+        const teacher_id_modal_select = document.getElementById("teacher_id_modal"); // Updated ID
+        const filterTahunAkademik = document.getElementById("filter-tahun-akademik");
+
 
         function openModal() {
             modal.style.display = "block";
             modalTitle.innerText = "Tambah Jadwal";
             form.reset();
-            document.getElementById("jadwal_id").value = '';
+            jadwal_id_input.value = '';
+            // Reset dropdowns explicitly for clarity if needed, though form.reset() should handle most.
+            class_id_modal_select.value = '';
+            mapel_id_modal_select.value = '';
+            hari_modal_select.value = '';
+            teacher_id_modal_select.value = '';
         }
 
-        /*         * Open modal for editing existing schedule
+        /* * Open modal for editing existing schedule
          * jadwal is an object with properties matching the form fields
          */
 
@@ -925,13 +1128,13 @@ $stmt = $pdo->query($query);
             modal.style.display = "block";
             modalTitle.innerText = "Edit Jadwal";
 
-            document.getElementById("jadwal_id").value = jadwal.id;
-            document.getElementById("class_id").value = jadwal.class_id;
-            document.getElementById("mapel_id").value = jadwal.id_mapel;
-            document.getElementById("hari").value = jadwal.hari;
-            document.getElementById("jam_mulai").value = jadwal.jam_mulai;
-            document.getElementById("jam_selesai").value = jadwal.jam_selesai;
-            document.getElementById("teacher_id").value = jadwal.teacher_id;
+            jadwal_id_input.value = jadwal.id;
+            class_id_modal_select.value = jadwal.class_id; // Using updated ID
+            mapel_id_modal_select.value = jadwal.id_mapel; // Using updated ID
+            hari_modal_select.value = jadwal.hari; // Using updated ID
+            jam_mulai_modal_input.value = jadwal.jam_mulai; // Using updated ID
+            jam_selesai_modal_input.value = jadwal.jam_selesai; // Using updated ID
+            teacher_id_modal_select.value = jadwal.teacher_id; // Using updated ID
         }
 
         function closeModal() {
@@ -949,7 +1152,7 @@ $stmt = $pdo->query($query);
             }
         }
 
-        /*         * Custom Alert Modal Logic         */
+        /* * Custom Alert Modal Logic         */
         const customAlertModal = document.getElementById("custom-alert-modal");
         const customAlertMessage = document.getElementById("custom-alert-message");
         const customAlertOkBtn = document.getElementById("custom-alert-ok");
@@ -981,11 +1184,13 @@ $stmt = $pdo->query($query);
             const confirmed = await showCustomConfirm('Yakin ingin menghapus jadwal ini?');
 
             if (confirmed) {
-                window.location.href = `hapus.php?id=${id_jadwal}`;
+                // Sertakan tahun akademik id saat menghapus
+                const currentTahunAkademikId = filterTahunAkademik.value;
+                window.location.href = `index.php?action=hapus&id=${id_jadwal}&tahun_akademik_id=${currentTahunAkademikId}`;
             }
         }
 
-        function showLogoutConfirm() {
+        function showLogoutConfirm() { // This is now used by SweetAlert2
             Swal.fire({
                 title: 'Konfirmasi Logout',
                 text: 'Apakah kamu yakin ingin logout?',
@@ -999,9 +1204,33 @@ $stmt = $pdo->query($query);
                 }
             });
         }
+        
+        // Bind logout button in sidebar to SweetAlert
+        const logoutButtonSidebar = document.getElementById('logoutButtonSidebar'); // Updated ID
+        if (logoutButtonSidebar) {
+            logoutButtonSidebar.addEventListener('click', function(e) {
+                e.preventDefault(); // Prevent default link behavior
+                showLogoutConfirm();
+            });
+        }
+        // Bind logout button in dropdown to SweetAlert
+        const logoutDropdownLink = document.getElementById('logoutDropdownLink');
+        if (logoutDropdownLink) {
+            logoutDropdownLink.addEventListener('click', function(e) {
+                e.preventDefault(); // Prevent default link behavior
+                showLogoutConfirm();
+            });
+        }
+
+        // Fungsi untuk menerapkan filter Tahun Akademik
+        function applyTahunAkademikFilter() {
+            const selectedTahunAkademik = filterTahunAkademik.value;
+            window.location.href = `index.php?tahun_akademik_id=${selectedTahunAkademik}`;
+        }
+
 
         // ===========================================
-        // LOGIKA BARU UNTUK FILTER INTERAKTIF
+        // LOGIKA BARU UNTUK FILTER INTERAKTIF CLIENT-SIDE
         // ===========================================
         document.addEventListener('DOMContentLoaded', function() {
             const filterKelas = document.getElementById('filter-kelas');
@@ -1010,12 +1239,17 @@ $stmt = $pdo->query($query);
             const resetBtn = document.getElementById('reset-filter-btn');
             const tableRows = document.querySelectorAll('.schedule-table tbody tr');
 
-            function applyFilters() {
+            function applyClientSideFilters() {
                 const selectedKelas = filterKelas.value;
                 const selectedMapel = filterMapel.value;
                 const selectedHari = filterHari.value;
 
                 tableRows.forEach(row => {
+                    // Check for "Tidak ada jadwal" row and skip it
+                    if (row.querySelector('td[colspan="7"]')) {
+                        return;
+                    }
+
                     const rowKelas = row.getAttribute('data-kelas');
                     const rowMapel = row.getAttribute('data-mapel');
                     const rowHari = row.getAttribute('data-hari');
@@ -1036,18 +1270,66 @@ $stmt = $pdo->query($query);
                 filterKelas.value = 'all';
                 filterMapel.value = 'all';
                 filterHari.value = 'all';
-                applyFilters();
+                applyClientSideFilters();
             }
 
-
-
             // Event listeners untuk setiap dropdown filter
-            filterKelas.addEventListener('change', applyFilters);
-            filterMapel.addEventListener('change', applyFilters);
-            filterHari.addEventListener('change', applyFilters);
+            filterKelas.addEventListener('change', applyClientSideFilters);
+            filterMapel.addEventListener('change', applyClientSideFilters);
+            filterHari.addEventListener('change', applyClientSideFilters);
 
             // Event listener untuk tombol reset
             resetBtn.addEventListener('click', resetFilters);
+
+            // Apply filters initially (in case of values from previous navigation or default)
+            applyClientSideFilters();
+        });
+
+        // Fungsi untuk menandai link sidebar yang aktif dengan benar
+        window.addEventListener('DOMContentLoaded', (event) => {
+            const currentPathname = window.location.pathname; 
+            const pathSegments = currentPathname.split('/');
+            const superadminIndex = pathSegments.indexOf('superadmin');
+            let relativePathFromSuperadmin = '';
+
+            if (superadminIndex !== -1 && pathSegments.length > superadminIndex) {
+                relativePathFromSuperadmin = pathSegments.slice(superadminIndex + 1).join('/');
+            } else {
+                relativePathFromSuperadmin = currentPathname.split('/').pop();
+            }
+            
+            document.querySelectorAll('.sidebar nav a').forEach(link => {
+                link.classList.remove('active'); 
+
+                let linkHref = new URL(link.href).pathname; 
+                const linkSegments = linkHref.split('/');
+                const linkSuperadminIndex = linkSegments.indexOf('superadmin');
+                let linkRelativePath = '';
+
+                if (linkSuperadminIndex !== -1 && linkSegments.length > linkSuperadminIndex) {
+                    linkRelativePath = linkSegments.slice(linkSuperadminIndex + 1).join('/');
+                } else {
+                     linkRelativePath = linkHref.split('/').pop();
+                }
+                
+                linkRelativePath = linkRelativePath.split('?')[0];
+                let currentPathWithoutQuery = relativePathFromSuperadmin.split('?')[0];
+
+                // For the "Jadwal" link, specifically check if its folder matches the current URL's folder.
+                // Assuming "Jadwal" link refers to "superadmin/jadwal/index.php"
+                if (link.getAttribute('href') === 'index.php') { // This is the "Jadwal" link
+                    const currentFolder = pathSegments[superadminIndex + 1]; // e.g., 'jadwal'
+                    if (currentFolder === 'jadwal' && currentPathWithoutQuery === 'jadwal/index.php') {
+                        link.classList.add('active');
+                    } else if (currentFolder === 'Tahun_Akademik' && currentPathWithoutQuery === 'Tahun_Akademik/index.php') { // Fix for Tahun Akademik in sidebar
+                        link.classList.add('active');
+                    } else if (currentFolder === 'kelas' && currentPathWithoutQuery === 'kelas/index.php') { // Fix for Kelas in sidebar
+                        link.classList.add('active');
+                    }
+                } else if (linkRelativePath === currentPathWithoutQuery) {
+                    link.classList.add('active');
+                }
+            });
         });
     </script>
 </body>
