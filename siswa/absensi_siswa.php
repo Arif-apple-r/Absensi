@@ -19,13 +19,15 @@ require '../koneksi.php'; // Sesuaikan path ini sesuai lokasi file koneksi.php A
 
 $rekap_absensi_siswa = [];
 $nama_kelas_siswa = 'Memuat...';
+$nama_tahun_akademik = 'Memuat...'; // Tambahan untuk Tahun Akademik
 
 if ($siswa_class_id) {
-    // Ambil Nama Kelas Siswa (untuk ditampilkan di header)
-    $stmt_kelas_nama = $pdo->prepare("SELECT nama_kelas FROM class WHERE id = ?");
+    // Ambil Nama Kelas Siswa dan Nama Tahun Akademik (untuk ditampilkan di header)
+    $stmt_kelas_nama = $pdo->prepare("SELECT c.nama_kelas, ta.nama_tahun FROM class c JOIN tahun_akademik ta ON c.id_tahun_akademik = ta.id WHERE c.id = ?");
     $stmt_kelas_nama->execute([$siswa_class_id]);
     $kelas_data = $stmt_kelas_nama->fetch(PDO::FETCH_ASSOC);
     $nama_kelas_siswa = $kelas_data['nama_kelas'] ?? 'Tidak Ditemukan';
+    $nama_tahun_akademik = $kelas_data['nama_tahun'] ?? 'Tidak Ditemukan'; // Ambil nama tahun akademik
 
     // Query untuk mengambil semua absensi siswa yang sedang login
     // Join dengan pertemuan, jadwal, mapel, dan guru untuk mendapatkan detail lengkap
@@ -41,7 +43,8 @@ if ($siswa_class_id) {
             g.name AS nama_guru,
             j.hari,
             j.jam_mulai,
-            j.jam_selesai
+            j.jam_selesai,
+            ta.nama_tahun  -- Tambahan: Nama Tahun Akademik
         FROM absensi AS a
         JOIN siswa AS s ON a.id_siswa = s.id
         JOIN pertemuan AS p ON a.id_pertemuan = p.id
@@ -49,6 +52,7 @@ if ($siswa_class_id) {
         JOIN mapel AS m ON j.id_mapel = m.id
         JOIN guru AS g ON j.teacher_id = g.id
         JOIN class AS c ON j.class_id = c.id 
+        JOIN tahun_akademik AS ta ON c.id_tahun_akademik = ta.id -- Tambahan: Join dengan tahun_akademik
         WHERE a.id_siswa = ?
         ORDER BY p.tanggal DESC, j.jam_mulai DESC;
     ";
@@ -82,11 +86,11 @@ if (!empty($siswa_id)) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Absensi Saya | Siswa</title>
-    <!-- Font Awesome untuk ikon -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         /* Variabel CSS dari file admin/guru Anda */
         :root {
@@ -491,7 +495,6 @@ if (!empty($siswa_id)) {
 </head>
 
 <body>
-    <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="logo"><span>SiswaCoy</span></div>
         <nav>
@@ -508,7 +511,7 @@ if (!empty($siswa_id)) {
                 <span>Absensi Saya</span>
             </a>
             <div class="logout-button-container">
-                <a href="../logout.php">
+                <a onclick="showLogoutConfirmation()">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Logout</span>
                 </a>
@@ -516,7 +519,6 @@ if (!empty($siswa_id)) {
         </nav>
     </div>
 
-    <!-- Header -->
     <div class="header" id="header">
         <button class="toggle-btn" onclick="toggleSidebar()">
             <i class="fas fa-bars"></i>
@@ -531,15 +533,13 @@ if (!empty($siswa_id)) {
             <img src="<?php echo $siswa_photo_src_header; ?>" alt="User Avatar"
                 loading="lazy"
                 onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=GR';">
-            <!-- Dropdown Menu -->
             <div class="dropdown-menu" id="userDropdownContent">
                 <a href="profil_siswa.php"><i class="fas fa-user-circle"></i> Profil</a>
-                <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a onclick="showLogoutConfirmation()"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
         </div>
     </div>
 
-    <!-- Konten Utama -->
     <div class="content" id="mainContent">
         <div class="card">
             <h2>Rekap Absensi Pribadi</h2>
@@ -547,6 +547,7 @@ if (!empty($siswa_id)) {
                 <p><strong>Nama:</strong> <?php echo htmlspecialchars($siswa_name); ?></p>
                 <p><strong>NIS:</strong> <?php echo htmlspecialchars($siswa_nis); ?></p>
                 <p><strong>Kelas:</strong> <?php echo htmlspecialchars($nama_kelas_siswa); ?></p>
+                <p><strong>Tahun Akademik:</strong> <?php echo htmlspecialchars($nama_tahun_akademik); ?></p>
             </div>
 
             <?php if (!empty($success_message)): ?>
@@ -623,6 +624,22 @@ if (!empty($siswa_id)) {
             header.classList.toggle("shifted");
         }
 
+        function showLogoutConfirmation() {
+            Swal.fire({
+                title: 'Konfirmasi Logout',
+                text: 'Apakah kamu yakin ingin logout?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Logout!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = "../logout.php"; // redirect logout
+                }
+            });
+        }
+
+
         // Logika Dropdown User Info
         const userInfoDropdown = document.getElementById("userInfoDropdown");
         const userDropdownContent = document.getElementById("userDropdownContent");
@@ -646,11 +663,6 @@ if (!empty($siswa_id)) {
         window.onload = function() {
             // Set nama dan last login dari sesi PHP
             document.getElementById('siswaName').textContent = '<?php echo htmlspecialchars($siswa_name); ?>';
-            document.getElementById('lastLogin').textContent = '<?php echo htmlspecialchars($last_login); ?>';
-
-            // Mengatur link sidebar
-            document.querySelector('.sidebar nav a:nth-child(1)').href = 'dashboard_siswa.php';
-            document.querySelector('.sidebar nav a:nth-child(2)').href = 'jadwal_siswa.php';
         };
     </script>
 </body>

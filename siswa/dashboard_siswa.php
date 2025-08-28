@@ -2,23 +2,37 @@
 session_start();
 
 // Validasi sesi siswa
-// Pastikan hanya siswa yang sudah login yang bisa mengakses halaman ini
 if (!isset($_SESSION['siswa_id']) || !is_numeric($_SESSION['siswa_id'])) {
     header("Location: ../login.php");
     exit;
 }
 
 // Sertakan file koneksi database Anda
-require_once '../koneksi.php'; // Menggunakan require_once untuk mencegah multiple inclusion
+require_once '../koneksi.php';
 
 // Ambil data siswa dari sesi
-// Gunakan operator null coalescing (??) untuk menangani kasus jika kunci sesi tidak ada
 $siswa_id = $_SESSION['siswa_id'];
 $siswa_name = $_SESSION['siswa_name'] ?? 'Siswa';
 $siswa_nis = $_SESSION['siswa_nis'] ?? 'N/A';
-$siswa_class_id = $_SESSION['siswa_class_id'] ?? null;
-$last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
-$siswa_photo_session = $_SESSION['siswa_photo'] ?? '';
+
+// --- BAGIAN KODE YANG SUDAH DIPERBAIKI SECARA KESELURUHAN ---
+// Mengambil data siswa, kelas, dan tahun akademik dalam satu query
+$sql_siswa = "SELECT s.id, s.name AS nama, s.nis, s.class_id, s.photo,
+                     c.nama_kelas, c.id_tahun_akademik,
+                     ta.nama_tahun
+              FROM siswa AS s
+              LEFT JOIN class AS c ON s.class_id = c.id
+              LEFT JOIN tahun_akademik AS ta ON c.id_tahun_akademik = ta.id
+              WHERE s.id = ?";
+$stmt_siswa = $pdo->prepare($sql_siswa);
+$stmt_siswa->execute([$siswa_id]);
+$siswa_data = $stmt_siswa->fetch(PDO::FETCH_ASSOC);
+
+$siswa_photo = $siswa_data['photo'] ?? '';
+$siswa_class_id = $siswa_data['class_id'] ?? null;
+$nama_kelas_siswa = $siswa_data['nama_kelas'] ?? 'Tidak Ditemukan';
+$nama_tahun_akademik = $siswa_data['nama_tahun'] ?? 'Tidak Ditemukan';
+$id_tahun_akademik_siswa = $siswa_data['id_tahun_akademik'] ?? null;
 
 // --- Bagian PHP untuk mengambil data ringkasan dashboard siswa ---
 $total_mapel = 0;
@@ -29,61 +43,52 @@ $rekap_absensi = [
     'Izin' => 0,
     'Alpha' => 0
 ];
-$nama_kelas_siswa = 'Memuat...';
 
 try {
-    // Ambil Nama Kelas Siswa jika class ID tersedia
-    if ($siswa_class_id) {
-        $sql_nama_kelas = "SELECT nama_kelas FROM class WHERE id = ?";
-        $stmt_nama_kelas = $pdo->prepare($sql_nama_kelas);
-        $stmt_nama_kelas->execute([$siswa_class_id]);
-        $kelas_data = $stmt_nama_kelas->fetch(PDO::FETCH_ASSOC);
-        $nama_kelas_siswa = $kelas_data['nama_kelas'] ?? 'Tidak Ditemukan';
-
-        // 1. Jumlah Mata Pelajaran yang diikuti siswa
-        $sql_mapel = "SELECT COUNT(DISTINCT id_mapel) AS jumlah_mapel FROM jadwal WHERE class_id = ?";
+    if ($siswa_class_id && $id_tahun_akademik_siswa) {
+        // 1. Jumlah Mata Pelajaran yang diikuti siswa (difilter berdasarkan tahun akademik)
+        // Perbaikan: Gabungkan dengan tabel `class` untuk mendapatkan `id_tahun_akademik`
+        $sql_mapel = "SELECT COUNT(DISTINCT j.id_mapel) AS jumlah_mapel
+                      FROM jadwal AS j
+                      JOIN class AS c ON j.class_id = c.id
+                      WHERE c.id = ? AND c.id_tahun_akademik = ?";
         $stmt_mapel = $pdo->prepare($sql_mapel);
-        $stmt_mapel->execute([$siswa_class_id]);
+        $stmt_mapel->execute([$siswa_class_id, $id_tahun_akademik_siswa]);
         $total_mapel = $stmt_mapel->fetch(PDO::FETCH_ASSOC)['jumlah_mapel'] ?? 0;
 
-        // 2. Jumlah Total Pertemuan di kelas siswa
-        $sql_pertemuan_kelas = "SELECT COUNT(p.id) AS jumlah_pertemuan FROM pertemuan AS p JOIN jadwal AS j ON p.id_jadwal = j.id WHERE j.class_id = ?";
+        // 2. Jumlah Total Pertemuan di kelas siswa (difilter berdasarkan tahun akademik)
+        // Perbaikan: Gabungkan dengan tabel `class` untuk mendapatkan `id_tahun_akademik`
+        $sql_pertemuan_kelas = "SELECT COUNT(p.id) AS jumlah_pertemuan
+                                FROM pertemuan AS p
+                                JOIN jadwal AS j ON p.id_jadwal = j.id
+                                JOIN class AS c ON j.class_id = c.id
+                                WHERE c.id = ? AND c.id_tahun_akademik = ?";
         $stmt_pertemuan_kelas = $pdo->prepare($sql_pertemuan_kelas);
-        $stmt_pertemuan_kelas->execute([$siswa_class_id]);
+        $stmt_pertemuan_kelas->execute([$siswa_class_id, $id_tahun_akademik_siswa]);
         $total_pertemuan_kelas = $stmt_pertemuan_kelas->fetch(PDO::FETCH_ASSOC)['jumlah_pertemuan'] ?? 0;
     }
 
-    // 3. Rekap Absensi Siswa (Hadir, Sakit, Izin, Alpha)
-    $sql_rekap_absensi = "SELECT status, COUNT(*) AS count FROM absensi WHERE id_siswa = ? GROUP BY status";
+    // 3. Rekap Absensi Siswa (Hadir, Sakit, Izin, Alpha) (difilter berdasarkan tahun akademik)
+    // Query ini sudah benar, tidak perlu diubah.
+    $sql_rekap_absensi = "SELECT a.status, COUNT(*) AS count
+                          FROM absensi AS a
+                          JOIN pertemuan AS p ON a.id_pertemuan = p.id
+                          JOIN jadwal AS j ON p.id_jadwal = j.id
+                          JOIN class AS c ON j.class_id = c.id
+                          WHERE a.id_siswa = ? AND c.id_tahun_akademik = ?
+                          GROUP BY a.status";
     $stmt_rekap_absensi = $pdo->prepare($sql_rekap_absensi);
-    $stmt_rekap_absensi->execute([$siswa_id]);
+    $stmt_rekap_absensi->execute([$siswa_id, $id_tahun_akademik_siswa]);
     while ($row = $stmt_rekap_absensi->fetch(PDO::FETCH_ASSOC)) {
-        // Mengisi array rekap_absensi dengan data dari database
         if (isset($rekap_absensi[$row['status']])) {
             $rekap_absensi[$row['status']] = $row['count'];
         }
     }
 } catch (PDOException $e) {
-    // Tangani error database dengan lebih elegan
-    // Dalam produksi, log error ini, jangan tampilkan ke user
     die("Error mengambil data dari database: " . $e->getMessage());
 }
 
-$siswa_photo = '';
-if (!empty($siswa_id)) {
-    $stmt_siswa_photo = $pdo->prepare("SELECT photo FROM siswa WHERE id = ?");
-    $stmt_siswa_photo->execute([$siswa_id]);
-    $result = $stmt_siswa_photo->fetch(PDO::FETCH_ASSOC);
-    if ($result) {
-        $siswa_photo = htmlspecialchars($result['photo']);
-    }
-}
-
-
-// Hitung total absensi yang tercatat
 $total_absensi_tercatat = array_sum($rekap_absensi);
-
-// Periksa apakah ada pesan sukses dari operasi sebelumnya
 $success_message = $_GET['success'] ?? '';
 ?>
 
@@ -97,6 +102,7 @@ $success_message = $_GET['success'] ?? '';
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         :root {
             --primary-color: #1abc9c;
@@ -480,6 +486,33 @@ $success_message = $_GET['success'] ?? '';
         .sidebar.collapsed .logout-button-container a span {
             display: none;
         }
+
+        /* Tambahan: CSS untuk Info Tahun Akademik */
+        .info-card {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 5px solid var(--primary-color);
+        }
+        .info-card .info-icon {
+            font-size: 24px;
+            color: var(--primary-color);
+            margin-right: 15px;
+        }
+        .info-card .info-details h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+        .info-card .info-details p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--text-color);
+        }
     </style>
 </head>
 
@@ -500,7 +533,7 @@ $success_message = $_GET['success'] ?? '';
                 <span>Absensi Saya</span>
             </a>
             <div class="logout-button-container">
-                <a href="../logout.php">
+                <a onclick="showLogoutConfirmation()">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Logout</span>
                 </a>
@@ -517,15 +550,14 @@ $success_message = $_GET['success'] ?? '';
             <span id="siswaName"><?php echo htmlspecialchars($siswa_name); ?></span>
             <?php
             // Tampilkan foto profil siswa jika ada, jika tidak pakai placeholder
-            $siswa_photo_src_header = !empty($siswa_photo) ? '../uploads/siswa/' . htmlspecialchars($siswa_photo) : 'https://placehold.co/40x40/cccccc/000000?text=GR';
+            $siswa_photo_src_header = !empty($siswa_photo) ? '../uploads/siswa/' . htmlspecialchars($siswa_photo) : 'https://placehold.co/40x40/cccccc/333333?text=GR';
             ?>
             <img src="<?php echo $siswa_photo_src_header; ?>" alt="User Avatar"
                 loading="lazy"
                 onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=GR';">
-            <!-- Dropdown Menu -->
             <div class="dropdown-menu" id="userDropdownContent">
                 <a href="profil_siswa.php"><i class="fas fa-user-circle"></i> Profil</a>
-                <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a onclick="showLogoutConfirmation()"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
         </div>
     </div>
@@ -536,6 +568,14 @@ $success_message = $_GET['success'] ?? '';
             <div class="info-header">
                 <p><strong>NIS:</strong> <?php echo htmlspecialchars($siswa_nis); ?></p>
                 <p><strong>Kelas:</strong> <?php echo htmlspecialchars($nama_kelas_siswa); ?></p>
+            </div>
+            
+            <div class="info-card">
+                <div class="info-icon"><i class="fas fa-calendar-alt"></i></div>
+                <div class="info-details">
+                    <h3>Tahun Akademik</h3>
+                    <p><?php echo htmlspecialchars($nama_tahun_akademik); ?></p>
+                </div>
             </div>
 
             <?php if (!empty($success_message)): ?>
@@ -608,16 +648,30 @@ $success_message = $_GET['success'] ?? '';
             header.classList.toggle("shifted");
         }
 
+        function showLogoutConfirmation() {
+            Swal.fire({
+                title: 'Konfirmasi Logout',
+                text: 'Apakah kamu yakin ingin logout?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Logout!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = "../logout.php";
+                }
+            });
+        }
+
         // Logika Dropdown User Info
         const userInfoDropdown = document.getElementById("userInfoDropdown");
         const userDropdownContent = document.getElementById("userDropdownContent");
 
-        if (userInfoDropdown && userDropdownContent) { // Pastikan elemen ada
+        if (userInfoDropdown && userDropdownContent) {
             userInfoDropdown.addEventListener('click', function() {
                 userDropdownContent.style.display = userDropdownContent.style.display === 'block' ? 'none' : 'block';
             });
 
-            // Tutup dropdown jika user klik di luar area dropdown
             window.onclick = function(event) {
                 if (!event.target.matches('#userInfoDropdown') && !event.target.closest('#userInfoDropdown')) {
                     if (userDropdownContent.style.display === 'block') {

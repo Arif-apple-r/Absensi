@@ -68,6 +68,7 @@ if (isset($_GET['success'])) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         /* Variabel CSS dari file admin/guru Anda */
         :root {
@@ -268,6 +269,26 @@ if (isset($_GET['success'])) {
             width: 20px;
         }
 
+        /* css untuk edit profil  */
+        .edit-profil {
+            position: absolute; /* Posisi absolut di dalam card */
+            bottom: 20px; /* Jarak dari bawah card */
+            right: 20px; /* Jarak dari kanan card */
+            text-align: right;
+        }
+
+        .edit-profil a {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+        .edit-profil a:hover {
+            background-color: #16a085;
+        }
+
 
         /* Konten Utama */
         .content {
@@ -303,16 +324,17 @@ if (isset($_GET['success'])) {
         .card {
             background: var(--card-background);
             border-radius: 12px;
-            padding: 24px;
+            padding: 24px 24px 80px; /* Tambahkan padding bawah lebih besar */
             box-shadow: 0 4px 20px var(--shadow-color);
             margin-bottom: 25px;
-            max-width: 800px; /* Lebih kecil untuk profil */
+            max-width: 800px;
             margin-left: auto;
             margin-right: auto;
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
+            position: relative;
         }
 
         .card h2 {
@@ -466,7 +488,7 @@ if (isset($_GET['success'])) {
                 <span>Absensi Saya</span>
             </a>
             <div class="logout-button-container">
-                <a href="../logout.php">
+                <a onclick="showLogoutConfirmation()">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Logout</span>
                 </a>
@@ -492,7 +514,7 @@ if (isset($_GET['success'])) {
             <!-- Dropdown Menu -->
             <div class="dropdown-menu" id="userDropdownContent">
                 <a href="profil_siswa.php"><i class="fas fa-user-circle"></i> Profil</a>
-                <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a onclick="showLogoutConfirmation()"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
         </div>
     </div>
@@ -507,7 +529,7 @@ if (isset($_GET['success'])) {
             <?php endif; ?>
 
             <div class="profile-photo-container">
-                <img src="<?php echo $photo_src; ?>" alt="Foto Profil" class="profile-photo">
+                <img src="<?php echo !empty($siswa_photo) ? '../uploads/siswa/' . htmlspecialchars($siswa_photo) : 'https://placehold.co/150x150?text=NO+IMAGE'; ?>" alt="Foto Profil" class="profile-photo">
             </div>
             
             <div class="profile-info">
@@ -520,6 +542,9 @@ if (isset($_GET['success'])) {
                 <p><strong><i class="fas fa-map-marker-alt"></i> Alamat:</strong> <?php echo htmlspecialchars($siswa_data['alamat'] ?? '-'); ?></p>
                 <p><strong><i class="fas fa-school"></i> Kelas:</strong> <?php echo htmlspecialchars($nama_kelas_siswa); ?></p>
                 <p><strong><i class="fas fa-calendar-plus"></i> Tanggal Masuk:</strong> <?php echo htmlspecialchars(date('d M Y', strtotime($siswa_data['admission_date'] ?? ''))); ?></p>
+            </div>
+            <div class="edit-profil">
+                <a href="edit_profil.php">Edit Profil</a>
             </div>
         </div>
     </div>
@@ -534,6 +559,21 @@ if (isset($_GET['success'])) {
             sidebar.classList.toggle("collapsed");
             mainContent.classList.toggle("shifted");
             header.classList.toggle("shifted");
+        }
+
+        function showLogoutConfirmation() {
+            Swal.fire({
+                title: 'Konfirmasi Logout',
+                text: 'Apakah kamu yakin ingin logout?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Logout!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = "../logout.php"; // redirect logout
+                }
+            });
         }
 
         // Logika Dropdown User Info
