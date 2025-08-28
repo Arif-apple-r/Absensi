@@ -1,59 +1,59 @@
 <?php
+// File: rekap_absensi_kelas.php
+
 session_start();
-// Pastikan hanya guru yang sudah login yang bisa mengakses halaman ini
 if (!isset($_SESSION['guru_id'])) {
-    header("Location: ../login.php"); // Sesuaikan path ke halaman login Anda
+    header("Location: ../login.php");
     exit;
 }
 
-// Ambil ID guru dari sesi
 $guru_id = $_SESSION['guru_id'];
-$guru_name = $_SESSION['guru_name'] ?? 'Guru'; // Default jika nama tidak ada di sesi
-$last_login = $_SESSION['last_login'] ?? 'Belum ada data login'; // Default jika waktu login tidak ada
+$guru_name = $_SESSION['guru_name'] ?? 'Guru';
+require '../koneksi.php';
 
-// Sertakan file koneksi database Anda
-require '../koneksi.php'; // Sesuaikan path ini sesuai lokasi file koneksi.php Anda
+// Ambil id_jadwal dari URL
+$jadwal_id = $_GET['jadwal_id'] ?? null;
 
-// Ambil class_id dan mapel_id dari URL
-$class_id = $_GET['class_id'] ?? null;
-$mapel_id = $_GET['mapel_id'] ?? null;
-
-// Redirect jika ID tidak valid
-if (!$class_id || !$mapel_id) {
-    header("Location: rekap_absensi_guru.php?error=" . urlencode("ID Kelas atau ID Mata Pelajaran tidak valid."));
+if (!$jadwal_id) {
+    header("Location: rekap_absensi_guru.php?error=" . urlencode("ID Jadwal tidak valid."));
     exit;
 }
 
-// Verifikasi bahwa guru ini memiliki akses ke kombinasi kelas/mata pelajaran ini
-$stmt_verify_access = $pdo->prepare("SELECT COUNT(*) FROM jadwal WHERE class_id = ? AND id_mapel = ? AND teacher_id = ?");
-$stmt_verify_access->execute([$class_id, $mapel_id, $guru_id]);
-if ($stmt_verify_access->fetchColumn() == 0) {
-    header("Location: rekap_absensi_guru.php?error=" . urlencode("Anda tidak memiliki akses ke kelas atau mata pelajaran ini."));
-    exit;
-}
-
-// Ambil informasi nama kelas dan mata pelajaran untuk ditampilkan
+// Verifikasi guru memiliki akses ke jadwal ini, dan ambil informasi terkait
 $stmt_info = $pdo->prepare("
-    SELECT c.nama_kelas, m.nama_mapel
-    FROM class AS c, mapel AS m
-    WHERE c.id = ? AND m.id = ?
+    SELECT
+        j.class_id,
+        j.id_mapel,
+        c.nama_kelas,
+        m.nama_mapel
+    FROM
+        jadwal AS j
+    INNER JOIN
+        class AS c ON j.class_id = c.id
+    INNER JOIN
+        mapel AS m ON j.id_mapel = m.id
+    WHERE
+        j.id = ? AND j.teacher_id = ?
 ");
-$stmt_info->execute([$class_id, $mapel_id]);
+$stmt_info->execute([$jadwal_id, $guru_id]);
 $info = $stmt_info->fetch(PDO::FETCH_ASSOC);
 
-$nama_kelas = $info['nama_kelas'] ?? 'N/A';
-$nama_mapel = $info['nama_mapel'] ?? 'N/A';
+if (!$info) {
+    header("Location: rekap_absensi_guru.php?error=" . urlencode("Anda tidak memiliki akses ke jadwal ini."));
+    exit;
+}
 
-// Dapatkan total pertemuan yang tersedia untuk kelas dan mata pelajaran ini
+$class_id = $info['class_id'];
+$mapel_id = $info['id_mapel'];
+$nama_kelas = $info['nama_kelas'];
+$nama_mapel = $info['nama_mapel'];
+
+// Hitung total pertemuan yang tersedia berdasarkan jadwal_id
 $stmt_total_meetings = $pdo->prepare("
-    SELECT COUNT(p.id) AS total_meetings
-    FROM pertemuan AS p
-    JOIN jadwal AS j ON p.id_jadwal = j.id
-    WHERE j.class_id = ? AND j.id_mapel = ?
+    SELECT COUNT(*) AS total_meetings FROM pertemuan WHERE id_jadwal = ?
 ");
-$stmt_total_meetings->execute([$class_id, $mapel_id]);
-$total_available_meetings = $stmt_total_meetings->fetch(PDO::FETCH_ASSOC)['total_meetings'] ?? 0;
-
+$stmt_total_meetings->execute([$jadwal_id]);
+$total_available_meetings = $stmt_total_meetings->fetchColumn();
 
 // Query untuk mendapatkan rekap absensi setiap siswa di kelas ini untuk mata pelajaran ini
 $query_rekap = "
@@ -65,24 +65,22 @@ $query_rekap = "
         COUNT(CASE WHEN a.status = 'Sakit' THEN 1 END) AS count_sakit,
         COUNT(CASE WHEN a.status = 'Izin' THEN 1 END) AS count_izin,
         COUNT(CASE WHEN a.status = 'Alpha' THEN 1 END) AS count_alpha,
-        COUNT(a.id) AS total_absensi_tercatat_siswa -- Jumlah absensi yang tercatat untuk siswa ini di mapel ini
+        COUNT(a.id) AS total_absensi_tercatat_siswa
     FROM
         siswa AS s
     LEFT JOIN
         absensi AS a ON s.id = a.id_siswa
     LEFT JOIN
         pertemuan AS p ON a.id_pertemuan = p.id
-    LEFT JOIN
-        jadwal AS j ON p.id_jadwal = j.id
     WHERE
-        s.class_id = ? AND j.id_mapel = ?
+        s.class_id = ? AND p.id_jadwal = ?
     GROUP BY
         s.id, s.NIS, s.name
     ORDER BY
         s.name ASC;
 ";
 $stmt_rekap = $pdo->prepare($query_rekap);
-$stmt_rekap->execute([$class_id, $mapel_id]);
+$stmt_rekap->execute([$class_id, $jadwal_id]);
 $rekap_absensi_siswa = $stmt_rekap->fetchAll(PDO::FETCH_ASSOC);
 
 
@@ -145,11 +143,11 @@ if (!empty($guru_id)) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rekap Absensi <?php echo htmlspecialchars($nama_kelas); ?> - <?php echo htmlspecialchars($nama_mapel); ?> | Guru</title>
-    <!-- Font Awesome untuk ikon -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         /* Variabel CSS dari file admin/guru Anda */
         :root {
@@ -210,6 +208,15 @@ if (!empty($guru_id)) {
             left: 0;
             width: 100%;
             background: var(--primary-color);
+        }
+
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
         }
 
         .sidebar nav a {
@@ -498,13 +505,62 @@ if (!empty($guru_id)) {
                 font-size: 0.85em; /* Kecilkan font */
             }
         }
+
+        /* Backlink untuk kembali */
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: var(--light-text-color);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: color 0.2s ease;
+        }
+
+        .back-link:hover {
+            color: var(--primary-color);
+        }
+
+        /* --- Penambahan CSS untuk Tombol Logout --- */
+        .sidebar .logout-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .sidebar .logout-button-container a {
+            background-color: #e74c3c; /* Warna merah untuk Logout */
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar .logout-button-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .sidebar.collapsed .logout-button-container {
+            padding: 0;
+        }
+
+        .sidebar.collapsed .logout-button-container a span {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
-    <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-        <div class="logo">GuruCoy</div>
+        <div class="logo"><span>GuruCoy</span></div>
         <nav>
             <a href="dashboard_guru.php">
                 <i class="fas fa-tachometer-alt"></i>
@@ -514,22 +570,19 @@ if (!empty($guru_id)) {
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal Mengajar</span>
             </a>
-            <a href="pertemuan_guru.php">
-                <i class="fas fa-clipboard-list"></i>
-                <span>Pertemuan</span>
-            </a>
-            <a href="absensi_guru.php">
-                <i class="fas fa-check-circle"></i>
-                <span>Absensi</span>
-            </a>
             <a href="rekap_absensi_guru.php" class="active">
                 <i class="fas fa-chart-bar"></i>
                 <span>Rekap Absensi</span>
             </a>
+            <div class="logout-button-container">
+                <a onclick="showLogoutConfirmation()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
         </nav>
     </div>
 
-    <!-- Header -->
     <div class="header" id="header">
         <button class="toggle-btn" onclick="toggleSidebar()">
             <i class="fas fa-bars"></i>
@@ -542,20 +595,15 @@ if (!empty($guru_id)) {
             ?>
             <img src="<?php echo $guru_photo_src_header; ?>" alt="User Avatar"
                 loading="lazy"
-                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=GR';"
-            >
-            <div class="last-login">Terakhir Login: <span id="lastLogin"><?php echo htmlspecialchars($last_login); ?></span></div>
-            <i class="fas fa-caret-down"></i>
+                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=GR';">
 
-            <!-- Dropdown Menu -->
             <div class="dropdown-menu" id="userDropdownContent">
                 <a href="profil_guru.php"><i class="fas fa-user-circle"></i> Profil</a>
-                <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a onclick="showLogoutConfirmation()"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
         </div>
     </div>
 
-    <!-- Konten Utama -->
     <div class="content" id="mainContent">
         <div class="card">
             <h2>Rekap Absensi Kelas <?php echo htmlspecialchars($nama_kelas); ?> - <?php echo htmlspecialchars($nama_mapel); ?></h2>
@@ -597,7 +645,11 @@ if (!empty($guru_id)) {
                                 ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($siswa_rekap['NIS']); ?></td>
-                                    <td><?php echo htmlspecialchars($siswa_rekap['nama_siswa']); ?></td>
+                                    <td>
+                                        <a href="detail_absensi_siswa.php?siswa_id=<?php echo htmlspecialchars($siswa_rekap['siswa_id']); ?>&jadwal_id=<?php echo htmlspecialchars($jadwal_id); ?>" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">
+                                            <?php echo htmlspecialchars($siswa_rekap['nama_siswa']); ?>
+                                        </a>
+                                    </td>
                                     <td class="status-hadir-count"><?php echo htmlspecialchars($siswa_rekap['count_hadir']); ?></td>
                                     <td class="status-sakit-count"><?php echo htmlspecialchars($siswa_rekap['count_sakit']); ?></td>
                                     <td class="status-izin-count"><?php echo htmlspecialchars($siswa_rekap['count_izin']); ?></td>
@@ -610,8 +662,8 @@ if (!empty($guru_id)) {
                     </table>
                 </div>
             <?php endif; ?>
-            <a href="rekap_absensi_guru.php" class="back-link" style="margin-top: 20px;">
-                <i class="fas fa-arrow-left"></i> Kembali ke Pilih Kelas
+            <a href="rekap_absensi_guru.php" class="back-link">
+                <i class="fas fa-arrow-left"></i> Kembali ke Rekap Kelas
             </a>
 
         </div>
@@ -629,16 +681,30 @@ if (!empty($guru_id)) {
             header.classList.toggle("shifted");
         }
 
+        function showLogoutConfirmation() {
+            Swal.fire({
+                title: 'Konfirmasi Logout',
+                text: 'Apakah kamu yakin ingin logout?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Logout!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = "../logout.php";
+                }
+            });
+        }
+
         // Logika Dropdown User Info
         const userInfoDropdown = document.getElementById("userInfoDropdown");
         const userDropdownContent = document.getElementById("userDropdownContent");
 
-        if (userInfoDropdown && userDropdownContent) { // Pastikan elemen ada
+        if (userInfoDropdown && userDropdownContent) {
             userInfoDropdown.addEventListener('click', function() {
                 userDropdownContent.style.display = userDropdownContent.style.display === 'block' ? 'none' : 'block';
             });
 
-            // Tutup dropdown jika user klik di luar area dropdown
             window.onclick = function(event) {
                 if (!event.target.matches('#userInfoDropdown') && !event.target.closest('#userInfoDropdown')) {
                     if (userDropdownContent.style.display === 'block') {
@@ -647,20 +713,6 @@ if (!empty($guru_id)) {
                 }
             }
         }
-
-        // Jalankan saat halaman dimuat
-        window.onload = function() {
-            // Set nama dan last login dari sesi PHP
-            document.getElementById('guruName').textContent = '<?php echo htmlspecialchars($guru_name); ?>';
-            document.getElementById('lastLogin').textContent = '<?php echo htmlspecialchars($last_login); ?>';
-
-            // Mengatur link sidebar
-            document.querySelector('.sidebar nav a:nth-child(1)').href = 'dashboard_guru.php';
-            document.querySelector('.sidebar nav a:nth-child(2)').href = 'jadwal_guru.php';
-            document.querySelector('.sidebar nav a:nth-child(3)').href = 'pertemuan_guru.php';
-            document.querySelector('.sidebar nav a:nth-child(4)').href = 'absensi_guru.php';
-            document.querySelector('.sidebar nav a:nth-child(5)').href = 'rekap_absensi_guru.php'; // Aktifkan link rekap absensi
-        };
     </script>
 </body>
 </html>

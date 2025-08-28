@@ -1,56 +1,67 @@
 <?php
+// Pastikan semua error ditampilkan saat pengembangan
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 session_start();
-// Pastikan hanya guru yang sudah login yang bisa mengakses halaman ini
+
+// Validasi otentikasi guru
 if (!isset($_SESSION['guru_id'])) {
-    header("Location: ../login.php"); // Sesuaikan path ke halaman login Anda
+    header("Location: ../login.php");
     exit;
 }
-
-// Ambil data guru dari sesi
-$guru_id = $_SESSION['guru_id'];
-$guru_name = $_SESSION['guru_name'] ?? 'Guru';
-$last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
 
 // Sertakan file koneksi database Anda
-require '../koneksi.php'; // Sesuaikan path ini sesuai lokasi file koneksi.php Anda
+// Perbaiki path jika diperlukan. Sesuaikan dengan lokasi file koneksi.php Anda.
+require_once '../koneksi.php';
 
-$guru_data = [];
-$guru_photo = ''; // Default photo
-
-// Ambil data profil lengkap guru dari database
-$stmt_guru_profil = $pdo->prepare("
-    SELECT 
-        nip, 
-        name, 
-        gender, 
-        email, 
-        pass, 
-        dob, 
-        no_hp, 
-        photo, 
-        alamat, 
-        mapel, 
-        admission_date
-    FROM guru
-    WHERE id = ?
-");
-$stmt_guru_profil->execute([$guru_id]);
-$guru_data = $stmt_guru_profil->fetch(PDO::FETCH_ASSOC);
-
-if ($guru_data) {
-    $guru_photo = $guru_data['photo'];
-} else {
-    // Jika data guru tidak ditemukan di DB (jarang terjadi jika sesi valid)
-    // Redirect ke dashboard atau tampilkan error
-    header("Location: dashboard_guru.php?error=" . urlencode("Data profil guru tidak ditemukan."));
-    exit;
-}
+// Inisialisasi variabel dari sesi
+$guru_id = $_SESSION['guru_id'];
+$guru_name = htmlspecialchars($_SESSION['guru_name'] ?? 'Guru');
+$guru_photo = htmlspecialchars($_SESSION['guru_photo'] ?? '');
 
 // Cek jika ada pesan sukses dari operasi sebelumnya
 $success_message = '';
 if (isset($_GET['success'])) {
     $success_message = htmlspecialchars($_GET['success']);
 }
+
+// Query untuk mengambil jadwal mengajar guru yang sedang login
+$query = "
+    SELECT
+        j.id AS jadwal_id,
+        j.hari,
+        j.jam_mulai,
+        j.jam_selesai,
+        m.nama_mapel,
+        c.nama_kelas,
+        c.photo AS class_photo,
+        g.photo AS guru_photo
+    FROM jadwal AS j
+    JOIN mapel AS m ON j.id_mapel = m.id
+    JOIN class AS c ON j.class_id = c.id
+    JOIN guru AS g ON j.teacher_id = g.id
+    WHERE j.teacher_id = :guru_id
+    ORDER BY FIELD(j.hari, 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'), j.jam_mulai ASC;
+";
+
+$jadwal_mengajar = [];
+$guru_photo = ''; // Inisialisasi ulang
+try {
+    $stmt = $pdo->prepare($query);
+    $stmt->bindParam(':guru_id', $guru_id, PDO::PARAM_INT);
+    $stmt->execute();
+    $jadwal_mengajar = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Ambil data foto guru dari hasil query (jika ada)
+    if (!empty($jadwal_mengajar)) {
+        $guru_photo = htmlspecialchars($jadwal_mengajar[0]['guru_photo']);
+    }
+
+} catch (PDOException $e) {
+    die("Error mengambil data: " . $e->getMessage());
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -58,15 +69,14 @@ if (isset($_GET['success'])) {
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Profil Saya | Guru</title>
-    <!-- Font Awesome untuk ikon -->
+    <title>Jadwal Mengajar - <?php echo $guru_name; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* Variabel CSS dari file admin/guru Anda */
+        /* CSS yang tidak diubah dari kode sebelumnya */
         :root {
             --primary-color: #1abc9c;
             --secondary-color: #34495e;
@@ -80,7 +90,6 @@ if (isset($_GET['success'])) {
             --sidebar-collapsed-width: 70px;
         }
 
-        /* Reset dan Dasar */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -96,7 +105,6 @@ if (isset($_GET['success'])) {
             overflow-x: hidden;
         }
 
-        /* Sidebar */
         .sidebar {
             width: var(--sidebar-width);
             background-color: var(--secondary-color);
@@ -104,7 +112,7 @@ if (isset($_GET['success'])) {
             top: 0;
             left: 0;
             height: 100%;
-            transition: width 0.3s ease;
+            transition: width 0.3s ease, transform 0.3s ease;
             z-index: 1000;
             padding-top: 70px;
             overflow: hidden;
@@ -152,6 +160,11 @@ if (isset($_GET['success'])) {
             font-size: 18px;
         }
 
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
+        }
+
         .sidebar.collapsed nav a i {
             margin-right: 0;
         }
@@ -166,7 +179,22 @@ if (isset($_GET['success'])) {
             padding-left: 25px;
         }
 
-        /* Header */
+        .sidebar nav a.active i {
+            color: var(--primary-color);
+        }
+
+        .sidebar nav a.deactive {
+            background-color: #253340ff;
+            pointer-events: none; /* Tambahan untuk menonaktifkan klik */
+        }
+        
+        /* Tambahan untuk menghilangkan efek hover pada tautan deactive */
+        .sidebar nav a.deactive:hover {
+            background-color: #253340ff; /* Kembali ke warna asli */
+            padding-left: 20px; /* Kembali ke padding asli */
+            transition: none; /* Menonaktifkan transisi hover */
+        }
+
         .header {
             height: 65.5px;
             background-color: var(--card-background);
@@ -207,14 +235,16 @@ if (isset($_GET['success'])) {
             gap: 10px;
             font-size: 14px;
             color: var(--text-color);
-            cursor: pointer; /* Menjadikan seluruh area user-info clickable */
-            padding: 5px 10px; /* Sedikit padding agar lebih mudah diklik */
+            cursor: pointer;
+            padding: 5px 10px;
             border-radius: 8px;
             transition: background-color 0.2s ease;
         }
+
         .user-info:hover {
             background-color: #f0f0f0;
         }
+
         .user-info img {
             width: 35px;
             height: 35px;
@@ -222,31 +252,35 @@ if (isset($_GET['success'])) {
             object-fit: cover;
             border: 2px solid var(--primary-color);
         }
+
         .user-info span {
             font-weight: 600;
         }
+
         .user-info .last-login {
             color: var(--light-text-color);
             font-size: 12px;
-            margin-left: 10px; /* Spasi dari nama */
+            margin-left: 10px;
         }
+
         .user-info i.fa-caret-down {
-            margin-left: 5px; /* Spasi untuk ikon dropdown */
+            margin-left: 5px;
         }
 
         .dropdown-menu {
             display: none;
             position: absolute;
-            top: 100%; /* Posisikan di bawah user-info */
+            top: 100%;
             right: 0;
             background-color: var(--card-background);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
             z-index: 1002;
             min-width: 160px;
             border-radius: 8px;
-            overflow: hidden; /* Pastikan sudut melengkung */
-            margin-top: 10px; /* Jarak antara user-info dan dropdown */
+            overflow: hidden;
+            margin-top: 10px;
         }
+
         .dropdown-menu a {
             color: var(--text-color);
             padding: 12px 16px;
@@ -255,16 +289,16 @@ if (isset($_GET['success'])) {
             font-weight: 500;
             transition: background-color 0.2s ease;
         }
+
         .dropdown-menu a:hover {
             background-color: var(--background-color);
         }
+
         .dropdown-menu a i {
             margin-right: 10px;
-            width: 20px; /* Agar ikon sejajar */
+            width: 20px;
         }
 
-
-        /* Konten Utama */
         .content {
             flex-grow: 1;
             padding: 90px 30px 30px 30px;
@@ -298,17 +332,12 @@ if (isset($_GET['success'])) {
         .card {
             background: var(--card-background);
             border-radius: 12px;
-            padding: 24px 24px 80px; /* Tambahkan padding bawah lebih besar */
+            padding: 24px;
             box-shadow: 0 4px 20px var(--shadow-color);
             margin-bottom: 25px;
-            max-width: 800px;
+            max-width: 1200px;
             margin-left: auto;
             margin-right: auto;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            position: relative;
         }
 
         .card h2 {
@@ -318,80 +347,80 @@ if (isset($_GET['success'])) {
             color: var(--text-color);
         }
 
-        /* Profile specific styles */
-        .profile-photo-container {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            overflow: hidden;
-            border: 5px solid var(--primary-color);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            margin-bottom: 25px;
-            background-color: #eee; /* Placeholder background */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .profile-photo {
+        .table-responsive {
             width: 100%;
-            height: 100%;
-            object-fit: cover;
+            overflow-x: auto;
         }
-        .profile-info {
+
+        .data-table {
             width: 100%;
-            max-width: 500px;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 15px;
             text-align: left;
+            border-bottom: 1px solid var(--border-color);
         }
-        .profile-info p {
-            margin-bottom: 12px;
-            font-size: 1.1em;
-            display: flex;
+
+        .data-table th {
+            background-color: #f8f8f8;
+            font-weight: 600;
+            color: var(--text-color);
+            text-transform: uppercase;
+        }
+
+        .data-table tr:hover {
+            background-color: #fafafa;
+        }
+
+        .action-button {
+            display: inline-flex;
             align-items: center;
-            gap: 15px;
-            padding: 8px 0;
-            border-bottom: 1px dashed var(--border-color);
+            gap: 8px;
+            padding: 8px 16px;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background-color 0.3s, transform 0.2s;
+            border: none;
+            cursor: pointer;
         }
-        .profile-info p:last-child {
-            border-bottom: none;
-        }
-        .profile-info strong {
-            color: var(--secondary-color);
-            flex-basis: 200px; /* Agar label sejajar */
-            display: inline-block;
-        }
-        .profile-info i {
-            color: var(--primary-color);
-            width: 20px; /* Agar ikon sejajar */
-            text-align: center;
+        .action-button:hover {
+            background-color: #16a085;
+            transform: translateY(-2px);
         }
 
+        .btn-view {
+            background-color: #3498db;
+        }
+        .btn-view:hover {
+            background-color: #2980b9;
+        }
 
-        /* Alerts */
         .alert {
             padding: 15px;
             margin-bottom: 20px;
             border-radius: 8px;
             font-weight: 600;
-        }
-        .alert-success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .alert-error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6fb;
+            color: #fff;
+            background-color: #27ae60;
         }
 
-        /* Media Queries untuk Responsivitas */
         @media (max-width: 768px) {
+            .sidebar:not(.collapsed) {
+                transform: translateX(0);
+            }
             .sidebar {
                 transform: translateX(-100%);
             }
             .sidebar.collapsed {
-                transform: translateX(0);
                 width: var(--sidebar-collapsed-width);
+                transform: translateX(0);
             }
             .content, .header {
                 margin-left: 0 !important;
@@ -399,34 +428,14 @@ if (isset($_GET['success'])) {
                 width: 100% !important;
                 padding-left: 20px !important;
             }
-            .header .user-info .last-login {
-                display: none; /* Sembunyikan last login di mobile header */
+            .header .user-info {
+                display: none;
             }
             .sidebar.collapsed + .header, .sidebar.collapsed ~ .content {
                 margin-left: var(--sidebar-collapsed-width) !important;
                 left: var(--sidebar-collapsed-width) !important;
                 width: calc(100% - var(--sidebar-collapsed-width)) !important;
             }
-        }
-
-        /* css untuk edit profil  */
-        .edit-profil {
-            position: absolute; /* Posisi absolut di dalam card */
-            bottom: 20px; /* Jarak dari bawah card */
-            right: 20px; /* Jarak dari kanan card */
-            text-align: right;
-        }
-
-        .edit-profil a {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 5px;
-            text-decoration: none;
-            transition: background-color 0.3s;
-        }
-        .edit-profil a:hover {
-            background-color: #16a085;
         }
 
         /* --- Penambahan CSS untuk Tombol Logout --- */
@@ -460,12 +469,11 @@ if (isset($_GET['success'])) {
 
         .sidebar.collapsed .logout-button-container a span {
             display: none;
-        }
+}
     </style>
 </head>
 
 <body>
-    <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="logo"><span>GuruCoy</span></div>
         <nav>
@@ -473,7 +481,7 @@ if (isset($_GET['success'])) {
                 <i class="fas fa-tachometer-alt"></i>
                 <span>Dashboard</span>
             </a>
-            <a href="jadwal_guru.php">
+            <a href="#" class="active">
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal Mengajar</span>
             </a>
@@ -490,19 +498,20 @@ if (isset($_GET['success'])) {
         </nav>
     </div>
 
-    <!-- Header -->
     <div class="header" id="header">
-        <button class="toggle-btn" onclick="toggleSidebar()">
+        <button class="toggle-btn">
             <i class="fas fa-bars"></i>
         </button>
-        <h1><i class="fas fa-user"></i> Profil Guru</h1>
+        <h1><i class="fas fa-calendar-alt"></i> Jadwal Mengajar</h1>
         <div class="user-info" id="userInfoDropdown">
             <span id="guruName"><?php echo htmlspecialchars($guru_name); ?></span>
             <?php
             // Tampilkan foto profil guru jika ada, jika tidak pakai placeholder
-            $photo_src = !empty($guru_data['photo']) ? '../uploads/guru/' . htmlspecialchars($guru_data['photo']) : 'https://placehold.co/40x40/cccccc/000000?text=GR';
+            $guru_photo_src_header = !empty($guru_photo) ? '../uploads/guru/' . htmlspecialchars($guru_photo) : 'https://placehold.co/40x40/cccccc/000000?text=GR';
             ?>
-            <img src="<?php echo $photo_src; ?>" alt="User Avatar">
+            <img src="<?php echo $guru_photo_src_header; ?>" alt="User Avatar"
+                loading="lazy"
+                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=GR';">
 
             <!-- Dropdown Menu -->
             <div class="dropdown-menu" id="userDropdownContent">
@@ -512,41 +521,61 @@ if (isset($_GET['success'])) {
         </div>
     </div>
 
-    <!-- Konten Utama -->
     <div class="content" id="mainContent">
         <div class="card">
-            <h2>Informasi Pribadi Guru</h2>
-            
             <?php if (!empty($success_message)): ?>
-                <div class="alert alert-success"><?php echo $success_message; ?></div>
+                <div class="alert"><?php echo $success_message; ?></div>
             <?php endif; ?>
-
-            <div class="profile-photo-container">
-                <img src="<?php echo $photo_src; ?>" alt="Foto Profil Guru" class="profile-photo">
-            </div>
             
-            <div class="profile-info">
-                <p><strong><i class="fas fa-id-badge"></i> NIP:</strong> <?php echo htmlspecialchars($guru_data['nip'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-signature"></i> Nama Lengkap:</strong> <?php echo htmlspecialchars($guru_data['name'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-venus-mars"></i> Jenis Kelamin:</strong> <?php echo htmlspecialchars(ucfirst($guru_data['gender'] ?? '-')); ?></p>
-                <p><strong><i class="fas fa-birthday-cake"></i> Tanggal Lahir:</strong> <?php echo htmlspecialchars($guru_data['dob'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-phone"></i> No. HP:</strong> <?php echo htmlspecialchars($guru_data['no_hp'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-envelope"></i> Email:</strong> <?php echo htmlspecialchars($guru_data['email'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-map-marker-alt"></i> Alamat:</strong> <?php echo htmlspecialchars($guru_data['alamat'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-book"></i> Mengajar Mapel:</strong> <?php echo htmlspecialchars($guru_data['mapel'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-calendar-plus"></i> Tanggal Masuk:</strong> <?php echo htmlspecialchars(date('d M Y', strtotime($guru_data['admission_date'] ?? ''))); ?></p>
-            </div>
-            <div class="edit-profil">
-                <a href="edit_profil.php">Edit Profil</a>
+            <h2>Daftar Jadwal Anda</h2>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Kelas</th>
+                            <th>Mata Pelajaran</th>
+                            <th>Hari</th>
+                            <th>Jam</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($jadwal_mengajar)): ?>
+                            <tr>
+                                <td colspan="5" style="text-align: center;">Anda tidak memiliki jadwal mengajar.</td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($jadwal_mengajar as $jadwal): ?>
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center;">
+                                            <img src="<?php echo htmlspecialchars('../uploads/kelas/' . $jadwal['class_photo']); ?>" alt="Foto Kelas" style="width: 40px; height: 40px; border-radius: 8px; margin-right: 10px; object-fit: cover;">
+                                            <span><?php echo htmlspecialchars($jadwal['nama_kelas']); ?></span>
+                                        </div>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($jadwal['nama_mapel']); ?></td>
+                                    <td><?php echo htmlspecialchars(substr($jadwal['hari'], 0, 5)); ?></td>
+                                    <td><?php echo htmlspecialchars(substr($jadwal['jam_mulai'], 0, 5) . ' - ' . substr($jadwal['jam_selesai'], 0, 5)); ?></td>
+                                    <td>
+                                        <a href="pertemuan_guru.php?id_jadwal=<?php echo htmlspecialchars($jadwal['jadwal_id']); ?>" class="action-button btn-view">
+                                            <i class="fas fa-eye"></i> Lihat Pertemuan
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
     <script>
-        // Logika untuk toggle sidebar
         const sidebar = document.getElementById("sidebar");
         const mainContent = document.getElementById("mainContent");
         const header = document.getElementById("header");
+        const toggleButton = document.querySelector('.toggle-btn');
+        const sidebarLinks = document.querySelectorAll('.sidebar nav a');
 
         function toggleSidebar() {
             sidebar.classList.toggle("collapsed");
@@ -573,31 +602,31 @@ if (isset($_GET['success'])) {
         const userInfoDropdown = document.getElementById("userInfoDropdown");
         const userDropdownContent = document.getElementById("userDropdownContent");
 
-        userInfoDropdown.addEventListener('click', function() {
-            userDropdownContent.style.display = userDropdownContent.style.display === 'block' ? 'none' : 'block';
-        });
+        if (userInfoDropdown && userDropdownContent) { // Pastikan elemen ada
+            userInfoDropdown.addEventListener('click', function() {
+                userDropdownContent.style.display = userDropdownContent.style.display === 'block' ? 'none' : 'block';
+            });
 
-        // Tutup dropdown jika user klik di luar area dropdown
-        window.onclick = function(event) {
-            if (!event.target.matches('#userInfoDropdown') && !event.target.closest('#userInfoDropdown')) {
-                if (userDropdownContent.style.display === 'block') {
-                    userDropdownContent.style.display = 'none';
+            // Tutup dropdown jika user klik di luar area dropdown
+            window.onclick = function(event) {
+                if (!event.target.matches('#userInfoDropdown') && !event.target.closest('#userInfoDropdown')) {
+                    if (userDropdownContent.style.display === 'block') {
+                        userDropdownContent.style.display = 'none';
+                    }
                 }
             }
         }
 
-        // Jalankan saat halaman dimuat
-        window.onload = function() {
-            // Set nama dan last login dari sesi PHP
-            document.getElementById('guruName').textContent = '<?php echo htmlspecialchars($guru_name); ?>';
-            document.getElementById('lastLogin').textContent = '<?php echo htmlspecialchars($last_login); ?>';
+        document.addEventListener('DOMContentLoaded', () => {
+            toggleButton.addEventListener('click', toggleSidebar);
 
-            // Mengatur link sidebar
-            document.querySelector('.sidebar nav a:nth-child(1)').href = 'dashboard_guru.php';
-            document.querySelector('.sidebar nav a:nth-child(2)').href = 'jadwal_guru.php';
-            document.querySelector('.sidebar nav a:nth-child(3)').href = 'pertemuan_guru.php';
-            document.querySelector('.sidebar nav a:nth-child(4)').href = 'absensi_guru.php';
-        };
+            const currentPath = window.location.pathname.split('/').pop();
+            sidebarLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+        });
     </script>
 </body>
 </html>

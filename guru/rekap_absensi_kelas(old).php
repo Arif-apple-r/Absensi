@@ -6,50 +6,136 @@ if (!isset($_SESSION['guru_id'])) {
     exit;
 }
 
-// Ambil data guru dari sesi
+// Ambil ID guru dari sesi
 $guru_id = $_SESSION['guru_id'];
-$guru_name = $_SESSION['guru_name'] ?? 'Guru';
-$last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
+$guru_name = $_SESSION['guru_name'] ?? 'Guru'; // Default jika nama tidak ada di sesi
+$last_login = $_SESSION['last_login'] ?? 'Belum ada data login'; // Default jika waktu login tidak ada
 
 // Sertakan file koneksi database Anda
 require '../koneksi.php'; // Sesuaikan path ini sesuai lokasi file koneksi.php Anda
 
-$guru_data = [];
-$guru_photo = ''; // Default photo
+// Ambil class_id dan mapel_id dari URL
+$class_id = $_GET['class_id'] ?? null;
+$mapel_id = $_GET['mapel_id'] ?? null;
 
-// Ambil data profil lengkap guru dari database
-$stmt_guru_profil = $pdo->prepare("
-    SELECT 
-        nip, 
-        name, 
-        gender, 
-        email, 
-        pass, 
-        dob, 
-        no_hp, 
-        photo, 
-        alamat, 
-        mapel, 
-        admission_date
-    FROM guru
-    WHERE id = ?
-");
-$stmt_guru_profil->execute([$guru_id]);
-$guru_data = $stmt_guru_profil->fetch(PDO::FETCH_ASSOC);
-
-if ($guru_data) {
-    $guru_photo = $guru_data['photo'];
-} else {
-    // Jika data guru tidak ditemukan di DB (jarang terjadi jika sesi valid)
-    // Redirect ke dashboard atau tampilkan error
-    header("Location: dashboard_guru.php?error=" . urlencode("Data profil guru tidak ditemukan."));
+// Redirect jika ID tidak valid
+if (!$class_id || !$mapel_id) {
+    header("Location: rekap_absensi_guru.php?error=" . urlencode("ID Kelas atau ID Mata Pelajaran tidak valid."));
     exit;
 }
 
-// Cek jika ada pesan sukses dari operasi sebelumnya
-$success_message = '';
+// Verifikasi bahwa guru ini memiliki akses ke kombinasi kelas/mata pelajaran ini
+$stmt_verify_access = $pdo->prepare("SELECT COUNT(*) FROM jadwal WHERE class_id = ? AND id_mapel = ? AND teacher_id = ?");
+$stmt_verify_access->execute([$class_id, $mapel_id, $guru_id]);
+if ($stmt_verify_access->fetchColumn() == 0) {
+    header("Location: rekap_absensi_guru.php?error=" . urlencode("Anda tidak memiliki akses ke kelas atau mata pelajaran ini."));
+    exit;
+}
+
+// Ambil informasi nama kelas dan mata pelajaran untuk ditampilkan
+$stmt_info = $pdo->prepare("
+    SELECT c.nama_kelas, m.nama_mapel
+    FROM class AS c, mapel AS m
+    WHERE c.id = ? AND m.id = ?
+");
+$stmt_info->execute([$class_id, $mapel_id]);
+$info = $stmt_info->fetch(PDO::FETCH_ASSOC);
+
+$nama_kelas = $info['nama_kelas'] ?? 'N/A';
+$nama_mapel = $info['nama_mapel'] ?? 'N/A';
+
+// Dapatkan total pertemuan yang tersedia untuk kelas dan mata pelajaran ini
+$stmt_total_meetings = $pdo->prepare("
+    SELECT COUNT(p.id) AS total_meetings
+    FROM pertemuan AS p
+    JOIN jadwal AS j ON p.id_jadwal = j.id
+    WHERE j.class_id = ? AND j.id_mapel = ?
+");
+$stmt_total_meetings->execute([$class_id, $mapel_id]);
+$total_available_meetings = $stmt_total_meetings->fetch(PDO::FETCH_ASSOC)['total_meetings'] ?? 0;
+
+
+// Query untuk mendapatkan rekap absensi setiap siswa di kelas ini untuk mata pelajaran ini
+$query_rekap = "
+    SELECT
+        s.id AS siswa_id,
+        s.NIS,
+        s.name AS nama_siswa,
+        COUNT(CASE WHEN a.status = 'Hadir' THEN 1 END) AS count_hadir,
+        COUNT(CASE WHEN a.status = 'Sakit' THEN 1 END) AS count_sakit,
+        COUNT(CASE WHEN a.status = 'Izin' THEN 1 END) AS count_izin,
+        COUNT(CASE WHEN a.status = 'Alpha' THEN 1 END) AS count_alpha,
+        COUNT(a.id) AS total_absensi_tercatat_siswa -- Jumlah absensi yang tercatat untuk siswa ini di mapel ini
+    FROM
+        siswa AS s
+    LEFT JOIN
+        absensi AS a ON s.id = a.id_siswa
+    LEFT JOIN
+        pertemuan AS p ON a.id_pertemuan = p.id
+    LEFT JOIN
+        jadwal AS j ON p.id_jadwal = j.id
+    WHERE
+        s.class_id = ? AND j.id_mapel = ?
+    GROUP BY
+        s.id, s.NIS, s.name
+    ORDER BY
+        s.name ASC;
+";
+$stmt_rekap = $pdo->prepare($query_rekap);
+$stmt_rekap->execute([$class_id, $mapel_id]);
+$rekap_absensi_siswa = $stmt_rekap->fetchAll(PDO::FETCH_ASSOC);
+
+
+// Untuk memastikan semua siswa di kelas tampil, bahkan yang belum punya absensi
+$stmt_all_students_in_class = $pdo->prepare("SELECT id, NIS, name FROM siswa WHERE class_id = ? ORDER BY name ASC");
+$stmt_all_students_in_class->execute([$class_id]);
+$all_students_in_class = $stmt_all_students_in_class->fetchAll(PDO::FETCH_ASSOC);
+
+$final_rekap_data = [];
+$rekap_indexed_by_siswa_id = [];
+foreach ($rekap_absensi_siswa as $row) {
+    $rekap_indexed_by_siswa_id[$row['siswa_id']] = $row;
+}
+
+// Gabungkan semua siswa dengan data absensi mereka (jika ada)
+foreach ($all_students_in_class as $student) {
+    $siswa_id_current = $student['id'];
+    if (isset($rekap_indexed_by_siswa_id[$siswa_id_current])) {
+        $final_rekap_data[] = $rekap_indexed_by_siswa_id[$siswa_id_current];
+    } else {
+        // Siswa ada di kelas ini tapi belum memiliki catatan absensi untuk mapel ini
+        $final_rekap_data[] = [
+            'siswa_id' => $siswa_id_current,
+            'NIS' => $student['NIS'],
+            'nama_siswa' => $student['name'],
+            'count_hadir' => 0,
+            'count_sakit' => 0,
+            'count_izin' => 0,
+            'count_alpha' => 0,
+            'total_absensi_tercatat_siswa' => 0 // Ini akan selalu 0 jika tidak ada absensi
+        ];
+    }
+}
+
+$message = '';
+$alert_type = '';
 if (isset($_GET['success'])) {
-    $success_message = htmlspecialchars($_GET['success']);
+    $message = htmlspecialchars($_GET['success']);
+    $alert_type = 'alert-success';
+} elseif (isset($_GET['error'])) {
+    $message = htmlspecialchars($_GET['error']);
+    $alert_type = 'alert-error';
+}
+
+// Ambil foto guru dari database untuk header
+$guru_photo = '';
+if (!empty($guru_id)) {
+    $stmt_guru_photo = $pdo->prepare("SELECT photo FROM guru WHERE id = ?");
+    $stmt_guru_photo->execute([$guru_id]);
+    $result = $stmt_guru_photo->fetch(PDO::FETCH_ASSOC);
+    if ($result) {
+        $guru_photo = htmlspecialchars($result['photo']);
+    }
 }
 ?>
 
@@ -58,7 +144,7 @@ if (isset($_GET['success'])) {
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Profil Saya | Guru</title>
+    <title>Rekap Absensi <?php echo htmlspecialchars($nama_kelas); ?> - <?php echo htmlspecialchars($nama_mapel); ?> | Guru</title>
     <!-- Font Awesome untuk ikon -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -166,6 +252,10 @@ if (isset($_GET['success'])) {
             padding-left: 25px;
         }
 
+        .sidebar nav a.active i {
+            color: var(--primary-color);
+        }
+
         /* Header */
         .header {
             height: 65.5px;
@@ -207,8 +297,8 @@ if (isset($_GET['success'])) {
             gap: 10px;
             font-size: 14px;
             color: var(--text-color);
-            cursor: pointer; /* Menjadikan seluruh area user-info clickable */
-            padding: 5px 10px; /* Sedikit padding agar lebih mudah diklik */
+            cursor: pointer;
+            padding: 5px 10px;
             border-radius: 8px;
             transition: background-color 0.2s ease;
         }
@@ -228,24 +318,24 @@ if (isset($_GET['success'])) {
         .user-info .last-login {
             color: var(--light-text-color);
             font-size: 12px;
-            margin-left: 10px; /* Spasi dari nama */
+            margin-left: 10px;
         }
         .user-info i.fa-caret-down {
-            margin-left: 5px; /* Spasi untuk ikon dropdown */
+            margin-left: 5px;
         }
 
         .dropdown-menu {
             display: none;
             position: absolute;
-            top: 100%; /* Posisikan di bawah user-info */
+            top: 100%;
             right: 0;
             background-color: var(--card-background);
             box-shadow: 0 8px 16px rgba(0,0,0,0.2);
             z-index: 1002;
             min-width: 160px;
             border-radius: 8px;
-            overflow: hidden; /* Pastikan sudut melengkung */
-            margin-top: 10px; /* Jarak antara user-info dan dropdown */
+            overflow: hidden;
+            margin-top: 10px;
         }
         .dropdown-menu a {
             color: var(--text-color);
@@ -260,7 +350,7 @@ if (isset($_GET['success'])) {
         }
         .dropdown-menu a i {
             margin-right: 10px;
-            width: 20px; /* Agar ikon sejajar */
+            width: 20px;
         }
 
 
@@ -298,17 +388,12 @@ if (isset($_GET['success'])) {
         .card {
             background: var(--card-background);
             border-radius: 12px;
-            padding: 24px 24px 80px; /* Tambahkan padding bawah lebih besar */
+            padding: 24px;
             box-shadow: 0 4px 20px var(--shadow-color);
             margin-bottom: 25px;
-            max-width: 800px;
+            max-width: 1200px;
             margin-left: auto;
             margin-right: auto;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            position: relative;
         }
 
         .card h2 {
@@ -318,52 +403,62 @@ if (isset($_GET['success'])) {
             color: var(--text-color);
         }
 
-        /* Profile specific styles */
-        .profile-photo-container {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            overflow: hidden;
-            border: 5px solid var(--primary-color);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        /* Info Header for context */
+        .info-header {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
             margin-bottom: 25px;
-            background-color: #eee; /* Placeholder background */
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            border-left: 5px solid var(--primary-color);
+            color: var(--text-color);
+            font-size: 0.95em;
         }
-        .profile-photo {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        .info-header p {
+            margin: 5px 0;
+            line-height: 1.5;
         }
-        .profile-info {
-            width: 100%;
-            max-width: 500px;
-            text-align: left;
-        }
-        .profile-info p {
-            margin-bottom: 12px;
-            font-size: 1.1em;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 8px 0;
-            border-bottom: 1px dashed var(--border-color);
-        }
-        .profile-info p:last-child {
-            border-bottom: none;
-        }
-        .profile-info strong {
+        .info-header strong {
             color: var(--secondary-color);
-            flex-basis: 200px; /* Agar label sejajar */
-            display: inline-block;
         }
-        .profile-info i {
-            color: var(--primary-color);
-            width: 20px; /* Agar ikon sejajar */
-            text-align: center;
+
+        /* Gaya Tabel */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
         }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            background-color: #f8f8f8;
+            font-weight: 600;
+            color: var(--text-color);
+            text-transform: uppercase;
+        }
+
+        .data-table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .data-table tr:hover {
+            background-color: #fafafa;
+        }
+        
+        /* Status Absensi Styling (untuk highlight angka) */
+        .status-hadir-count { color: #27ae60; font-weight: 600; } /* Green */
+        .status-sakit-count { color: #e67e22; font-weight: 600; } /* Orange */
+        .status-izin-count { color: #3498db; font-weight: 600; } /* Blue */
+        .status-alpha-count { color: #e74c3c; font-weight: 600; } /* Red */
 
 
         /* Alerts */
@@ -400,33 +495,18 @@ if (isset($_GET['success'])) {
                 padding-left: 20px !important;
             }
             .header .user-info .last-login {
-                display: none; /* Sembunyikan last login di mobile header */
+                display: none;
             }
             .sidebar.collapsed + .header, .sidebar.collapsed ~ .content {
                 margin-left: var(--sidebar-collapsed-width) !important;
                 left: var(--sidebar-collapsed-width) !important;
                 width: calc(100% - var(--sidebar-collapsed-width)) !important;
             }
-        }
-
-        /* css untuk edit profil  */
-        .edit-profil {
-            position: absolute; /* Posisi absolut di dalam card */
-            bottom: 20px; /* Jarak dari bawah card */
-            right: 20px; /* Jarak dari kanan card */
-            text-align: right;
-        }
-
-        .edit-profil a {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 5px;
-            text-decoration: none;
-            transition: background-color 0.3s;
-        }
-        .edit-profil a:hover {
-            background-color: #16a085;
+             .data-table th,
+            .data-table td {
+                padding: 10px; /* Kurangi padding untuk layar kecil */
+                font-size: 0.85em; /* Kecilkan font */
+            }
         }
 
         /* --- Penambahan CSS untuk Tombol Logout --- */
@@ -460,7 +540,7 @@ if (isset($_GET['success'])) {
 
         .sidebar.collapsed .logout-button-container a span {
             display: none;
-        }
+}
     </style>
 </head>
 
@@ -477,7 +557,7 @@ if (isset($_GET['success'])) {
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal Mengajar</span>
             </a>
-            <a href="rekap_absensi_guru.php">
+            <a href="rekap_absensi_guru.php" class="active">
                 <i class="fas fa-chart-bar"></i>
                 <span>Rekap Absensi</span>
             </a>
@@ -495,14 +575,16 @@ if (isset($_GET['success'])) {
         <button class="toggle-btn" onclick="toggleSidebar()">
             <i class="fas fa-bars"></i>
         </button>
-        <h1><i class="fas fa-user"></i> Profil Guru</h1>
+        <h1><i class="fas fa-chart-bar"></i> Rekap Absensi</h1>
         <div class="user-info" id="userInfoDropdown">
             <span id="guruName"><?php echo htmlspecialchars($guru_name); ?></span>
             <?php
             // Tampilkan foto profil guru jika ada, jika tidak pakai placeholder
-            $photo_src = !empty($guru_data['photo']) ? '../uploads/guru/' . htmlspecialchars($guru_data['photo']) : 'https://placehold.co/40x40/cccccc/000000?text=GR';
+            $guru_photo_src_header = !empty($guru_photo) ? '../uploads/guru/' . htmlspecialchars($guru_photo) : 'https://placehold.co/40x40/cccccc/000000?text=GR';
             ?>
-            <img src="<?php echo $photo_src; ?>" alt="User Avatar">
+            <img src="<?php echo $guru_photo_src_header; ?>" alt="User Avatar"
+                loading="lazy"
+                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=GR';">
 
             <!-- Dropdown Menu -->
             <div class="dropdown-menu" id="userDropdownContent">
@@ -515,30 +597,62 @@ if (isset($_GET['success'])) {
     <!-- Konten Utama -->
     <div class="content" id="mainContent">
         <div class="card">
-            <h2>Informasi Pribadi Guru</h2>
+            <h2>Rekap Absensi Kelas <?php echo htmlspecialchars($nama_kelas); ?> - <?php echo htmlspecialchars($nama_mapel); ?></h2>
             
-            <?php if (!empty($success_message)): ?>
-                <div class="alert alert-success"><?php echo $success_message; ?></div>
+            <?php if (!empty($message)): ?>
+                <div class="alert <?php echo $alert_type; ?>"><?php echo $message; ?></div>
             <?php endif; ?>
 
-            <div class="profile-photo-container">
-                <img src="<?php echo $photo_src; ?>" alt="Foto Profil Guru" class="profile-photo">
+            <div class="info-header">
+                <p>Total Pertemuan Mata Pelajaran Ini: <strong><?php echo htmlspecialchars($total_available_meetings); ?></strong></p>
             </div>
-            
-            <div class="profile-info">
-                <p><strong><i class="fas fa-id-badge"></i> NIP:</strong> <?php echo htmlspecialchars($guru_data['nip'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-signature"></i> Nama Lengkap:</strong> <?php echo htmlspecialchars($guru_data['name'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-venus-mars"></i> Jenis Kelamin:</strong> <?php echo htmlspecialchars(ucfirst($guru_data['gender'] ?? '-')); ?></p>
-                <p><strong><i class="fas fa-birthday-cake"></i> Tanggal Lahir:</strong> <?php echo htmlspecialchars($guru_data['dob'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-phone"></i> No. HP:</strong> <?php echo htmlspecialchars($guru_data['no_hp'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-envelope"></i> Email:</strong> <?php echo htmlspecialchars($guru_data['email'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-map-marker-alt"></i> Alamat:</strong> <?php echo htmlspecialchars($guru_data['alamat'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-book"></i> Mengajar Mapel:</strong> <?php echo htmlspecialchars($guru_data['mapel'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-calendar-plus"></i> Tanggal Masuk:</strong> <?php echo htmlspecialchars(date('d M Y', strtotime($guru_data['admission_date'] ?? ''))); ?></p>
-            </div>
-            <div class="edit-profil">
-                <a href="edit_profil.php">Edit Profil</a>
-            </div>
+
+            <?php if (empty($final_rekap_data)): ?>
+                <div class="info-header">
+                    <p>Tidak ada siswa di kelas ini atau tidak ada data absensi yang tercatat untuk mata pelajaran ini.</p>
+                </div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>NIS</th>
+                                <th>Nama Siswa</th>
+                                <th>Hadir</th>
+                                <th>Sakit</th>
+                                <th>Izin</th>
+                                <th>Alpha</th>
+                                <th>Total Tercatat</th>
+                                <th>Persentase Hadir</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($final_rekap_data as $siswa_rekap): ?>
+                                <?php
+                                    $persentase_hadir = 0;
+                                    if ($total_available_meetings > 0) {
+                                        $persentase_hadir = ($siswa_rekap['count_hadir'] / $total_available_meetings) * 100;
+                                    }
+                                ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($siswa_rekap['NIS']); ?></td>
+                                    <td><?php echo htmlspecialchars($siswa_rekap['nama_siswa']); ?></td>
+                                    <td class="status-hadir-count"><?php echo htmlspecialchars($siswa_rekap['count_hadir']); ?></td>
+                                    <td class="status-sakit-count"><?php echo htmlspecialchars($siswa_rekap['count_sakit']); ?></td>
+                                    <td class="status-izin-count"><?php echo htmlspecialchars($siswa_rekap['count_izin']); ?></td>
+                                    <td class="status-alpha-count"><?php echo htmlspecialchars($siswa_rekap['count_alpha']); ?></td>
+                                    <td><?php echo htmlspecialchars($siswa_rekap['total_absensi_tercatat_siswa']); ?></td>
+                                    <td><?php echo number_format($persentase_hadir, 2); ?>%</td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+            <a href="rekap_absensi_guru.php" class="back-link" style="margin-top: 20px;">
+                <i class="fas fa-arrow-left"></i> Kembali ke Pilih Kelas
+            </a>
+
         </div>
     </div>
 
@@ -573,15 +687,17 @@ if (isset($_GET['success'])) {
         const userInfoDropdown = document.getElementById("userInfoDropdown");
         const userDropdownContent = document.getElementById("userDropdownContent");
 
-        userInfoDropdown.addEventListener('click', function() {
-            userDropdownContent.style.display = userDropdownContent.style.display === 'block' ? 'none' : 'block';
-        });
+        if (userInfoDropdown && userDropdownContent) { // Pastikan elemen ada
+            userInfoDropdown.addEventListener('click', function() {
+                userDropdownContent.style.display = userDropdownContent.style.display === 'block' ? 'none' : 'block';
+            });
 
-        // Tutup dropdown jika user klik di luar area dropdown
-        window.onclick = function(event) {
-            if (!event.target.matches('#userInfoDropdown') && !event.target.closest('#userInfoDropdown')) {
-                if (userDropdownContent.style.display === 'block') {
-                    userDropdownContent.style.display = 'none';
+            // Tutup dropdown jika user klik di luar area dropdown
+            window.onclick = function(event) {
+                if (!event.target.matches('#userInfoDropdown') && !event.target.closest('#userInfoDropdown')) {
+                    if (userDropdownContent.style.display === 'block') {
+                        userDropdownContent.style.display = 'none';
+                    }
                 }
             }
         }
@@ -597,6 +713,7 @@ if (isset($_GET['success'])) {
             document.querySelector('.sidebar nav a:nth-child(2)').href = 'jadwal_guru.php';
             document.querySelector('.sidebar nav a:nth-child(3)').href = 'pertemuan_guru.php';
             document.querySelector('.sidebar nav a:nth-child(4)').href = 'absensi_guru.php';
+            document.querySelector('.sidebar nav a:nth-child(5)').href = 'rekap_absensi_guru.php'; // Aktifkan link rekap absensi
         };
     </script>
 </body>

@@ -176,6 +176,7 @@ if (isset($_GET['error'])) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         /* Variabel CSS dari file admin Anda */
         :root {
@@ -725,7 +726,7 @@ if (isset($_GET['error'])) {
                 <span>Rekap Absensi</span>
             </a>
             <div class="logout-button-container">
-                <a href="../logout.php">
+                <a onclick="showLogoutConfirmation()">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Logout</span>
                 </a>
@@ -752,7 +753,7 @@ if (isset($_GET['error'])) {
             <!-- Dropdown Menu -->
             <div class="dropdown-menu" id="userDropdownContent">
                 <a href="profil_guru.php"><i class="fas fa-user-circle"></i> Profil</a>
-                <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a onclick="showLogoutConfirmation()"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
         </div>
     </div>
@@ -873,6 +874,21 @@ if (isset($_GET['error'])) {
             sidebar.classList.toggle("collapsed");
             mainContent.classList.toggle("shifted");
             header.classList.toggle("shifted");
+        }
+
+        function showLogoutConfirmation() {
+            Swal.fire({
+                title: 'Konfirmasi Logout',
+                text: 'Apakah kamu yakin ingin logout?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Logout!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = "../logout.php"; // redirect logout
+                }
+            });
         }
 
         // Logika Dropdown User Info
