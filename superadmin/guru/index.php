@@ -384,178 +384,195 @@ if (isset($_GET['success'])) {
         </div>
     </div>
 
-    <script>
-        // Sidebar toggle logic
-        const sidebar = document.getElementById("sidebar");
-        const mainContent = document.getElementById("mainContent");
-        const header = document.getElementById("header");
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Cache DOM elements
+        const $sidebar = $('#sidebar');
+        const $content = $('#content');
+        const $header = $('#header');
+        const $toggleBtn = $('#toggle-btn');
+        const $userInfo = $('#userInfo');
+        const $dropdownMenu = $('#dropdownMenu');
+        const $guruModal = $('#guruModal');
+        const $modalTitle = $('#modalTitle');
+        const $formAction = $('#formAction');
+        const $guruForm = $('#guruForm');
+        const $NIPguru = $('#NIPguru');
+        const $namaguru = $('#namaguru');
+        const $emailguru = $('#emailguru');
+        const $genderguru = $('#genderguru');
+        const $dobguru = $('#dobguru');
+        const $nohpguru = $('#nohpguru');
+        const $alamatguru = $('#alamatguru');
+        const $passwordguru = $('#passwordguru');
+        const $passwordReq = $('#password-req');
+        const $oldNip = $('#oldNip');
+        const $oldPhoto = $('#oldPhoto');
+        const $currentPhotoPreview = $('#currentPhotoPreview');
+        const $currentPhotoText = $('#currentPhotoText');
 
-        function toggleSidebar() {
-            sidebar.classList.toggle("collapsed");
-            mainContent.classList.toggle("shifted");
-            header.classList.toggle("shifted");
-        }
-
-        // Modal logic
-        const guruModal = document.getElementById("guru-modal");
-        const btnTambahGuru = document.getElementById("btn-tambah-guru");
-        const guruList = document.getElementById("guru-list");
-        const modalTitle = document.getElementById("modal-title");
-        const guruForm = document.getElementById("guru-form");
-        const btnCancel = document.getElementById("btn-cancel");
-
-        let isEditMode = false;
-        let currentGuruItem = null;
-
-        // Custom Alert/Confirmation functions
-        const customAlertModal = document.getElementById("custom-alert-modal");
-        const customAlertMessage = document.getElementById("custom-alert-message");
-        const customAlertOkBtn = document.getElementById("custom-alert-ok");
-        const customAlertCancelBtn = document.getElementById("custom-alert-cancel");
-        let customAlertResolve;
-
-        function showCustomAlert(message) {
-            return new Promise(resolve => {
-                customAlertMessage.textContent = message;
-                customAlertOkBtn.style.display = 'block';
-                customAlertCancelBtn.style.display = 'none';
-                customAlertModal.style.display = 'flex';
-                customAlertResolve = resolve;
-            });
-        }
-
-        function showCustomConfirm(message) {
-            return new Promise(resolve => {
-                customAlertMessage.textContent = message;
-                customAlertOkBtn.style.display = 'block';
-                customAlertCancelBtn.style.display = 'block';
-                customAlertModal.style.display = 'flex';
-                customAlertResolve = resolve;
-            });
-        }
-
-        customAlertOkBtn.addEventListener('click', () => {
-            customAlertModal.style.display = 'none';
-            customAlertResolve(true);
+        // Sidebar and Header Toggling
+        $toggleBtn.on('click', function() {
+            $sidebar.toggleClass('collapsed');
+            $content.toggleClass('shifted');
+            $header.toggleClass('shifted');
         });
 
-        customAlertCancelBtn.addEventListener('click', () => {
-            customAlertModal.style.display = 'none';
-            customAlertResolve(false);
+        // User Info Dropdown
+        $userInfo.on('click', function(e) {
+            e.stopPropagation(); 
+            $dropdownMenu.fadeToggle(200);
         });
 
-        // Event listener for "Tambah Guru" button
-        btnTambahGuru.addEventListener("click", () => {
-            isEditMode = false;
-            modalTitle.textContent = "Tambah Data Guru";
-            guruForm.reset();
-            document.getElementById("nipGuru").readOnly = false; // Allow editing NIP when adding
-            document.getElementById("passwordGuru").style.display = "block";
-            document.getElementById("labelPasswordGuru").style.display = "block";
-            guruModal.style.display = "flex"; // Use flex to center the modal
+        // Close dropdown when clicking outside
+        $(document).on('click', function() {
+            $dropdownMenu.fadeOut(200);
         });
 
-        // Event listener for "Edit" buttons
-        guruList.addEventListener("click", (e) => {
-            if (e.target.classList.contains("btn-edit") || e.target.closest(".btn-edit")) {
-                isEditMode = true;
-                modalTitle.textContent = "Edit Data Guru";
-                currentGuruItem = e.target.closest("li");
+        // Guru Modal Logic
+        const resetGuruModal = () => {
+            $guruForm[0].reset();
+            $NIPguru.prop('disabled', false);
+            $passwordguru.prop('required', true).val('');
+            $passwordReq.show();
+            $oldPhoto.val('');
+            $currentPhotoPreview.hide().attr('src', '');
+            $currentPhotoText.hide();
+        };
 
-                // Populate form fields
-                document.getElementById("namaGuru").value = currentGuruItem.dataset.nama;
-                document.getElementById("nipGuru").value = currentGuruItem.dataset.nip;
-                document.getElementById("nipGuru").readOnly = true; // Prevent editing NIP
-                document.getElementById("dobGuru").value = currentGuruItem.dataset.dob;
-                document.getElementById("nohpGuru").value = currentGuruItem.dataset.nohp;
-                document.getElementById("emailGuru").value = currentGuruItem.dataset.email;
-                document.getElementById("alamatGuru").value = currentGuruItem.dataset.alamat;
+        $('#tambahGuruBtn').on('click', function() {
+            resetGuruModal();
+            $modalTitle.text('Tambah Guru');
+            $formAction.val('tambah');
+            $guruModal.show();
+        });
 
-                // Set gender radio button
-                if (currentGuruItem.dataset.gender && currentGuruItem.dataset.gender.trim().toLowerCase() === "laki-laki") {
-                    document.getElementById("male").checked = true;
-                } else if (currentGuruItem.dataset.gender && currentGuruItem.dataset.gender.trim().toLowerCase() === "perempuan") {
-                    document.getElementById("female").checked = true;
-                }
-
-                // Hide password field for edit mode
-                document.getElementById("passwordGuru").style.display = "none";
-                document.getElementById("labelPasswordGuru").style.display = "none";
-                guruModal.style.display = "flex"; // Use flex to center the modal
+        $('.edit-btn').on('click', function() {
+            resetGuruModal(); 
+            const data = $(this).data();
+            $modalTitle.text('Edit Guru');
+            $formAction.val('edit');
+            
+            // Correctly decode URL-encoded data from PHP
+            $oldNip.val(decodeURIComponent(data.nip));
+            $NIPguru.val(decodeURIComponent(data.nip)).prop('disabled', true);
+            $namaguru.val(decodeURIComponent(data.name));
+            $emailguru.val(decodeURIComponent(data.email));
+            const decodedGender = decodeURIComponent(data.gender);
+            if (decodedGender) {
+                // Convert the first letter to uppercase for a proper match
+                const normalizedGender = decodedGender.charAt(0).toUpperCase() + decodedGender.slice(1);
+                $genderguru.val(normalizedGender);
             }
-        });
-
-        // Event listener for "Hapus" buttons
-        guruList.addEventListener("click", async (e) => {
-            if (e.target.classList.contains("btn-hapus") || e.target.closest(".btn-hapus")) {
-                const btnHapus = e.target.closest(".btn-hapus");
-                const nip = btnHapus.dataset.nip;
-                const confirmed = await showCustomConfirm('Yakin ingin menghapus data guru ini?');
-
-                if (confirmed) {
-                    window.location.href = `hapus.php?nip=${nip}`;
-                }
+            $dobguru.val(decodeURIComponent(data.dob));
+            $nohpguru.val(decodeURIComponent(data.nohp));
+            $alamatguru.val(decodeURIComponent(data.alamat));
+            
+            $passwordguru.prop('required', false);
+            $passwordReq.hide();
+            
+            if (data.photo) {
+                const photoName = decodeURIComponent(data.photo);
+                $oldPhoto.val(photoName);
+                $currentPhotoPreview.show().attr('src', `../../uploads/guru/${photoName}`);
+                $currentPhotoText.show().text(`File lama: ${photoName}`);
+            } else {
+                $oldPhoto.val('');
             }
+            $guruModal.show();
         });
 
-
-        // Event listener for "Batal" button in modal
-        btnCancel.addEventListener("click", () => {
-            guruModal.style.display = "none";
+        $('.close-btn, #cancelBtn').on('click', function() {
+            $guruModal.hide();
         });
 
-        // Close modal when clicking outside of it
-        window.onclick = function (event) {
-            if (event.target == guruModal) {
-                guruModal.style.display = "none";
+        window.onclick = function(event) {
+            if (event.target === $guruModal[0]) {
+                $guruModal.hide();
             }
         };
 
-                function showLogoutConfirm() {
+        // Submit form with AJAX
+        $guruForm.on('submit', async function(e) {
+            $NIPguru.prop('disabled', false); 
+            e.preventDefault();
+
+            const formData = new FormData(this);
+
             Swal.fire({
-                title: 'Konfirmasi Logout',
-                text: 'Apakah kamu yakin ingin logout?',
+                title: 'Memproses...',
+                text: 'Mohon tunggu sebentar',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                const response = await fetch('index.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.text();
+                const trimmedResult = result.trim();
+
+                if (trimmedResult.startsWith("success:")) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: trimmedResult.substring(8),
+                        confirmButtonText: 'OK'
+                    });
+                    window.location.reload();
+                } else if (trimmedResult.startsWith("error:")) {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: trimmedResult.substring(6),
+                        confirmButtonText: 'OK'
+                    });
+                } else {
+                    console.error("Server responded with unexpected output:", result);
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: 'Respons server tidak terduga. Output PHP: ' + trimmedResult.substring(0, 300) + '...',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            } catch (error) {
+                console.error("Fetch error:", error);
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: 'Terjadi kesalahan jaringan atau client: ' + error.message,
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
+
+        // SweetAlert for delete confirmation
+        $('.delete-btn').on('click', function() {
+            const nipToDelete = $(this).data('nip');
+            const currentTahunAkademikId = new URLSearchParams(window.location.search).get('tahun_akademik_id');
+
+            Swal.fire({
+                title: 'Apakah Anda yakin?',
+                text: "Anda tidak akan dapat mengembalikan data ini!",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: 'Ya, Logout!',
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, hapus!',
                 cancelButtonText: 'Batal'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = "../../logout.php"; // redirect logout
+                    window.location.href = `?action=hapus_guru&NIP=${nipToDelete}&tahun_akademik_id=${currentTahunAkademikId}`;
                 }
-            });
-        }
-
-        // Form submission logic
-        guruForm.addEventListener("submit", function(e) {
-            e.preventDefault();
-            const formData = new FormData(guruForm);
-            if (isEditMode) {
-                formData.append('action', 'edit_guru');
-                formData.append('nipGuru', currentGuruItem.dataset.nip); // Use NIP as identifier
-            } else {
-                formData.append('action', 'tambah_guru');
-            }
-
-            fetch('index.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.text())
-            .then(async result => {
-                if (result.trim() === "success") {
-                    await showCustomAlert(isEditMode ? "Guru berhasil diupdate!" : "Guru berhasil ditambahkan!");
-                    window.location.reload();
-                } else {
-                    await showCustomAlert("Gagal: " + result);
-                }
-            })
-            .catch(async error => {
-                await showCustomAlert("Terjadi kesalahan: " + error);
             });
         });
-
-    </script>
+    });
+</script>
 </body>
 </html>
+
 
