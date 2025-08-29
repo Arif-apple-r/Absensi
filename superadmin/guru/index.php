@@ -1,102 +1,222 @@
 <?php
 session_start();
-if (!isset($_SESSION['superadmin_id'])) {
+// Aktifkan reporting error untuk debugging. Pastikan ini selalu ada.
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+if (!isset($_SESSION['superadmin_id'])) { 
     header("Location: ../../login.php");
     exit;
 }
 require '../../koneksi.php';
 
-// Check if the user is an admin
-$stmt = $pdo->query("SELECT * FROM guru ORDER BY name ASC");
-$gurulist = $stmt->fetchAll();
+$superadmin_name = htmlspecialchars($_SESSION['superadmin_name'] ?? 'SuperAdmin'); 
+$superadmin_photo = 'https://placehold.co/40x40/cccccc/333333?text=SA'; 
 
-// Handle AJAX POST for adding guru
+$message = '';
+$alert_type = '';
+
+// Ambil daftar Tahun Akademik untuk filter dan dropdown form
+$stmt_tahun_akademik = $pdo->query("SELECT id, nama_tahun, is_active FROM tahun_akademik ORDER BY nama_tahun DESC");
+$tahun_akademik_options = $stmt_tahun_akademik->fetchAll(PDO::FETCH_ASSOC);
+
+$selected_tahun_akademik_id = $_GET['tahun_akademik_id'] ?? null;
+
+if ($selected_tahun_akademik_id === null) {
+    $stmt_active_tahun = $pdo->query("SELECT id FROM tahun_akademik WHERE is_active = 1 LIMIT 1");
+    $active_tahun = $stmt_active_tahun->fetch(PDO::FETCH_ASSOC);
+    $selected_tahun_akademik_id = $active_tahun['id'] ?? ($tahun_akademik_options[0]['id'] ?? null);
+}
+
+if ($selected_tahun_akademik_id === null) {
+    $message = "Tidak ada Tahun Akademik yang ditemukan atau diatur aktif.";
+    $alert_type = 'alert-error';
+    $selected_tahun_akademik_id = 0;
+} else {
+    $selected_tahun_akademik_id = (int)$selected_tahun_akademik_id;
+}
+
+
+// --- Handle AJAX POST untuk menambah atau mengedit guru ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    if ($_POST['action'] === 'edit_guru') {
-        $nip      = $_POST['nipGuru'];
-        $name     = $_POST['namaGuru'];
-        $email    = $_POST['emailGuru'];
-        $gender   = $_POST['gender'];
-        $dob      = $_POST['dobGuru'];
-        $no_hp    = $_POST['nohpGuru'];
-        $alamat   = $_POST['alamatGuru'];
+    $response_status = 'error';
+    $response_message = 'Terjadi kesalahan tidak dikenal.';
 
-        // Handle photo update if a new file is uploaded
-        $foto = $_FILES['photoGuru']['name'] ?? '';
-        $tmp  = $_FILES['photoGuru']['tmp_name'] ?? '';
-        $folder = "../../uploads/guru/";
-        $namaFotoBaru = '';
+    try { 
+        $nip_baru       = $_POST['NIPguru'] ?? null; 
+        $nip_lama_for_update = $_POST['NIP_lama_for_update'] ?? null; 
+        $name     = $_POST['namaguru'] ?? '';
+        $email    = $_POST['emailguru'] ?? '';
+        $gender   = $_POST['genderguru'] ?? ''; 
+        $dob_raw  = $_POST['dobguru'] ?? '';
+        $alamat   = $_POST['alamatguru'] ?? '';
+        $password = $_POST['passwordguru'] ?? null; 
 
-        if ($foto && $tmp) {
-            $ext  = pathinfo($foto, PATHINFO_EXTENSION);
-            $namaFotoBaru = uniqid() . '.' . $ext;
-            move_uploaded_file($tmp, $folder . $namaFotoBaru);
+        $dob = !empty($dob_raw) ? $dob_raw : null;
 
-            // Delete old photo
-            $stmtOld = $pdo->prepare("SELECT photo FROM guru WHERE nip = ?");
-            $stmtOld->execute([$nip]);
-            $oldData = $stmtOld->fetch();
-            if ($oldData && !empty($oldData['photo'])) {
-                $oldFilePath = $folder . $oldData['photo'];
-                if (file_exists($oldFilePath)) {
-                    unlink($oldFilePath);
+        $no_hp_raw = $_POST['nohpguru'] ?? '';
+        $no_hp = null; 
+        if (is_numeric($no_hp_raw) && $no_hp_raw !== '') {
+            $no_hp = (int)$no_hp_raw;
+            if ($no_hp < 0 || $no_hp > 99999999999999) { 
+                throw new Exception("Nomor HP terlalu besar atau negatif untuk disimpan.");
+            }
+        } else if (!empty($no_hp_raw)) { 
+            throw new Exception("Nomor HP harus berupa angka.");
+        }
+
+        $foto_path_db = null;
+        $folder_upload = "../../uploads/guru/";
+        $upload_succeeded = true; 
+
+        if (!is_dir($folder_upload)) {
+            mkdir($folder_upload, 0777, true);
+        }
+
+        if (isset($_FILES['photoguru']) && $_FILES['photoguru']['error'] === UPLOAD_ERR_OK) {
+            $foto_tmp = $_FILES['photoguru']['tmp_name'];
+            $foto_name = $_FILES['photoguru']['name'];
+            $ext = pathinfo($foto_name, PATHINFO_EXTENSION);
+            $nama_foto_baru = uniqid() . '.' . $ext;
+            $dest_path = $folder_upload . $nama_foto_baru;
+
+            if (move_uploaded_file($foto_tmp, $dest_path)) {
+                $foto_path_db = $nama_foto_baru;
+            } else {
+                throw new Exception("Gagal mengunggah foto guru. Coba lagi atau pastikan folder 'uploads/guru/' dapat ditulis.");
+            }
+        } else if (isset($_POST['old_photoguru']) && !empty($_POST['old_photoguru'])) {
+            $foto_path_db = $_POST['old_photoguru'];
+        }
+
+        if ($upload_succeeded) {
+            if ($_POST['action'] === 'tambah') {
+                if ($nip_baru && $name && $email && $gender && $password && $dob && $no_hp && $alamat) { 
+                    try {
+                        $stmt_check_nip = $pdo->prepare("SELECT COUNT(*) FROM guru WHERE nip = ?");
+                        $stmt_check_nip->execute([$nip_baru]);
+                        if ($stmt_check_nip->fetchColumn() > 0) {
+                            $response_message = "Gagal menambahkan guru: NIP sudah terdaftar.";
+                        } else {
+                            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                            $admission_date = date('Y-m-d H:i:s'); 
+                            
+                            $stmt = $pdo->prepare("INSERT INTO guru (nip, name, email, gender, dob, no_hp, alamat, photo, pass, admission_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                            $stmt->execute([$nip_baru, $name, $email, $gender, $dob, $no_hp, $alamat, $foto_path_db, $hashed_password, $admission_date]);
+                            $response_status = 'success';
+                            $response_message = "Guru berhasil ditambahkan!";
+                        }
+                    } catch (PDOException $e) {
+                        $response_message = "Gagal menambahkan guru (DB Error): " . $e->getMessage();
+                    }
+                } else {
+                    $response_message = "Mohon lengkapi semua field yang diperlukan (NIP, Nama, Email, Gender, Tanggal Lahir, Password) untuk menambah guru.";
+                }
+            } elseif ($_POST['action'] === 'edit') {
+                if ($nip_lama_for_update && $nip_baru && $name && $email && $gender && $dob) { 
+                    try {
+                        if ($nip_baru !== $nip_lama_for_update) {
+                            $stmt_check_nip_exist = $pdo->prepare("SELECT COUNT(*) FROM guru WHERE nip = ? AND nip != ?");
+                            $stmt_check_nip_exist->execute([$nip_baru, $nip_lama_for_update]);
+                            if ($stmt_check_nip_exist->fetchColumn() > 0) {
+                                $response_message = "Gagal mengupdate guru: NIP baru sudah terdaftar untuk guru lain.";
+                                throw new Exception($response_message); 
+                            }
+                        }
+
+                        if ($foto_path_db && isset($_POST['old_photoguru']) && $_POST['old_photoguru'] !== $foto_path_db && file_exists($folder_upload . $_POST['old_photoguru'])) {
+                            unlink($folder_upload . $_POST['old_photoguru']);
+                        }
+        
+                        $update_pass_sql = '';
+                        $update_pass_params = [];
+                        if (!empty($password)) {
+                            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                            $update_pass_sql = ', pass = ?';
+                            $update_pass_params = [$hashed_password];
+                        }
+        
+                        $stmt = $pdo->prepare("UPDATE guru SET nip = ?, name = ?, email = ?, gender = ?, dob = ?, no_hp = ?, alamat = ?, photo = ? " . $update_pass_sql . " WHERE nip = ?");
+                        $stmt->execute(array_merge([$nip_baru, $name, $email, $gender, $dob, $no_hp, $alamat, $foto_path_db], $update_pass_params, [$nip_lama_for_update]));
+                        
+                        $response_status = 'success';
+                        $response_message = "Guru berhasil diupdate!";
+                    } catch (PDOException $e) {
+                        $response_message = "Gagal mengupdate guru (DB Error): " . $e->getMessage();
+                    } catch (Exception $e) { 
+                        $response_message = $e->getMessage();
+                    }
+                } else {
+                    $response_message = "Mohon lengkapi semua field yang diperlukan untuk mengupdate guru. (NIP, Nama, Email, Gender, Tanggal Lahir, Alamat)";
                 }
             }
+        }
+    } catch (Throwable $e) { 
+        $response_message = "Kesalahan fatal di server: " . $e->getMessage() . " (Line: " . $e->getLine() . " in " . basename($e->getFile()) . ")";
+        error_log("Fatal error in guru AJAX POST: " . $e->getMessage() . " on line " . $e->getLine() . " in file " . $e->getFile() . "\n" . $e->getTraceAsString());
+    }
+    
+    if ($response_status === 'success') {
+        echo "success:" . $response_message;
+    } else {
+        echo "error: " . $response_message;
+    }
+    exit; 
+} 
+// --- END Handle AJAX POST untuk menambah atau mengedit guru ---
 
-            // Update photo in DB
-            $stmt = $pdo->prepare("UPDATE guru SET photo = ? WHERE nip = ?");
-            $stmt->execute([$namaFotoBaru, $nip]);
+
+// --- Handle GET requests (delete guru) ---
+if (isset($_GET['action']) && $_GET['action'] === 'hapus_guru' && isset($_GET['NIP'])) {
+    $nip_to_delete = $_GET['NIP'];
+    $current_tahun_akademik_id = $_GET['tahun_akademik_id'] ?? $selected_tahun_akademik_id;
+
+    try {
+        $stmt_get_photo = $pdo->prepare("SELECT photo FROM guru WHERE nip = ?");
+        $stmt_get_photo->execute([$nip_to_delete]);
+        $guru_data = $stmt_get_photo->fetch(PDO::FETCH_ASSOC);
+        $foto_to_delete = $guru_data['photo'] ?? '';
+
+        $stmt = $pdo->prepare("DELETE FROM guru WHERE nip = ?");
+        $stmt->execute([$nip_to_delete]);
+
+        $folder_upload = "../../uploads/guru/";
+        if (!empty($foto_to_delete) && $foto_to_delete != 'default.jpg' && file_exists($folder_upload . $foto_to_delete)) {
+            unlink($folder_upload . $foto_to_delete);
         }
 
-        // Update other fields
-        $stmt = $pdo->prepare("UPDATE guru SET name = ?, email = ?, gender = ?, dob = ?, alamat = ?, no_hp = ? WHERE nip = ?");
-        $stmt->execute([$name, $email, $gender, $dob, $alamat, $no_hp, $nip]);
-
-        echo "success";
+        $message = "Guru berhasil dihapus!";
+        $alert_type = 'alert-success';
+        
+        header("Location: index.php?success=" . urlencode($message) . "&tahun_akademik_id=" . $current_tahun_akademik_id);
         exit;
-    } elseif ($_POST['action'] === 'tambah_guru') {
-        $name     = $_POST['namaGuru'];
-        $email    = $_POST['emailGuru'];
-        $password = password_hash($_POST['passwordGuru'], PASSWORD_DEFAULT);
-        $nip      = $_POST['nipGuru'];
-        $gender   = $_POST['gender'];
-        $dob      = $_POST['dobGuru'];
-        $no_hp    = $_POST['nohpGuru'];
-        $alamat   = $_POST['alamatGuru'];
-        $admission_date = date('Y-m-d H:i:s');
-
-        // Upload foto
-        $foto = $_FILES['photoGuru']['name'] ?? '';
-        $tmp  = $_FILES['photoGuru']['tmp_name'] ?? '';
-        $folder = "../../uploads/guru/";
-        $namaFotoBaru = '';
-        if ($foto && $tmp) {
-            $ext  = pathinfo($foto, PATHINFO_EXTENSION);
-            $namaFotoBaru = uniqid() . '.' . $ext;
-            move_uploaded_file($tmp, $folder . $namaFotoBaru);
-        }
-
-        // Simpan ke DB
-        $stmt = $pdo->prepare("INSERT INTO guru
-            (nip, name, gender, dob, photo, no_hp, email, pass, alamat, admission_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([
-            $nip,
-            $name,
-            $gender,
-            $dob,
-            $namaFotoBaru,
-            $no_hp,
-            $email,
-            $password,
-            $alamat,
-            $admission_date,
-        ]);
-        echo "success";
+    } catch (PDOException $e) {
+        $message = "Gagal menghapus guru: " . $e->getMessage();
+        $alert_type = 'alert-error';
+        header("Location: index.php?error=" . urlencode($message) . "&tahun_akademik_id=" . $current_tahun_akademik_id);
         exit;
     }
 }
+
+
+// --- Ambil daftar Guru untuk ditampilkan ---
+$query_guru = "SELECT * FROM guru ORDER BY name ASC";
+
+$stmt_guru = $pdo->prepare($query_guru);
+$stmt_guru->execute();
+$guru_list = $stmt_guru->fetchAll(PDO::FETCH_ASSOC);
+
+
+// Ambil pesan dari URL jika ada
+if (isset($_GET['success'])) {
+    $message = htmlspecialchars($_GET['success']);
+    $alert_type = 'alert-success';
+} elseif (isset($_GET['error'])) {
+    $message = htmlspecialchars($_GET['error']);
+    $alert_type = 'alert-error';
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -438,3 +558,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     </script>
 </body>
 </html>
+
