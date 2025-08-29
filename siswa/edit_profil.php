@@ -524,6 +524,24 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
             border-radius: 8px;
             margin-bottom: 1rem;
         }
+
+        /* Back Link */
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: var(--light-text-color);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: color 0.2s ease;
+        }
+
+        .back-link:hover {
+            color: var(--primary-color);
+        }
+
         
         @media (max-width: 768px) {
             .sidebar {
@@ -595,9 +613,9 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal Kelas</span>
             </a>
-            <a href="rekap_absensi_siswa.php">
-                <i class="fas fa-chart-bar"></i>
-                <span>Rekap Absensi</span>
+            <a href="absensi_siswa.php">
+                <i class="fas fa-check-circle"></i>
+                <span>Absensi Saya</span>
             </a>
             <div class="logout-button-container">
                 <a href="#" id="logoutButton">
@@ -724,6 +742,10 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
                     <button type="submit" class="btn-submit">Ubah Password</button>
                 </div>
             </form>
+
+            <a href="profil_siswa.php" class="back-link">
+                <i class="fas fa-arrow-left"></i> Kembali ke Profil Anda
+            </a>
         </div>
     </main>
 

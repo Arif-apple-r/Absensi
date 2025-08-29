@@ -537,6 +537,24 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
                 width: calc(100% - var(--sidebar-collapsed-width)) !important;
             }
         }
+
+        /* Back Link */
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: var(--light-text-color);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: color 0.2s ease;
+        }
+
+        .back-link:hover {
+            color: var(--primary-color);
+        }
+
         .sidebar .logout-button-container {
             position: absolute;
             bottom: 20px;
@@ -713,6 +731,9 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
                     <button type="submit" class="btn-submit">Ubah Password</button>
                 </div>
             </form>
+            <a href="profil_guru.php" class="back-link">
+                <i class="fas fa-arrow-left"></i> Kembali ke Profil Anda
+            </a>
         </div>
     </main>
 

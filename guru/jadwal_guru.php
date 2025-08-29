@@ -701,10 +701,10 @@ $error_message = $error_message ?? '';
                     <table class="data-table">
                         <thead>
                             <tr>
+                                <th>Kelas</th>
                                 <th>Hari</th>
                                 <th>Waktu</th>
                                 <th>Mata Pelajaran</th>
-                                <th>Kelas</th>
                                 <th>Aksi</th>
                             </tr>
                         </thead>
