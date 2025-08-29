@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         if ($upload_succeeded) {
             if ($_POST['action'] === 'tambah') {
-                if ($nip_baru && $name && $email && $gender && $password && $dob && $no_hp && $alamat) { 
+                if ($nip_baru && $name && $email && $password && $dob && $no_hp && $alamat) { 
                     try {
                         $stmt_check_nip = $pdo->prepare("SELECT COUNT(*) FROM guru WHERE nip = ?");
                         $stmt_check_nip->execute([$nip_baru]);
@@ -220,167 +220,609 @@ if (isset($_GET['success'])) {
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Guru | SuperAdmin</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../../assets/admin1.css">
-    <title>Daftar Guru</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #1abc9c;
+            --secondary-color: #34495e;
+            --background-color: #f0f2f5;
+            --card-background: #ffffff;
+            --text-color: #2c3e50;
+            --light-text-color: #7f8c8d;
+            --border-color: #e0e0e0;
+            --shadow-color: rgba(0, 0, 0, 0.08);
+            --sidebar-width: 250px;
+            --sidebar-collapsed-width: 70px;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            display: flex;
+            min-height: 100vh;
+            color: var(--text-color);
+            overflow-x: hidden;
+        }
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--secondary-color);
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            transition: width 0.3s ease;
+            z-index: 1000;
+            padding-top: 70px;
+            overflow: hidden;
+        }
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+        .sidebar .logo {
+            color: #fff;
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            padding: 15px 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: var(--primary-color);
+        }
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
+        }
+        .sidebar nav a {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            color: #fff;
+            text-decoration: none;
+            transition: background-color 0.2s ease, padding-left 0.2s ease;
+        }
+        .sidebar nav a i {
+            width: 25px;
+            text-align: center;
+            margin-right: 20px;
+            font-size: 18px;
+        }
+        .sidebar.collapsed nav a i {
+            margin-right: 0;
+        }
+        .sidebar.collapsed nav a span {
+            display: none;
+        }
+        .sidebar nav a:hover,
+        .sidebar nav a.active {
+            background-color: #3e566d;
+            padding-left: 25px;
+        }
+        .sidebar nav a.active i {
+            color: var(--primary-color);
+        }
+        .header {
+            height: 65.5px;
+            background-color: var(--card-background);
+            box-shadow: 0 2px 10px var(--shadow-color);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            width: calc(100% - var(--sidebar-width));
+            z-index: 999;
+            transition: left 0.3s ease, width 0.3s ease;
+            justify-content: space-between;
+        }
+        .header.shifted {
+            left: var(--sidebar-collapsed-width);
+            width: calc(100% - var(--sidebar-collapsed-width));
+        }
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+        .header h1 i {
+            margin-right: 10px;
+        }
+        /* User Info Dropdown Styling */
+        .user-info {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--text-color);
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+        }
+        .user-info:hover {
+            background-color: #f0f0f0;
+        }
+        .user-info img {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary-color);
+        }
+        .user-info span {
+            font-weight: 600;
+        }
+        .user-info i.fa-caret-down {
+            margin-left: 5px;
+        }
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: var(--card-background);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            z-index: 1002;
+            min-width: 160px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .dropdown-menu a {
+            color: var(--text-color);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+        .dropdown-menu a:hover {
+            background-color: var(--background-color);
+        }
+        .dropdown-menu a i {
+            margin-right: 10px;
+            width: 20px;
+        }
+        .content {
+            flex-grow: 1;
+            padding: 90px 30px 30px 30px;
+            margin-left: var(--sidebar-width);
+            transition: margin-left 0.3s ease;
+            max-width: 100%;
+        }
+        .content.shifted {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+        .toggle-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            margin-right: 20px;
+            transition: background-color 0.3s;
+        }
+        .toggle-btn:hover {
+            background-color: #16a085;
+        }
+        .card {
+            background: var(--card-background);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            margin-bottom: 25px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .card h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .data-table th, .data-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .data-table th {
+            background-color: #f8f8f8;
+            font-weight: 600;
+            color: var(--text-color);
+            text-transform: uppercase;
+        }
+        .data-table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .data-table tr:hover {
+            background-color: #fafafa;
+        }
+        .action-link {
+            padding: 8px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color 0.2s, color 0.2s;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .action-link.edit {
+            background-color: #3498db;
+            color: white;
+        }
+        .action-link.edit:hover {
+            background-color: #2980b9;
+        }
+        .action-link.delete {
+            background-color: #e74c3c;
+            color: white;
+            margin-top: 10px;
+        }
+        .action-link.delete:hover {
+            background-color: #c0392b;
+        }
+        .add-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 25px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background-color 0.3s, transform 0.2s;
+            margin-right: 15px;
+        }
+        .add-link:hover {
+            background-color: #16a085;
+            transform: translateY(-2px);
+        }
+        /* Alerts */
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        /* Modals */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1001; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .modal-header h3 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 600;
+        }
+        .close-btn {
+            color: var(--light-text-color);
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-btn:hover,
+        .close-btn:focus {
+            color: var(--text-color);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Poppins', sans-serif;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+            gap: 10px;
+        }
+        .modal-footer .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background-color 0.2s, color 0.2s;
+            border: none;
+        }
+        .modal-footer .btn-cancel {
+            background-color: #bdc3c7;
+            color: white;
+        }
+        .modal-footer .btn-cancel:hover {
+            background-color: #95a5a6;
+        }
+        .modal-footer .btn-submit {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .modal-footer .btn-submit:hover {
+            background-color: #16a085;
+        }
+        .profile-photo {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .photo-upload {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        .photo-upload img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--border-color);
+        }
+        
+    </style>
 </head>
 <body>
+
     <div class="sidebar" id="sidebar">
-        <div class="logo"><span>SuperAdminCoy</span></div>
+        <div class="logo">
+            <span>Admin Panel</span>
+        </div>
         <nav>
-            <a href="../dashboard_superadmin.php">
-                <i class="fas fa-tachometer-alt"></i>
-                <span>Dashboard</span>
-            </a>
-            <a href="../admin/index.php">
-                <i class="fas fa-users-cog"></i>
-                <span>Admin</span>
-            </a>
-            <a href="index.php" class="active">
-                <i class="fas fa-chalkboard-teacher"></i>
-                <span>Guru</span>
-            </a>
-            <a href="../siswa/index.php">
-                <i class="fas fa-user-graduate"></i>
-                <span>Siswa</span>
-            </a>
-            <a href="../jadwal/index.php">
-                <i class="fas fa-calendar-alt"></i>
-                <span>Jadwal</span>
-            </a>
-            <a href="../Tahun_Akademik/index.php">
-                <i class="fas fa-calendar"></i>
-                <span>Tahun Akademik</span>
-            </a>
-            <a href="../kelas/index.php">
-                <i class="fas fa-school"></i>
-                <span>Kelas</span>
-            </a>
-            <a href="../mapel/index.php">
-                <i class="fas fa-book"></i>
-                <span>Mata Pelajaran</span>
-            </a>
-            <div class="logout-button-container">
-                <a onclick="showLogoutConfirm(event)">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                </a>
-            </div>
+            <a href="../dashboard/index.php"><i class="fas fa-home"></i> <span>Dashboard</span></a>
+            <a href="../tahun_akademik/index.php"><i class="fas fa-calendar-alt"></i> <span>Tahun Akademik</span></a>
+            <a href="../class/index.php"><i class="fas fa-chalkboard-teacher"></i> <span>Kelas</span></a>
+            <a href="../mapel/index.php"><i class="fas fa-book"></i> <span>Mata Pelajaran</span></a>
+            <a href="../guru/index.php" class="active"><i class="fas fa-user-tie"></i> <span>Guru</span></a>
+            <a href="../siswa/index.php"><i class="fas fa-user-graduate"></i> <span>Siswa</span></a>
+            <a href="../jadwal/index.php"><i class="fas fa-clock"></i> <span>Jadwal</span></a>
         </nav>
     </div>
 
-    <div class="header" id="header">
-        <button class="toggle-btn" onclick="toggleSidebar()">
-            <i class="fas fa-bars"></i>
-        </button>
-        <h1>Daftar Guru</h1>
-    </div>
-
-    <div class="content" id="mainContent">
-        <div class="card">
-            <h2>Data Guru</h2>
-            <button class="add-link" id="btn-tambah-guru">
-                <i class="fas fa-plus"></i> Tambah Guru
-            </button>
-
-            <ul class="guru-list" id="guru-list">
-                <?php foreach ($gurulist as $guru): ?>
-                <li
-                    data-id="<?= htmlspecialchars($guru['nip']) ?>"
-                    data-nama="<?= htmlspecialchars($guru['name']) ?>"
-                    data-nip="<?= htmlspecialchars($guru['nip']) ?>"
-                    data-gender="<?= htmlspecialchars($guru['gender']) ?>"
-                    data-dob="<?= htmlspecialchars($guru['dob']) ?>"
-                    data-nohp="<?= htmlspecialchars($guru['no_hp']) ?>"
-                    data-email="<?= htmlspecialchars($guru['email']) ?>"
-                    data-alamat="<?= htmlspecialchars($guru['alamat']) ?>"
-                    data-photo="<?= htmlspecialchars($guru['photo']) ?>"
-                >
-                    <div class="guru-info">
-                        <img
-                            src="../../uploads/guru/<?= htmlspecialchars($guru['photo']) ?>"
-                            alt="Foto <?= htmlspecialchars($guru['name']) ?>"
-                            loading="lazy"
-                            onerror="this.onerror=null;this.src='https://placehold.co/60x60/cccccc/333333?text=No+Foto';"
-                        >
-                        <div class="guru-text">
-                            <span class="guru-nama"><?= htmlspecialchars($guru['name']) ?></span>
-                            <span class="guru-email"><?= htmlspecialchars($guru['email']) ?></span>
-                        </div>
-                    </div>
-                    <div class="guru-actions">
-                        <button class="action-link edit btn-edit">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <button class="action-link delete btn-hapus" data-nip="<?= urlencode($guru['nip']) ?>">
-                            <i class="fas fa-trash-alt"></i> Hapus
-                        </button>
-                    </div>
-                </li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-    </div>
-
-    <!-- Modal for Add/Edit Guru -->
-    <div id="guru-modal" class="modal">
-        <div class="modal-content">
-            <h3 id="modal-title">Edit Data Guru</h3>
-            <form id="guru-form" enctype="multipart/form-data">
-                <label for="namaGuru">Nama Guru:</label>
-                <input type="text" id="namaGuru" name="namaGuru" required>
-
-                <label for="nipGuru">NIP:</label>
-                <input type="text" id="nipGuru" name="nipGuru" required>
-
-                <label>Jenis Kelamin:</label>
-                <div class="gender-group">
-                    <input type="radio" id="male" name="gender" value="Laki-Laki">
-                    <label for="male">Laki-Laki</label>
-                    <input type="radio" id="female" name="gender" value="Perempuan">
-                    <label for="female">Perempuan</label>
+    <div class="content" id="content">
+        <div class="header" id="header">
+            <button class="toggle-btn" id="toggle-btn"><i class="fas fa-bars"></i></button>
+            <h1>Manajemen Guru</h1>
+            <div class="user-info" id="userInfo">
+                <img src="<?= htmlspecialchars($superadmin_photo) ?>" alt="User Photo">
+                <span><?= htmlspecialchars($superadmin_name) ?></span>
+                <i class="fas fa-caret-down"></i>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <a href="../../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </div>
+            </div>
+        </div>
 
-                <label for="dobGuru">Tanggal Lahir:</label>
-                <input type="date" id="dobGuru" name="dobGuru">
+        <div class="card">
+            <h2>Daftar Guru</h2>
+            <?php if ($message): ?>
+                <div class="alert <?= htmlspecialchars($alert_type) ?>">
+                    <i class="fas fa-info-circle"></i>
+                    <p><?= htmlspecialchars($message) ?></p>
+                </div>
+            <?php endif; ?>
 
-                <label for="photoGuru">Foto Guru:</label>
-                <input type="file" id="photoGuru" name="photoGuru">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                <button type="button" class="add-link" id="tambahGuruBtn"><i class="fas fa-plus-circle"></i> Tambah Guru</button>
+            </div>
 
-                <label for="nohpGuru">Nomor HP:</label>
-                <input type="text" id="nohpGuru" name="nohpGuru">
+           <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>NIP</th>
+                            <th>Nama</th>
+                            <th>Email</th>
+                            <th>Jenis Kelamin</th>
+                            <th>Tanggal Lahir</th>
+                            <th>No. HP</th>
+                            <th>Alamat</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($guru_list)): ?>
+                            <tr>
+                                <td colspan="8" style="text-align: center;">Tidak ada data guru.</td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($guru_list as $guru): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($guru['nip'] ?? '') ?></td>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <img src="../../uploads/guru/<?= htmlspecialchars($guru['photo'] ?? 'default.jpg') ?>" alt="Foto Guru" class="profile-photo">
+                                            <span><?= htmlspecialchars($guru['name'] ?? '') ?></span>
+                                        </div>
+                                    </td>
+                                    <td><?= htmlspecialchars($guru['email'] ?? '') ?></td>
+                                    <td><?= htmlspecialchars($guru['gender'] ?? '') ?></td>
+                                    <td><?= htmlspecialchars($guru['dob'] ?? '') ?></td>
+                                    <td><?= htmlspecialchars($guru['no_hp'] ?? '') ?></td>
+                                    <td><?= htmlspecialchars($guru['alamat'] ?? '') ?></td>
+                                    <td>
+                                        <button class="action-link edit-btn" 
+                                            data-nip="<?= urlencode($guru['nip'] ?? '') ?>"
+                                            data-name="<?= urlencode($guru['name'] ?? '') ?>" 
+                                            data-email="<?= urlencode($guru['email'] ?? '') ?>" 
+                                            data-gender="<?= urlencode($guru['gender'] ?? '') ?>"
+                                            data-dob="<?= urlencode($guru['dob'] ?? '') ?>" 
+                                            data-nohp="<?= urlencode($guru['no_hp'] ?? '') ?>"
+                                            data-alamat="<?= urlencode($guru['alamat'] ?? '') ?>"
+                                            data-photo="<?= urlencode($guru['photo'] ?? '') ?>">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        <button class="action-link delete-btn" data-nip="<?= urlencode($guru['nip'] ?? '') ?>">
+                                            <i class="fas fa-trash-alt"></i> Hapus
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-                <label for="emailGuru">Email:</label>
-                <input type="email" id="emailGuru" name="emailGuru">
+    </div>
 
-                <label for="passwordGuru" id="labelPasswordGuru" style="display:none;">Password:</label>
-                <input type="password" id="passwordGuru" name="passwordGuru" style="display:none;">
-
-                <label for="alamatGuru">Alamat:</label>
-                <input type="text" id="alamatGuru" name="alamatGuru">
-
-                <div class="modal-buttons">
-                    <button type="submit" class="btn-save">Simpan</button>
-                    <button type="button" class="btn-close" id="btn-cancel">Batal</button>
+    <div id="guruModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Tambah Guru</h3>
+                <span class="close-btn">&times;</span>
+            </div>
+            <form id="guruForm" action="index.php" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="action" id="formAction" value="tambah">
+                <input type="hidden" name="NIP_lama_for_update" id="oldNip">
+                <input type="hidden" name="old_photoguru" id="oldPhoto">
+                
+                <div class="form-group">
+                    <label for="NIPguru">NIP <span style="color: red;">*</span></label>
+                    <input type="text" id="NIPguru" name="NIPguru" required>
+                </div>
+                <div class="form-group">
+                    <label for="namaguru">Nama <span style="color: red;">*</span></label>
+                    <input type="text" id="namaguru" name="namaguru" required>
+                </div>
+                <div class="form-group">
+                    <label for="emailguru">Email <span style="color: red;">*</span></label>
+                    <input type="email" id="emailguru" name="emailguru" required>
+                </div>
+                <div class="form-group">
+                    <label for="genderguru">Jenis Kelamin <span style="color: red;">*</span></label>
+                    <select id="genderguru" name="genderguru">
+                        <option value="">Pilih Jenis Kelamin</option>
+                        <option value="Laki-laki">laki-laki</option>
+                        <option value="Perempuan">Perempuan</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="dobguru">Tanggal Lahir <span style="color: red;">*</span></label>
+                    <input type="date" id="dobguru" name="dobguru" required>
+                </div>
+                <div class="form-group">
+                    <label for="nohpguru">No. HP</label>
+                    <input type="text" id="nohpguru" name="nohpguru">
+                </div>
+                <div class="form-group">
+                    <label for="alamatguru">Alamat</label>
+                    <textarea id="alamatguru" name="alamatguru"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="passwordguru">Password <span id="password-req" style="color: red;">*</span></label>
+                    <input type="password" id="passwordguru" name="passwordguru">
+                </div>
+                <div class="form-group">
+                    <label for="photoguru">Foto Profil</label>
+                    <input type="file" id="photoguru" name="photoguru" accept="image/*">
+                </div>
+                <div class="photo-upload">
+                    <img id="currentPhotoPreview" src="" alt="Foto Profil" style="display:none;">
+                    <p id="currentPhotoText" style="display:none;"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-cancel" id="cancelBtn">Batal</button>
+                    <button type="submit" class="btn btn-submit">Simpan</button>
                 </div>
             </form>
-        </div>
-    </div>
-
-    <!-- Custom Alert/Confirmation Modal -->
-    <div id="custom-alert-modal" class="custom-modal-overlay">
-        <div class="custom-modal-content">
-            <h4 id="custom-alert-message"></h4>
-            <div class="modal-buttons">
-                <button type="button" class="btn-save" id="custom-alert-ok">OK</button>
-                <button type="button" class="btn-close" id="custom-alert-cancel" style="display:none;">Batal</button>
-            </div>
         </div>
     </div>
 
@@ -574,5 +1016,3 @@ if (isset($_GET['success'])) {
 </script>
 </body>
 </html>
-
-
