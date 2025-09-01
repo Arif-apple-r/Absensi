@@ -446,10 +446,6 @@ if (isset($_GET['success'])) {
             font-weight: 600;
             color: var(--text-color);
         }
-        .table-responsive {
-            width: 100%;
-            overflow-x: auto;
-        }
         .data-table {
             width: 100%;
             border-collapse: collapse;
@@ -481,18 +477,33 @@ if (isset($_GET['success'])) {
             display: inline-block;
             margin-right: 5px;
         }
+
+        .action-link {
+            padding: 8px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color 0.2s, color 0.2s;
+            display: inline-block;
+            margin-right: 5px;
+            /* Added spacing */
+        }
+
         .action-link.edit {
             background-color: #3498db;
             color: white;
         }
+
         .action-link.edit:hover {
             background-color: #2980b9;
         }
+
         .action-link.delete {
             background-color: #e74c3c;
             color: white;
             margin-top: 10px;
         }
+
         .action-link.delete:hover {
             background-color: #c0392b;
         }
@@ -656,24 +667,56 @@ if (isset($_GET['success'])) {
             object-fit: cover;
             border: 2px solid var(--border-color);
         }
+        .table-responsive {
+            overflow-x: auto;
+        }
         
     </style>
 </head>
 <body>
 
     <div class="sidebar" id="sidebar">
-        <div class="logo">
-            <span>Admin Panel</span>
-        </div>
+        <div class="logo"><span>SuperAdminCoy</span></div>
         <nav>
-            <a href="../dashboard/index.php"><i class="fas fa-home"></i> <span>Dashboard</span></a>
-            <a href="../tahun_akademik/index.php"><i class="fas fa-calendar-alt"></i> <span>Tahun Akademik</span></a>
-            <a href="../class/index.php"><i class="fas fa-chalkboard-teacher"></i> <span>Kelas</span></a>
-            <a href="../mapel/index.php"><i class="fas fa-book"></i> <span>Mata Pelajaran</span></a>
-            <a href="../guru/index.php" class="active"><i class="fas fa-user-tie"></i> <span>Guru</span></a>
-            <a href="../siswa/index.php"><i class="fas fa-user-graduate"></i> <span>Siswa</span></a>
-            <a href="../jadwal/index.php"><i class="fas fa-clock"></i> <span>Jadwal</span></a>
+            <a href="../dashboard_superadmin.php">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="../admin/index.php">
+                <i class="fas fa-users-cog"></i>
+                <span>Admin</span>
+            </a>
+            <a href="index.php" class="active">
+                <i class="fas fa-chalkboard-teacher"></i>
+                <span>Guru</span>
+            </a>
+            <a href="../siswa/index.php">
+                <i class="fas fa-user-graduate"></i>
+                <span>Siswa</span>
+            </a>
+            <a href="../jadwal/index.php">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Jadwal</span>
+            </a>
+            <a href="../Tahun_Akademik/index.php">
+                <i class="fas fa-calendar"></i>
+                <span>Tahun Akademik</span>
+            </a>
+            <a href="../kelas/index.php">
+                <i class="fas fa-school"></i>
+                <span>Kelas</span>
+            </a>
+            <a href="../mapel/index.php">
+                <i class="fas fa-book"></i>
+                <span>Mata Pelajaran</span>
+            </a>
         </nav>
+        <div class="logout-button-container">
+            <a onclick="showLogoutConfirmation()" id="logoutButtonSidebar">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </a>
+        </div>
     </div>
 
     <div class="content" id="content">
@@ -708,37 +751,30 @@ if (isset($_GET['success'])) {
                     <thead>
                         <tr>
                             <th>NIP</th>
+                            <th style="text-align: center;">Profil</th>
                             <th>Nama</th>
                             <th>Email</th>
                             <th>Jenis Kelamin</th>
-                            <th>Tanggal Lahir</th>
                             <th>No. HP</th>
-                            <th>Alamat</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($guru_list)): ?>
                             <tr>
-                                <td colspan="8" style="text-align: center;">Tidak ada data guru.</td>
+                                <td colspan="7" style="text-align: center;">Tidak ada data guru.</td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($guru_list as $guru): ?>
                                 <tr>
                                     <td><?= htmlspecialchars($guru['nip'] ?? '') ?></td>
-                                    <td>
-                                        <div style="display: flex; align-items: center; gap: 10px;">
-                                            <img src="../../uploads/guru/<?= htmlspecialchars($guru['photo'] ?? 'default.jpg') ?>" alt="Foto Guru" class="profile-photo">
-                                            <span><?= htmlspecialchars($guru['name'] ?? '') ?></span>
-                                        </div>
-                                    </td>
+                                    <td style="text-align: center;"><img src="../../uploads/guru/<?= htmlspecialchars($guru['photo'] ?? 'default.jpg') ?>" alt="Foto Guru" class="profile-photo"></td>
+                                    <td><?= htmlspecialchars($guru['name'] ?? '') ?></td>
                                     <td><?= htmlspecialchars($guru['email'] ?? '') ?></td>
                                     <td><?= htmlspecialchars($guru['gender'] ?? '') ?></td>
-                                    <td><?= htmlspecialchars($guru['dob'] ?? '') ?></td>
                                     <td><?= htmlspecialchars($guru['no_hp'] ?? '') ?></td>
-                                    <td><?= htmlspecialchars($guru['alamat'] ?? '') ?></td>
                                     <td>
-                                        <button class="action-link edit-btn" 
+                                        <button class="action-link edit" 
                                             data-nip="<?= urlencode($guru['nip'] ?? '') ?>"
                                             data-name="<?= urlencode($guru['name'] ?? '') ?>" 
                                             data-email="<?= urlencode($guru['email'] ?? '') ?>" 
@@ -747,10 +783,10 @@ if (isset($_GET['success'])) {
                                             data-nohp="<?= urlencode($guru['no_hp'] ?? '') ?>"
                                             data-alamat="<?= urlencode($guru['alamat'] ?? '') ?>"
                                             data-photo="<?= urlencode($guru['photo'] ?? '') ?>">
-                                            <i class="fas fa-edit"></i> Edit
+                                            <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="action-link delete-btn" data-nip="<?= urlencode($guru['nip'] ?? '') ?>">
-                                            <i class="fas fa-trash-alt"></i> Hapus
+                                        <button class="action-link delete" data-nip="<?= urlencode($guru['nip'] ?? '') ?>">
+                                            <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </td>
                                 </tr>
@@ -890,7 +926,7 @@ if (isset($_GET['success'])) {
             $guruModal.show();
         });
 
-        $('.edit-btn').on('click', function() {
+        $('.edit').on('click', function() {
             resetGuruModal(); 
             const data = $(this).data();
             $modalTitle.text('Edit Guru');
@@ -993,7 +1029,7 @@ if (isset($_GET['success'])) {
         });
 
         // SweetAlert for delete confirmation
-        $('.delete-btn').on('click', function() {
+        $('.delete').on('click', function() {
             const nipToDelete = $(this).data('nip');
             const currentTahunAkademikId = new URLSearchParams(window.location.search).get('tahun_akademik_id');
 
