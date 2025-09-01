@@ -45,7 +45,6 @@ if ($guru && password_verify($pass, $guru['pass'])) {
 }
 
 // cek ke siswa
-// cek ke siswa
 $stmt = $pdo->prepare("SELECT * FROM siswa WHERE email = ?");
 $stmt->execute([$email]);
 $siswa = $stmt->fetch();
@@ -53,16 +52,15 @@ $siswa = $stmt->fetch();
 if ($siswa && password_verify($pass, $siswa['pass'])) {
     $_SESSION['siswa_id'] = $siswa['id'];
     $_SESSION['siswa_name'] = $siswa['name'];
-    $_SESSION['siswa_nis'] = $siswa['NIS']; // Penting untuk ditampilkan di dashboard
-    $_SESSION['siswa_class_id'] = $siswa['class_id']; // Penting untuk filtering jadwal/absensi
-    $_SESSION['siswa'] = $siswa; // Simpan seluruh objek siswa jika perlu
-    $_SESSION['last_login'] = date('Y-m-d H:i:s'); // Simpan waktu login
-    header("Location: siswa/dashboard_siswa.php"); // Arahkan ke dashboard siswa
+    $_SESSION['siswa_nis'] = $siswa['NIS'];
+    $_SESSION['siswa_class_id'] = $siswa['class_id'];
+    $_SESSION['siswa'] = $siswa;
+    $_SESSION['last_login'] = date('Y-m-d H:i:s');
+    header("Location: siswa/dashboard_siswa.php");
     exit;
 }
 
-// ... kode PHP jika login gagal (redirect ke login.php dengan error) ...
-
-
-echo "Login gagal: Email atau password salah!";
+// Jika semua cek gagal, simpan pesan error ke dalam session
+echo "<script>alert('Login gagal: Email atau password salah!'); window.location.href = 'login.php';</script>";
+exit;
 ?>

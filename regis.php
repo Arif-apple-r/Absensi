@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-    <link rel="stylesheet" href="assets/index.css">
+    <link rel="stylesheet" href="assets/index0.css">
 </head>
 <body>
     <div class="container-signup">
@@ -67,7 +67,7 @@
             </form>
         </div>
         <div class="kaki">
-            <p>Sudah punya akun kembali ke <a href="index.php">login</a></p>
+            <p>Sudah punya akun kembali ke <a href="login.php">login</a></p>
         </div>
     </div>
 </body>
