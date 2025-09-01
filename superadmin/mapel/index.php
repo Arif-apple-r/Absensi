@@ -3,10 +3,12 @@ require '../../koneksi.php';
 session_start();
 
 // Cek sesi login superadmin
-if (!isset($_SESSION['superadmin'])) {
+if (!isset($_SESSION['superadmin_id'])) {
     header("Location: ../../login.php");
     exit;
 }
+
+$superadmin_name = htmlspecialchars($_SESSION['superadmin_name'] ?? 'SuperAdmin');
 
 // Logika Tambah Mata Pelajaran
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tambah_mapel'])) {
@@ -223,17 +225,79 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
             width: calc(100% - var(--sidebar-width));
             z-index: 999;
             transition: left 0.3s ease, width 0.3s ease;
+            justify-content: space-between;
         }
-
         .header.shifted {
             left: var(--sidebar-collapsed-width);
             width: calc(100% - var(--sidebar-collapsed-width));
         }
-
         .header h1 {
             font-size: 22px;
             font-weight: 600;
             margin: 0;
+            display: flex;
+            align-items: center;
+        }
+        .header h1 i {
+            margin-right: 10px;
+        }
+
+        /* User Info Dropdown Styling */
+        .user-info {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--text-color);
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+        }
+        .user-info:hover {
+            background-color: #f0f0f0;
+        }
+        .user-info img {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary-color);
+        }
+        .user-info span {
+            font-weight: 600;
+        }
+        .user-info i.fa-caret-down {
+            margin-left: 5px;
+        }
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: var(--card-background);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            z-index: 1002;
+            min-width: 160px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .dropdown-menu a {
+            color: var(--text-color);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+        .dropdown-menu a:hover {
+            background-color: var(--background-color);
+        }
+        .dropdown-menu a i {
+            margin-right: 10px;
+            width: 20px;
         }
 
         .content {
@@ -597,7 +661,14 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
         <button class="toggle-btn" onclick="toggleSidebar()">
             <i class="fas fa-bars"></i>
         </button>
-        <h1>Mata Pelajaran</h1>
+        <h1><i class="fas fa-book"></i> Manajemen Mata Pelajaran</h1>
+        <div class="user-info" id="userInfoDropdown">
+            <span><?= $superadmin_name ?></span>
+            <div class="dropdown-menu" id="userDropdownContent">
+                <!-- <a href="profil_superadmin.php"><i class="fas fa-user-circle"></i> Profil</a> -->
+                <a href="#" id="logoutDropdownLink" onclick="showLogoutConfirm(event); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </div>
     </div>
 
     <div class="content" id="mainContent">

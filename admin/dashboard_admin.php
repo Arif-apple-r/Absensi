@@ -350,6 +350,7 @@ $total_mapel = getCount($conn, "SELECT COUNT(*) AS count FROM mapel");
             <a href="guru/index.php"><i class="fas fa-chalkboard-teacher"></i><span>Guru</span></a>
             <a href="siswa/index.php"><i class="fas fa-user-graduate"></i><span>Siswa</span></a>
             <a href="jadwal/index.php"><i class="fas fa-calendar-alt"></i><span>Jadwal</span></a>
+            <a href="Tahun_Akademik/index.php"><i class="fas fa-calendar"></i><span>Tahun Akademik</span></a>
             <a href="kelas/index.php"><i class="fas fa-school"></i><span>Kelas</span></a>
             <a href="mapel/index.php"><i class="fas fa-book"></i><span>Mata Pelajaran</span></a>
             <div class="logout-button-container">

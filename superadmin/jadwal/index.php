@@ -854,14 +854,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'edit' && isset($_GET['id'])) {
         <button class="toggle-btn" onclick="toggleSidebar()">
             <i class="fas fa-bars"></i>
         </button>
-        <h1>Jadwal Kelas</h1>
+        <h1><i class="fas fa-calendar-alt"></i> Jadwal Kelas</h1>
         <div class="user-info" id="userInfoDropdown">
             <span><?= $superadmin_name ?></span>
-            <img src="<?= $superadmin_photo ?>" alt="User Avatar"
-                loading="lazy"
-                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=SA';"
-            >
-            <i class="fas fa-caret-down"></i>
             <div class="dropdown-menu" id="userDropdownContent">
                 <!-- <a href="profil_superadmin.php"><i class="fas fa-user-circle"></i> Profil</a> -->
                 <a href="../../logout.php" id="logoutDropdownLink"><i class="fas fa-sign-out-alt"></i> Logout</a>

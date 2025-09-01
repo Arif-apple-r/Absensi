@@ -670,6 +670,40 @@ if (isset($_GET['success'])) {
         .table-responsive {
             overflow-x: auto;
         }
+
+        /* Logout button at bottom of sidebar */
+        .sidebar .logout-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .sidebar .logout-button-container a {
+            background-color: #e74c3c;
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar .logout-button-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .sidebar.collapsed .logout-button-container {
+            padding: 0;
+        }
+
+        .sidebar.collapsed .logout-button-container a span {
+            display: none;
+        }
+
         
     </style>
 </head>
@@ -722,11 +756,9 @@ if (isset($_GET['success'])) {
     <div class="content" id="content">
         <div class="header" id="header">
             <button class="toggle-btn" id="toggle-btn"><i class="fas fa-bars"></i></button>
-            <h1>Manajemen Guru</h1>
+            <h1><i class="fas fa-chalkboard-teacher"></i> Manajemen Guru</h1>
             <div class="user-info" id="userInfo">
-                <img src="<?= htmlspecialchars($superadmin_photo) ?>" alt="User Photo">
                 <span><?= htmlspecialchars($superadmin_name) ?></span>
-                <i class="fas fa-caret-down"></i>
                 <div class="dropdown-menu" id="dropdownMenu">
                     <a href="../../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </div>
@@ -934,7 +966,7 @@ if (isset($_GET['success'])) {
             
             // Correctly decode URL-encoded data from PHP
             $oldNip.val(decodeURIComponent(data.nip));
-            $NIPguru.val(decodeURIComponent(data.nip)).prop('disabled', true);
+            $NIPguru.val(decodeURIComponent(data.nip)).prop('disabled', false);
             $namaguru.val(decodeURIComponent(data.name));
             $emailguru.val(decodeURIComponent(data.email));
             const decodedGender = decodeURIComponent(data.gender);
@@ -1027,6 +1059,28 @@ if (isset($_GET['success'])) {
                 });
             }
         });
+
+        function showLogoutConfirmation() {
+            Swal.fire({
+                title: 'Konfirmasi Logout',
+                text: 'Apakah kamu yakin ingin logout?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Logout!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = "../../logout.php";
+                }
+            });
+        }
+
+        if (logoutButtonSidebar) {
+            logoutButtonSidebar.addEventListener('click', function(e) {
+                e.preventDefault();
+                showLogoutConfirmation();
+            });
+        }
 
         // SweetAlert for delete confirmation
         $('.delete').on('click', function() {

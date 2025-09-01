@@ -528,6 +528,10 @@
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal</span>
             </a>
+            <a href="../Tahun_Akademik/index.php">
+                <i class="fas fa-calendar"></i>
+                <span>Tahun Akademik</span>
+            </a>
             <a href="../kelas/index.php">
                 <i class="fas fa-school"></i>
                 <span>Kelas</span>
@@ -537,7 +541,7 @@
                 <span>Mata Pelajaran</span>
             </a>
             <div class="logout-button-container">
-                <a href="../logout.php">
+                <a onclick="showLogoutConfirm()">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Logout</span>
                 </a>
@@ -646,6 +650,12 @@
         const header = document.getElementById("header");
         const absensiModal = document.getElementById("absensiModal");
 
+        function toggleSidebar() {
+            sidebar.classList.toggle("collapsed");
+            mainContent.classList.toggle("shifted");
+            header.classList.toggle("shifted");
+        }
+
         function toggleKeterangan(selectElement) {
             const keteranganContainer = selectElement.closest('.student-item').querySelector('.keterangan-container');
             const keteranganTextarea = keteranganContainer.querySelector('textarea');
@@ -658,6 +668,21 @@
                 keteranganTextarea.disabled = true;
                 keteranganTextarea.value = ''; // Opsional: bersihkan nilai saat disembunyikan
             }
+        }
+
+        function showLogoutConfirm() {
+            Swal.fire({
+                title: 'Konfirmasi Logout',
+                text: 'Apakah kamu yakin ingin logout?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Logout!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = "../../logout.php"; // redirect logout
+                }
+            });
         }
 
         function openModal() {
@@ -678,22 +703,6 @@
             if (event.target == absensiModal) {
                 closeModal();
             }
-        }
-
-        function showLogoutConfirm(event) {
-            event.preventDefault();
-            Swal.fire({
-                title: 'Konfirmasi Logout',
-                text: 'Apakah kamu yakin ingin logout?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Ya, Logout!',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = "../../logout.php"; // redirect logout
-                }
-            });
         }
 
     </script>

@@ -785,11 +785,6 @@ if (isset($_GET['success'])) {
         <h1><i class="fas fa-school"></i> Manajemen Kelas</h1>
         <div class="user-info" id="userInfoDropdown">
             <span><?= $superadmin_name ?></span>
-            <img src="<?= $superadmin_photo ?>" alt="User Avatar"
-                loading="lazy"
-                onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=SA';"
-            >
-            <i class="fas fa-caret-down"></i>
             <div class="dropdown-menu" id="userDropdownContent">
                 <!-- <a href="profil_superadmin.php"><i class="fas fa-user-circle"></i> Profil</a> -->
                 <a href="#" id="logoutDropdownLink" onclick="showLogoutConfirm(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>

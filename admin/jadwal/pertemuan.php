@@ -1,6 +1,6 @@
 <?php
     session_start();
-    if (!isset($_SESSION['admin'])) {
+    if (!isset($_SESSION['admin_id'])) {
         header("Location: ../../login.php");
         exit;
     }
@@ -159,6 +159,16 @@
             width: 100%;
             background: var(--primary-color);
         }
+
+        .logo span {
+            transition: font-size 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo span {
+            font-size: 0.5em;
+            transition: font-size 0.3s ease;
+        }
+
 
         .sidebar nav a {
             display: flex;
@@ -575,12 +585,46 @@
         .btn-cancel-delete:hover {
             background-color: #bbb;
         }
+
+        /* --- Penambahan CSS untuk Tombol Logout --- */
+        .sidebar .logout-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .sidebar .logout-button-container a {
+            background-color: #e74c3c;
+            /* Warna merah untuk Logout */
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar .logout-button-container a:hover {
+            background-color: #c0392b;
+        }
+
+        .sidebar.collapsed .logout-button-container {
+            padding: 0;
+        }
+
+        .sidebar.collapsed .logout-button-container a span {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
     <div class="sidebar" id="sidebar">
-        <div class="logo">AdminCoy</div>
+        <div class="logo"><span>SuperAdminCoy</span></div>
         <nav>
             <a href="../dashboard_admin.php">
                 <i class="fas fa-tachometer-alt"></i>
@@ -598,6 +642,10 @@
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal</span>
             </a>
+            <a href="../Tahun_Akademik/index.php">
+                <i class="fas fa-calendar"></i>
+                <span>Tahun Akademik</span>
+            </a>
             <a href="../kelas/index.php">
                 <i class="fas fa-school"></i>
                 <span>Kelas</span>
@@ -606,10 +654,12 @@
                 <i class="fas fa-book"></i>
                 <span>Mata Pelajaran</span>
             </a>
-            <a onclick="showLogoutConfirm(event)">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Logout</span>
-            </a>
+            <div class="logout-button-container">
+                <a onclick="showLogoutConfirm(event)">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
         </nav>
     </div>
 
