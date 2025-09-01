@@ -97,7 +97,6 @@ if ($selected_tahun_akademik_id) {
         $stmt = $pdo->prepare($query);
         $stmt->execute([$guru_id, $selected_tahun_akademik_id]);
         $jadwal_mengajar = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
     } catch (PDOException $e) {
         $error_message = "Gagal mengambil data jadwal: " . $e->getMessage();
         error_log($error_message);
@@ -115,6 +114,9 @@ if ($selected_tahun_akademik_id) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rekap Absensi - Dashboard Guru</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
@@ -642,8 +644,8 @@ if ($selected_tahun_akademik_id) {
                                     <td>
                                         <div class="table-cell-with-image">
                                             <?php
-                                                $class_photo_path = '../uploads/kelas/' . htmlspecialchars($jadwal['class_photo']);
-                                                $class_photo_src = file_exists($class_photo_path) && !empty($jadwal['class_photo']) ? $class_photo_path : 'https://placehold.co/50x50/e0e0e0/333333?text=' . substr(htmlspecialchars($jadwal['nama_kelas']), 0, 2);
+                                            $class_photo_path = '../uploads/kelas/' . htmlspecialchars($jadwal['class_photo']);
+                                            $class_photo_src = file_exists($class_photo_path) && !empty($jadwal['class_photo']) ? $class_photo_path : 'https://placehold.co/50x50/e0e0e0/333333?text=' . substr(htmlspecialchars($jadwal['nama_kelas']), 0, 2);
                                             ?>
                                             <img src="<?= $class_photo_src ?>" alt="Foto Kelas" class="class-photo">
                                             <span><?= htmlspecialchars($jadwal['nama_kelas']) ?></span>

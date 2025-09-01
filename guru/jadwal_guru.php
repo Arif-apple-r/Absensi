@@ -95,8 +95,8 @@ if ($selected_tahun_akademik_id) {
     $kelas_options = mysqli_fetch_all($result_kelas, MYSQLI_ASSOC);
     mysqli_stmt_close($stmt_kelas);
 } else {
-     // Jika tidak ada tahun akademik yang dipilih, ambil semua kelas guru
-     $query_kelas_diajar = "SELECT DISTINCT c.id, c.nama_kelas
+    // Jika tidak ada tahun akademik yang dipilih, ambil semua kelas guru
+    $query_kelas_diajar = "SELECT DISTINCT c.id, c.nama_kelas
                            FROM jadwal AS j
                            JOIN class AS c ON j.class_id = c.id
                            WHERE j.teacher_id = ?
@@ -175,6 +175,9 @@ $error_message = $error_message ?? '';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jadwal Mengajar - Dashboard Guru</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
@@ -525,7 +528,7 @@ $error_message = $error_message ?? '';
             align-items: center;
             gap: 12px;
         }
-        
+
         .class-photo {
             width: 50px;
             height: 50px;
@@ -714,13 +717,13 @@ $error_message = $error_message ?? '';
                                     <td>
                                         <div class="table-cell-with-image">
                                             <?php
-                                                $class_photo_path = '../uploads/kelas/' . htmlspecialchars($jadwal['class_photo']);
-                                                $class_photo_src = file_exists($class_photo_path) && !empty($jadwal['class_photo']) ? $class_photo_path : 'https://placehold.co/50x50/e0e0e0/333333?text=' . substr(htmlspecialchars($jadwal['nama_kelas']), 0, 2);
+                                            $class_photo_path = '../uploads/kelas/' . htmlspecialchars($jadwal['class_photo']);
+                                            $class_photo_src = file_exists($class_photo_path) && !empty($jadwal['class_photo']) ? $class_photo_path : 'https://placehold.co/50x50/e0e0e0/333333?text=' . substr(htmlspecialchars($jadwal['nama_kelas']), 0, 2);
                                             ?>
                                             <img src="<?= $class_photo_src ?>" alt="Foto Kelas" class="class-photo">
                                             <span><?= htmlspecialchars($jadwal['nama_kelas']) ?></span>
                                         </div>
-                                    </td>                                    
+                                    </td>
                                     <td><?= htmlspecialchars($jadwal['hari']) ?></td>
                                     <td><?= htmlspecialchars(date("H:i", strtotime($jadwal['jam_mulai']))) . ' - ' . htmlspecialchars(date("H:i", strtotime($jadwal['jam_selesai']))) ?></td>
                                     <td><?= htmlspecialchars($jadwal['nama_mapel']) ?></td>

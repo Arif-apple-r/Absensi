@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $file_tmp = $_FILES['photo']['tmp_name'];
             $file_name = uniqid('photo_') . '_' . basename($_FILES['photo']['name']);
             $file_destination = '../uploads/siswa/' . $file_name;
-            
+
             // Hapus foto lama jika ada
             $stmt_old_photo = $pdo->prepare("SELECT photo FROM siswa WHERE id = ?");
             $stmt_old_photo->execute([$siswa_id]);
@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['change_password'])) {
         $new_password = $_POST['new_password'];
         $confirm_password = $_POST['confirm_password'];
-        
+
         if ($new_password !== $confirm_password) {
             $error_message = "Konfirmasi password tidak cocok!";
         } else if (strlen($new_password) < 6) {
@@ -139,11 +139,15 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
 
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profil Saya - Dashboard Siswa</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
@@ -168,6 +172,7 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         }
 
         body {
+            color: #333;
             font-family: 'Poppins', sans-serif;
             background-color: var(--background-color);
             display: flex;
@@ -177,6 +182,8 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         }
 
         .sidebar {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 400;
             width: var(--sidebar-width);
             background-color: var(--secondary-color);
             position: fixed;
@@ -194,6 +201,7 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         }
 
         .sidebar .logo {
+            font-family: 'Poppins', sans-serif;
             color: #fff;
             font-size: 24px;
             font-weight: 700;
@@ -216,6 +224,9 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         }
 
         .sidebar nav a {
+            font-size: 16px;
+            font-weight: 500;
+            font-family: 'Poppins', sans-serif;
             display: flex;
             align-items: center;
             padding: 15px 20px;
@@ -266,6 +277,7 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         }
 
         .header {
+            font-family: 'Poppins', sans-serif;
             height: 65.5px;
             background-color: var(--card-background);
             box-shadow: 0 2px 10px var(--shadow-color);
@@ -287,6 +299,7 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         }
 
         .header h1 {
+            font-family: 'Poppins', sans-serif;
             font-size: 22px;
             font-weight: 600;
             margin: 0;
@@ -324,6 +337,8 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         }
 
         .user-info span {
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
             font-weight: 600;
         }
 
@@ -352,6 +367,8 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         }
 
         .dropdown-menu a {
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
             color: var(--text-color);
             padding: 12px 16px;
             text-decoration: none;
@@ -411,12 +428,13 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         }
 
         .card h2 {
+            font-family: 'Poppins', sans-serif;
             margin-bottom: 20px;
             font-size: 24px;
             font-weight: 600;
             color: var(--text-color);
         }
-        
+
         .profile-photo-container {
             display: flex;
             justify-content: center;
@@ -446,6 +464,7 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         }
 
         .form-group label {
+            font-family: 'Poppins', sans-serif;
             display: block;
             margin-bottom: 0.5rem;
             font-weight: 600;
@@ -455,6 +474,8 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         .form-group input,
         .form-group select,
         .form-group textarea {
+            font-size: 14px;
+            font-family: 'Poppins', sans-serif;
             width: 100%;
             padding: 10px;
             border-radius: 8px;
@@ -462,11 +483,11 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
             background-color: var(--background-color);
             transition: border-color 0.2s ease;
         }
-        
+
         .form-group input[type="file"] {
             padding: 5px;
         }
-        
+
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
@@ -481,7 +502,7 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
             flex-wrap: wrap;
         }
 
-        .flex-container > .form-group {
+        .flex-container>.form-group {
             flex: 1 1 45%;
         }
 
@@ -493,6 +514,9 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         }
 
         .btn-submit {
+            font-weight: 600;
+            font-size: 14px;
+            font-family: 'Poppins', sans-serif;
             padding: 10px 20px;
             background-color: var(--primary-color);
             color: white;
@@ -506,7 +530,7 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         .btn-submit:hover {
             background-color: #16a085;
         }
-        
+
         .alert-success {
             color: #155724;
             background-color: #d4edda;
@@ -515,7 +539,7 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
             border-radius: 8px;
             margin-bottom: 1rem;
         }
-        
+
         .alert-error {
             color: #721c24;
             background-color: #f8d7da;
@@ -542,30 +566,37 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
             color: var(--primary-color);
         }
 
-        
+
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
             }
+
             .sidebar.collapsed {
                 transform: translateX(0);
                 width: var(--sidebar-collapsed-width);
             }
-            .content, .header {
+
+            .content,
+            .header {
                 margin-left: 0 !important;
                 left: 0 !important;
                 width: 100% !important;
                 padding-left: 20px !important;
             }
+
             .header .user-info .last-login {
                 display: none;
             }
-            .sidebar.collapsed + .header, .sidebar.collapsed ~ .content {
+
+            .sidebar.collapsed+.header,
+            .sidebar.collapsed~.content {
                 margin-left: var(--sidebar-collapsed-width) !important;
                 left: var(--sidebar-collapsed-width) !important;
                 width: calc(100% - var(--sidebar-collapsed-width)) !important;
             }
         }
+
         .sidebar .logout-button-container {
             position: absolute;
             bottom: 20px;
@@ -599,6 +630,7 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         }
     </style>
 </head>
+
 <body>
     <aside class="sidebar" id="sidebar">
         <div class="logo">
@@ -611,7 +643,7 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
             </a>
             <a href="jadwal_siswa.php">
                 <i class="fas fa-calendar-alt"></i>
-                <span>Jadwal Kelas</span>
+                <span>Jadwal Saya</span>
             </a>
             <a href="absensi_siswa.php">
                 <i class="fas fa-check-circle"></i>
@@ -658,11 +690,11 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
                     <p><?php echo $error_message; ?></p>
                 </div>
             <?php endif; ?>
-            
+
             <form action="profil_siswa.php" method="POST" enctype="multipart/form-data">
                 <div class="profile-photo-container">
                     <?php
-                        $siswa_photo_src = !empty($siswa_photo) ? '../uploads/siswa/' . htmlspecialchars($siswa_photo) : 'https://placehold.co/150x150/e0e0e0/333333?text=SW';
+                    $siswa_photo_src = !empty($siswa_photo) ? '../uploads/siswa/' . htmlspecialchars($siswa_photo) : 'https://placehold.co/150x150/e0e0e0/333333?text=SW';
                     ?>
                     <img src="<?php echo $siswa_photo_src; ?>" alt="Foto Profil Siswa" class="profile-photo" id="profilePhotoPreview">
                     <div class="form-group mt-4">
@@ -722,9 +754,9 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
                     <button type="submit" class="btn-submit">Simpan Perubahan</button>
                 </div>
             </form>
-            
+
             <hr class="my-6">
-            
+
             <form action="profil_siswa.php" method="POST">
                 <h2 class="text-2xl font-bold mb-6">Ubah Password</h2>
                 <input type="hidden" name="change_password" value="1">
@@ -805,7 +837,7 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         if (logoutDropdownLink) {
             logoutDropdownLink.addEventListener('click', showLogoutConfirmation);
         }
-        
+
         // Tampilkan pesan SweetAlert jika ada
         window.addEventListener('load', () => {
             if (successMessage) {
@@ -814,7 +846,7 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
                 Swal.fire('Error!', errorMessage, 'error');
             }
         });
-        
+
         // Preview foto yang diunggah
         if (photoFileInput) {
             photoFileInput.addEventListener('change', function(event) {
@@ -830,4 +862,5 @@ $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
         }
     </script>
 </body>
+
 </html>
