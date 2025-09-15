@@ -1,0 +1,292 @@
+*{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body{
+  min-height: 100vh;
+  width: 100%;
+  background-image: url(apaiki.jpg);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.container{
+  max-width: 450px;
+  width: 100%;
+  padding: 20px;
+  background: #fff;
+  border-radius: 7px;
+  box-shadow: 0 5px 10px rgba(223, 182, 182, 0.3);
+  overflow: hidden;
+}
+.container-signup{
+  max-width: 750px;
+  height: 420px;
+  width: 100%;
+  padding: 25px;
+  background: #fff;
+  border-radius: 7px;
+  box-shadow: 0 5px 10px rgba(223, 182, 182, 0.3);
+  overflow: hidden;
+}
+
+.judul {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+p{
+  font-style: bold;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: #4b62d2;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+/* login */
+.login {
+  padding: 10px;
+}
+
+.login input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.login-container button:hover {
+    background-color: #1f1684;
+}
+
+/* kaki */
+.kaki {
+  text-align: center;
+  align-items: flex-end;
+}
+
+.kaki a {
+  text-decoration: none;
+  color: #333;
+  animation: ease-in-out 0.5s;
+}
+
+.kaki a:hover {
+  color: #009579;
+}
+
+/* sign-up */
+
+.signup-list {
+  padding: 10px;
+}
+
+.signup-list form .fields{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+form .fields .input-field{
+    display: flex;
+    width: calc(100% / 3 - 15px);
+    flex-direction: column;
+    margin: 4px 0;
+}
+.input-field label{
+    font-size: 12px;
+    font-weight: 500;
+    color: #2e2e2e;
+}
+
+.input-field input, select{
+    outline: none;
+    font-size: 14px;
+    font-weight: 400;
+    color: #333;
+    border-radius: 5px;
+    border: 1px solid #aaa;
+    padding: 0 15px;
+    height: 42px;
+    margin: 8px 0;
+}
+
+.input-field input :focus,
+.input-field select:focus{
+    box-shadow: 0 3px 6px rgba(0,0,0,0.13);
+}
+.input-field select,
+.input-field input[type="date"]{
+    color: #707070;
+}
+.input-field input[type="date"]:valid{
+    color: #333;
+}
+
+/* file photo */
+.custom-file-input {
+  display: inline-block;
+  width: 100%; /* Menyesuaikan lebar dengan input-field lainnya */
+  height: 42px; /* Ukuran tinggi yang sama */
+  border-radius: 5px; /* Sesuaikan border radius dengan input-field lainnya */
+  border: 1px solid #aaa; /* Border dengan warna yang sama */
+  background: #fff;
+  position: relative;
+}
+
+.custom-file-input::-webkit-file-upload-button {
+  visibility: hidden;
+}
+
+.custom-file-input::before {
+  content: 'Select img files';
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(top, #f9f9f9, #e3e3e3);
+  border-radius: 5px;
+  outline: none;
+  white-space: nowrap;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: pointer;
+  text-shadow: 1px 1px #fff;
+  font-size: 14px;
+  height: 100%;
+}
+
+.custom-file-input:active::before {
+  background: -webkit-linear-gradient(top, #e3e3e3, #f9f9f9);
+}
+
+/* Optional: Ensure proper alignment with other form fields */
+.custom-file-input::before {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+}
+
+/* Styling for the modal pop-up */
+.modal {
+    display: none; /* By default, hide the modal */
+    position: fixed; /* Stay fixed on the page */
+    z-index: 1; /* Place it on top of everything */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.4); /* Dark background with transparency */
+    align-items: center; /* Center content vertically */
+    justify-content: center; /* Center content horizontally */
+    -webkit-animation: fadeIn 0.5s;
+    animation: fadeIn 0.5s;
+}
+
+/* Modal content box */
+.modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%; /* Adjust width as needed */
+    max-width: 400px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+}
+
+/* Styling for the modal pop-up */
+.modal {
+    display: none; /* By default, hide the modal */
+    position: fixed; /* Stay fixed on the page */
+    z-index: 100; /* Pastikan z-index lebih tinggi dari elemen lain */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.4); /* Dark background with transparency */
+    align-items: center; /* Center content vertically */
+    justify-content: center; /* Center content horizontally */
+    -webkit-animation: fadeIn 0.5s;
+    animation: fadeIn 0.5s;
+}
+
+/* Modal content box */
+.modal-content {
+    background-color: #fefefe;
+    margin: auto; /* auto margin membantu centering */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 90%; /* Sesuaikan lebar */
+    max-width: 400px; /* Batas lebar maksimal */
+    border-radius: 8px;
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+    position: relative; /* Penting untuk posisi close button */
+}
+
+/* Modal header */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+    margin-bottom: 15px; /* Tambah jarak bawah header */
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #333;
+}
+
+/* Close button */
+.close-btn {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.close-btn:hover,
+.close-btn:focus {
+    color: #000;
+    text-decoration: none;
+}
+
+/* Modal message */
+#modal-message {
+    font-size: 1rem;
+    color: #555;
+    text-align: center;
+    line-height: 1.5; /* Memberikan sedikit ruang antar baris */
+}
+
+/* Fade-in animation */
+@-webkit-keyframes fadeIn {
+    from {opacity: 0}
+    to {opacity: 1}
+}
+
+@keyframes fadeIn {
+    from {opacity: 0}
+    to {opacity: 1}
+}

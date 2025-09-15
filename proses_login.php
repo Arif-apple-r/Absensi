@@ -31,7 +31,7 @@ if ($admin && password_verify($pass, $admin['pass'])) {
     exit;
 }
 
-// Cek ke tabel guru 
+// Cek ke tabel guru
 $stmt = $pdo->prepare("SELECT * FROM guru WHERE email = ?");
 $stmt->execute([$email]);
 $guru = $stmt->fetch();
@@ -60,7 +60,8 @@ if ($siswa && password_verify($pass, $siswa['pass'])) {
     exit;
 }
 
-// Jika semua cek gagal, simpan pesan error ke dalam session
-echo "<script>alert('Login gagal: Email atau password salah!'); window.location.href = 'login.php';</script>";
+// Jika semua cek gagal, simpan pesan error ke dalam session dan redirect ke halaman login
+$_SESSION['error_message'] = 'Login gagal: Email atau password salah!';
+header("Location: login.php");
 exit;
 ?>
