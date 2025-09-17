@@ -1,56 +1,111 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 session_start();
-// Pastikan hanya siswa yang sudah login yang bisa mengakses halaman ini
+
 if (!isset($_SESSION['siswa_id'])) {
-    header("Location: ../login.php"); // Sesuaikan path ke halaman login Anda
+    header("Location: ../login.php");
     exit;
 }
 
-// Ambil data siswa dari sesi
+require '../koneksi.php';
+
 $siswa_id = $_SESSION['siswa_id'];
-$siswa_name = $_SESSION['siswa_name'] ?? 'Siswa';
-$siswa_nis = $_SESSION['siswa_nis'] ?? 'N/A';
-$siswa_class_id = $_SESSION['siswa_class_id'] ?? null;
-$last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
+$siswa_name = htmlspecialchars($_SESSION['siswa_name'] ?? 'Siswa');
+$siswa_nis = htmlspecialchars($_SESSION['siswa_nis'] ?? 'N/A');
+$siswa_class_id_session = $_SESSION['siswa_class_id'] ?? null;
+$last_login = htmlspecialchars($_SESSION['last_login'] ?? 'Belum ada data login');
+$siswa_photo_session = htmlspecialchars($_SESSION['siswa_photo'] ?? '');
 
-// Sertakan file koneksi database Anda
-require '../koneksi.php'; // Sesuaikan path ini sesuai lokasi file koneksi.php Anda
-
-$siswa_data = [];
-$nama_kelas_siswa = 'Tidak Ditemukan';
-$siswa_photo = ''; // Default photo
-
-// Ambil data profil lengkap siswa dari database
-$stmt_siswa_profil = $pdo->prepare("
-    SELECT 
-        s.NIS, 
-        s.name, 
-        s.gender, 
-        s.dob, 
-        s.photo, 
-        s.no_hp, 
-        s.email, 
-        s.alamat, 
-        s.admission_date,
-        c.nama_kelas
-    FROM siswa AS s
-    LEFT JOIN class AS c ON s.class_id = c.id
-    WHERE s.id = ?
-");
-$stmt_siswa_profil->execute([$siswa_id]);
-$siswa_data = $stmt_siswa_profil->fetch(PDO::FETCH_ASSOC);
-
-if ($siswa_data) {
-    $nama_kelas_siswa = $siswa_data['nama_kelas'] ?? 'Tidak Ditemukan';
-    $siswa_photo = $siswa_data['photo'];
-} else {
-    // Jika data siswa tidak ditemukan di DB (jarang terjadi jika sesi valid)
-    // Redirect ke dashboard atau tampilkan error
-    header("Location: dashboard_siswa.php?error=" . urlencode("Data profil siswa tidak ditemukan."));
-    exit;
+function getActiveTahunAkademikId($pdo)
+{
+    try {
+        $stmt = $pdo->query("SELECT id FROM tahun_akademik WHERE is_active = 1 LIMIT 1");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['id'] ?? null;
+    } catch (PDOException $e) {
+        error_log("Error getting active academic year ID: " . $e->getMessage());
+        return null;
+    }
 }
 
-// Cek jika ada pesan sukses dari operasi sebelumnya
+// Ambil semua daftar Tahun Akademik untuk filter dropdown
+$stmt_tahun_akademik = $pdo->query("SELECT id, nama_tahun, is_active FROM tahun_akademik ORDER BY nama_tahun DESC");
+$tahun_akademik_options = $stmt_tahun_akademik->fetchAll(PDO::FETCH_ASSOC);
+
+// Tentukan tahun akademik yang sedang dipilih (dari GET atau default ke yang aktif)
+$selected_tahun_akademik_id = $_GET['tahun_akademik_id'] ?? null;
+if ($selected_tahun_akademik_id === null) {
+    $selected_tahun_akademik_id = getActiveTahunAkademikId($pdo);
+}
+
+// Ambil data siswa dari database untuk mendapatkan class_id
+$stmt_siswa = $pdo->prepare("SELECT class_id, photo FROM siswa WHERE id = ?");
+$stmt_siswa->execute([$siswa_id]);
+$siswa_data = $stmt_siswa->fetch(PDO::FETCH_ASSOC);
+$siswa_class_id = $siswa_data['class_id'] ?? null;
+$siswa_photo = $siswa_data['photo'] ?? '';
+
+// Ambil semua daftar Mata Pelajaran untuk filter dropdown
+$stmt_mapel = $pdo->query("SELECT id, nama_mapel FROM mapel ORDER BY nama_mapel ASC");
+$mapel_options = $stmt_mapel->fetchAll(PDO::FETCH_ASSOC);
+
+// Ambil filter yang dipilih dari URL
+$selected_hari = $_GET['hari'] ?? null;
+$selected_mapel_id = $_GET['mapel_id'] ?? null;
+
+$jadwal_siswa = [];
+$nama_kelas_siswa = 'Memuat...';
+
+if ($siswa_class_id && $selected_tahun_akademik_id) {
+    // Ambil Nama Kelas Siswa berdasarkan tahun akademik yang dipilih
+    $stmt_kelas_nama = $pdo->prepare("SELECT nama_kelas FROM class WHERE id = ? AND id_tahun_akademik = ?");
+    $stmt_kelas_nama->execute([$siswa_class_id, $selected_tahun_akademik_id]);
+    $kelas_data = $stmt_kelas_nama->fetch(PDO::FETCH_ASSOC);
+    $nama_kelas_siswa = $kelas_data['nama_kelas'] ?? 'Tidak Ditemukan';
+
+    // Query untuk mengambil jadwal siswa dengan filter hari dan mapel
+    $query_jadwal = "
+        SELECT
+            j.id AS jadwal_id,
+            j.hari,
+            j.jam_mulai,
+            j.jam_selesai,
+            m.nama_mapel,
+            g.name AS nama_guru,
+            c.nama_kelas
+        FROM jadwal AS j
+        JOIN mapel AS m ON j.id_mapel = m.id
+        JOIN guru AS g ON j.teacher_id = g.id
+        JOIN class AS c ON j.class_id = c.id
+        WHERE j.class_id = ? AND c.id_tahun_akademik = ?
+    ";
+    
+    $params = [$siswa_class_id, $selected_tahun_akademik_id];
+    
+    if ($selected_hari && $selected_hari !== 'all') {
+        $query_jadwal .= " AND j.hari = ?";
+        $params[] = $selected_hari;
+    }
+
+    if ($selected_mapel_id && $selected_mapel_id !== 'all') {
+        $query_jadwal .= " AND j.id_mapel = ?";
+        $params[] = $selected_mapel_id;
+    }
+
+    $query_jadwal .= " ORDER BY FIELD(j.hari, 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'), j.jam_mulai ASC;";
+
+    $stmt_jadwal = $pdo->prepare($query_jadwal);
+    $stmt_jadwal->execute($params);
+    $jadwal_siswa = $stmt_jadwal->fetchAll(PDO::FETCH_ASSOC);
+
+    $stmt_mapel_filter = $pdo->prepare("SELECT DISTINCT m.id, m.nama_mapel FROM jadwal j JOIN mapel m ON j.id_mapel = m.id WHERE j.class_id = ?");
+    $stmt_mapel_filter->execute([$siswa_class_id_session]);
+    $mapel_filter_options = $stmt_mapel_filter->fetchAll(PDO::FETCH_ASSOC);
+
+}
+
 $success_message = '';
 if (isset($_GET['success'])) {
     $success_message = htmlspecialchars($_GET['success']);
@@ -62,13 +117,13 @@ if (isset($_GET['success'])) {
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Profil Saya | Siswa</title>
-    <!-- Font Awesome untuk ikon -->
+    <title>Jadwal Saya | Siswa</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Variabel CSS dari file admin/guru Anda */
         :root {
@@ -139,7 +194,6 @@ if (isset($_GET['success'])) {
             font-size: 0.5em;
             transition: font-size 0.3s ease;
         }
-
         .sidebar nav a {
             display: flex;
             align-items: center;
@@ -168,6 +222,10 @@ if (isset($_GET['success'])) {
         .sidebar nav a.active {
             background-color: #3e566d;
             padding-left: 25px;
+        }
+
+        .sidebar nav a.active i {
+            color: var(--primary-color);
         }
 
         /* Header */
@@ -269,27 +327,6 @@ if (isset($_GET['success'])) {
             width: 20px;
         }
 
-        /* css untuk edit profil  */
-        .edit-profil {
-            position: absolute; /* Posisi absolut di dalam card */
-            bottom: 20px; /* Jarak dari bawah card */
-            right: 20px; /* Jarak dari kanan card */
-            text-align: right;
-        }
-
-        .edit-profil a {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 5px;
-            text-decoration: none;
-            transition: background-color 0.3s;
-        }
-        .edit-profil a:hover {
-            background-color: #16a085;
-        }
-
-
         /* Konten Utama */
         .content {
             flex-grow: 1;
@@ -324,17 +361,12 @@ if (isset($_GET['success'])) {
         .card {
             background: var(--card-background);
             border-radius: 12px;
-            padding: 24px 24px 80px; /* Tambahkan padding bawah lebih besar */
+            padding: 24px;
             box-shadow: 0 4px 20px var(--shadow-color);
             margin-bottom: 25px;
-            max-width: 800px;
+            max-width: 1200px;
             margin-left: auto;
             margin-right: auto;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            position: relative;
         }
 
         .card h2 {
@@ -344,54 +376,57 @@ if (isset($_GET['success'])) {
             color: var(--text-color);
         }
 
-        /* Profile specific styles */
-        .profile-photo-container {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            overflow: hidden;
-            border: 5px solid var(--primary-color);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        /* Info Header for context */
+        .info-header {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
             margin-bottom: 25px;
-            background-color: #eee; /* Placeholder background */
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            border-left: 5px solid var(--primary-color);
+            color: var(--text-color);
+            font-size: 0.95em;
         }
-        .profile-photo {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        .info-header p {
+            margin: 5px 0;
+            line-height: 1.5;
         }
-        .profile-info {
-            width: 100%;
-            max-width: 500px;
-            text-align: left;
-        }
-        .profile-info p {
-            margin-bottom: 12px;
-            font-size: 1.1em;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 8px 0;
-            border-bottom: 1px dashed var(--border-color);
-        }
-        .profile-info p:last-child {
-            border-bottom: none;
-        }
-        .profile-info strong {
+        .info-header strong {
             color: var(--secondary-color);
-            flex-basis: 200px; /* Agar label sejajar */
-            display: inline-block;
-        }
-        .profile-info i {
-            color: var(--primary-color);
-            width: 20px; /* Agar ikon sejajar */
-            text-align: center;
         }
 
+        /* Gaya Tabel */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
 
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            background-color: #f8f8f8;
+            font-weight: 600;
+            color: var(--text-color);
+            text-transform: uppercase;
+        }
+
+        .data-table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .data-table tr:hover {
+            background-color: #fafafa;
+        }
+        
         /* Alerts */
         .alert {
             padding: 15px;
@@ -425,8 +460,8 @@ if (isset($_GET['success'])) {
                 width: 100% !important;
                 padding-left: 20px !important;
             }
-            .header .user-info .last-login {
-                display: none; /* Sembunyikan last login di mobile header */
+            .header .user-info {
+                display: none;
             }
             .sidebar.collapsed + .header, .sidebar.collapsed ~ .content {
                 margin-left: var(--sidebar-collapsed-width) !important;
@@ -467,11 +502,27 @@ if (isset($_GET['success'])) {
         .sidebar.collapsed .logout-button-container a span {
             display: none;
         }
+
+        .filter-container {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-container select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--background-color);
+            cursor: pointer;
+        }
     </style>
 </head>
 
 <body>
-    <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="logo"><span>SiswaCoy</span></div>
         <nav>
@@ -479,9 +530,13 @@ if (isset($_GET['success'])) {
                 <i class="fas fa-tachometer-alt"></i>
                 <span>Dashboard</span>
             </a>
-            <a href="jadwal_siswa.php">
+            <a href="jadwal_siswa.php" class="active">
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal Saya</span>
+            </a>
+            <a href="absensi_siswa.php">
+                <i class="fas fa-check-circle"></i>
+                <span>Absensi Saya</span>
             </a>
             <div class="logout-button-container">
                 <a onclick="showLogoutConfirmation()">
@@ -492,12 +547,11 @@ if (isset($_GET['success'])) {
         </nav>
     </div>
 
-    <!-- Header -->
     <div class="header" id="header">
         <button class="toggle-btn" onclick="toggleSidebar()">
             <i class="fas fa-bars"></i>
         </button>
-        <h1><i class="fas fa-user"></i> Profil Siswa</h1>
+        <h1><i class="fas fa-calendar-alt"></i> Jadwal Saya</h1>
         <div class="user-info" id="userInfoDropdown">
             <span id="siswaName"><?php echo htmlspecialchars($siswa_name); ?></span>
             <?php
@@ -507,7 +561,6 @@ if (isset($_GET['success'])) {
             <img src="<?php echo $siswa_photo_src_header; ?>" alt="User Avatar"
                 loading="lazy"
                 onerror="this.onerror=null;this.src='https://placehold.co/40x40/cccccc/333333?text=GR';">
-            <!-- Dropdown Menu -->
             <div class="dropdown-menu" id="userDropdownContent">
                 <a href="profil_siswa.php"><i class="fas fa-user-circle"></i> Profil</a>
                 <a onclick="showLogoutConfirmation()"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -515,41 +568,97 @@ if (isset($_GET['success'])) {
         </div>
     </div>
 
-    <!-- Konten Utama -->
     <div class="content" id="mainContent">
         <div class="card">
-            <h2>Informasi Pribadi</h2>
+            <h2>Jadwal Pelajaran Kelas <?php echo htmlspecialchars($nama_kelas_siswa); ?></h2>
+            
+            <div class="filter-container">
+                <label for="tahun_akademik" class="font-semibold text-gray-700">Tahun Akademik:</label>
+                <select id="tahun_akademik">
+                    <?php foreach ($tahun_akademik_options as $ta): ?>
+                        <option 
+                            value="<?php echo htmlspecialchars($ta['id']); ?>" 
+                            <?php echo ($ta['id'] == $selected_tahun_akademik_id) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($ta['nama_tahun']); ?>
+                            <?php echo ($ta['is_active']) ? ' (Aktif)' : ''; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <label for="hari_filter" class="font-semibold text-gray-700">Hari:</label>
+                <select id="hari_filter">
+                    <option value="all">Semua Hari</option>
+                    <?php
+                    $days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+                    foreach ($days as $day):
+                        $selected = ($day == $selected_hari) ? 'selected' : '';
+                    ?>
+                        <option value="<?php echo $day; ?>" <?php echo $selected; ?>><?php echo $day; ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <label for="mapel_filter" class="font-semibold text-gray-700">Mata Pelajaran:</label>
+                <select id="mapel_filter">
+                    <option value="all">Semua Mata Pelajaran</option>
+                    <?php foreach ($mapel_options as $mapel): ?>
+                        <option 
+                            value="<?php echo htmlspecialchars($mapel['id']); ?>" 
+                            <?php echo ($mapel['id'] == $selected_mapel_id) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($mapel['nama_mapel']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
             
             <?php if (!empty($success_message)): ?>
                 <div class="alert alert-success"><?php echo $success_message; ?></div>
             <?php endif; ?>
 
-            <div class="profile-photo-container">
-                <img src="<?php echo !empty($siswa_photo) ? '../uploads/siswa/' . htmlspecialchars($siswa_photo) : 'https://placehold.co/150x150?text=NO+IMAGE'; ?>" alt="Foto Profil" class="profile-photo">
-            </div>
-            
-            <div class="profile-info">
-                <p><strong><i class="fas fa-id-card"></i> NIS:</strong> <?php echo htmlspecialchars($siswa_data['NIS'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-signature"></i> Nama Lengkap:</strong> <?php echo htmlspecialchars($siswa_data['name'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-venus-mars"></i> Jenis Kelamin:</strong> <?php echo htmlspecialchars(ucfirst($siswa_data['gender'] ?? '-')); ?></p>
-                <p><strong><i class="fas fa-birthday-cake"></i> Tanggal Lahir:</strong> <?php echo htmlspecialchars($siswa_data['dob'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-phone"></i> No. HP:</strong> <?php echo htmlspecialchars($siswa_data['no_hp'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-envelope"></i> Email:</strong> <?php echo htmlspecialchars($siswa_data['email'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-map-marker-alt"></i> Alamat:</strong> <?php echo htmlspecialchars($siswa_data['alamat'] ?? '-'); ?></p>
-                <p><strong><i class="fas fa-school"></i> Kelas:</strong> <?php echo htmlspecialchars($nama_kelas_siswa); ?></p>
-                <p><strong><i class="fas fa-calendar-plus"></i> Tanggal Masuk:</strong> <?php echo htmlspecialchars(date('d M Y', strtotime($siswa_data['admission_date'] ?? ''))); ?></p>
-            </div>
-            <div class="edit-profil">
-                <a href="edit_profil.php">Edit Profil</a>
-            </div>
+            <?php if (empty($jadwal_siswa)): ?>
+                <div class="info-header">
+                    <p>Tidak ada jadwal yang tersedia untuk kelas Anda dengan filter yang dipilih.</p>
+                </div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Hari</th>
+                                <th>Jam Mulai</th>
+                                <th>Jam Selesai</th>
+                                <th>Mata Pelajaran</th>
+                                <th>Guru Pengajar</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($jadwal_siswa as $jadwal): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($jadwal['hari']); ?></td>
+                                    <td><?php echo htmlspecialchars(substr($jadwal['jam_mulai'], 0, 5)); ?></td>
+                                    <td><?php echo htmlspecialchars(substr($jadwal['jam_selesai'], 0, 5)); ?></td>
+                                    <td><?php echo htmlspecialchars($jadwal['nama_mapel']); ?></td>
+                                    <td><?php echo htmlspecialchars($jadwal['nama_guru']); ?></td>
+                                    <td>
+                                        <a href="absensi_siswa.php?jadwal_id=<?php echo htmlspecialchars($jadwal['jadwal_id']); ?>" 
+                                           class="text-blue-600 hover:underline font-semibold">
+                                           Lihat Absensi
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
     <script>
-        // Logika untuk toggle sidebar
         const sidebar = document.getElementById("sidebar");
         const mainContent = document.getElementById("mainContent");
         const header = document.getElementById("header");
+        const tahunAkademikFilter = document.getElementById('tahun_akademik');
+        const hariFilter = document.getElementById('hari_filter');
+        const mapelFilter = document.getElementById('mapel_filter');
 
         function toggleSidebar() {
             sidebar.classList.toggle("collapsed");
@@ -567,21 +676,49 @@ if (isset($_GET['success'])) {
                 cancelButtonText: 'Batal'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = "../logout.php"; // redirect logout
+                    window.location.href = "../logout.php";
                 }
             });
         }
+        
+        // Logika untuk menangani perubahan filter
+        function applyFilters() {
+            const tahunId = tahunAkademikFilter.value;
+            const hari = hariFilter.value;
+            const mapelId = mapelFilter.value;
+            
+            const url = new URL(window.location.href);
+            url.searchParams.set('tahun_akademik_id', tahunId);
+            
+            if (hari && hari !== 'all') {
+                url.searchParams.set('hari', hari);
+            } else {
+                url.searchParams.delete('hari');
+            }
+            
+            if (mapelId && mapelId !== 'all') {
+                url.searchParams.set('mapel_id', mapelId);
+            } else {
+                url.searchParams.delete('mapel_id');
+            }
+
+            window.location.href = url.toString();
+        }
+
+        tahunAkademikFilter.addEventListener('change', applyFilters);
+        hariFilter.addEventListener('change', applyFilters);
+        mapelFilter.addEventListener('change', applyFilters);
 
         // Logika Dropdown User Info
         const userInfoDropdown = document.getElementById("userInfoDropdown");
         const userDropdownContent = document.getElementById("userDropdownContent");
 
-        if (userInfoDropdown && userDropdownContent) { // Pastikan elemen ada
-            userInfoDropdown.addEventListener('click', function() {
+        if (userInfoDropdown && userDropdownContent) {
+            userInfoDropdown.addEventListener('click', function(event) {
+                event.stopPropagation();
                 userDropdownContent.style.display = userDropdownContent.style.display === 'block' ? 'none' : 'block';
             });
 
-            // Tutup dropdown jika user klik di luar area dropdown
             window.onclick = function(event) {
                 if (!event.target.matches('#userInfoDropdown') && !event.target.closest('#userInfoDropdown')) {
                     if (userDropdownContent.style.display === 'block') {
@@ -590,18 +727,6 @@ if (isset($_GET['success'])) {
                 }
             }
         }
-
-        // Jalankan saat halaman dimuat
-        window.onload = function() {
-            // Set nama dan last login dari sesi PHP
-            document.getElementById('siswaName').textContent = '<?php echo htmlspecialchars($siswa_name); ?>';
-            document.getElementById('lastLogin').textContent = '<?php echo htmlspecialchars($last_login); ?>';
-
-            // Mengatur link sidebar
-            document.querySelector('.sidebar nav a:nth-child(1)').href = 'dashboard_siswa.php';
-            document.querySelector('.sidebar nav a:nth-child(2)').href = 'jadwal_siswa.php';
-            document.querySelector('.sidebar nav a:nth-child(3)').href = 'absensi_siswa.php';
-        };
     </script>
 </body>
 </html>

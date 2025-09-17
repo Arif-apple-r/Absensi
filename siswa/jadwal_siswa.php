@@ -99,6 +99,11 @@ if ($siswa_class_id && $selected_tahun_akademik_id) {
     $stmt_jadwal = $pdo->prepare($query_jadwal);
     $stmt_jadwal->execute($params);
     $jadwal_siswa = $stmt_jadwal->fetchAll(PDO::FETCH_ASSOC);
+
+    $stmt_mapel_filter = $pdo->prepare("SELECT DISTINCT m.id, m.nama_mapel FROM jadwal j JOIN mapel m ON j.id_mapel = m.id WHERE j.class_id = ?");
+    $stmt_mapel_filter->execute([$siswa_class_id_session]);
+    $mapel_filter_options = $stmt_mapel_filter->fetchAll(PDO::FETCH_ASSOC);
+
 }
 
 $success_message = '';
@@ -529,10 +534,6 @@ if (isset($_GET['success'])) {
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal Saya</span>
             </a>
-            <a href="absensi_siswa.php">
-                <i class="fas fa-check-circle"></i>
-                <span>Absensi Saya</span>
-            </a>
             <div class="logout-button-container">
                 <a onclick="showLogoutConfirmation()">
                     <i class="fas fa-sign-out-alt"></i>
@@ -621,6 +622,7 @@ if (isset($_GET['success'])) {
                                 <th>Jam Selesai</th>
                                 <th>Mata Pelajaran</th>
                                 <th>Guru Pengajar</th>
+                                <th>Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -631,6 +633,9 @@ if (isset($_GET['success'])) {
                                     <td><?php echo htmlspecialchars(substr($jadwal['jam_selesai'], 0, 5)); ?></td>
                                     <td><?php echo htmlspecialchars($jadwal['nama_mapel']); ?></td>
                                     <td><?php echo htmlspecialchars($jadwal['nama_guru']); ?></td>
+                                <td>
+                                    <a href="absensi_siswa.php?id_jadwal=<?php echo htmlspecialchars($jadwal['jadwal_id']); ?>" class="btn">Lihat Absensi</a>
+                                </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>

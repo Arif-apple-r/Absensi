@@ -14,23 +14,43 @@ $siswa_class_id = $_SESSION['siswa_class_id'] ?? null;
 $last_login = $_SESSION['last_login'] ?? 'Belum ada data login';
 $siswa_photo_session = $_SESSION['siswa_photo'] ?? '';
 
+// Ambil ID jadwal dari URL. Jika tidak ada, nilainya null.
+$id_jadwal = $_GET['id_jadwal'] ?? null;
+
 // Sertakan file koneksi database Anda
-require '../koneksi.php'; // Sesuaikan path ini sesuai lokasi file koneksi.php Anda
+require '../koneksi.php';
 
 $rekap_absensi_siswa = [];
 $nama_kelas_siswa = 'Memuat...';
-$nama_tahun_akademik = 'Memuat...'; // Tambahan untuk Tahun Akademik
+$nama_tahun_akademik = 'Memuat...';
+
+// Variabel untuk menyimpan informasi jadwal yang dipilih
+$jadwal_info = null;
 
 if ($siswa_class_id) {
-    // Ambil Nama Kelas Siswa dan Nama Tahun Akademik (untuk ditampilkan di header)
+    // Ambil Nama Kelas Siswa dan Nama Tahun Akademik
     $stmt_kelas_nama = $pdo->prepare("SELECT c.nama_kelas, ta.nama_tahun FROM class c JOIN tahun_akademik ta ON c.id_tahun_akademik = ta.id WHERE c.id = ?");
     $stmt_kelas_nama->execute([$siswa_class_id]);
     $kelas_data = $stmt_kelas_nama->fetch(PDO::FETCH_ASSOC);
     $nama_kelas_siswa = $kelas_data['nama_kelas'] ?? 'Tidak Ditemukan';
-    $nama_tahun_akademik = $kelas_data['nama_tahun'] ?? 'Tidak Ditemukan'; // Ambil nama tahun akademik
+    $nama_tahun_akademik = $kelas_data['nama_tahun'] ?? 'Tidak Ditemukan';
 
-    // Query untuk mengambil semua absensi siswa yang sedang login
-    // Join dengan pertemuan, jadwal, mapel, dan guru untuk mendapatkan detail lengkap
+    // Jika id_jadwal ada di URL, ambil detail jadwal terkait
+    if ($id_jadwal) {
+        $query_jadwal_info = "
+            SELECT m.nama_mapel, g.name AS nama_guru
+            FROM jadwal j
+            JOIN mapel m ON j.id_mapel = m.id
+            JOIN guru g ON j.teacher_id = g.id
+            WHERE j.id = ? AND j.class_id = ?
+        ";
+        $stmt_jadwal_info = $pdo->prepare($query_jadwal_info);
+        $stmt_jadwal_info->execute([$id_jadwal, $siswa_class_id]);
+        $jadwal_info = $stmt_jadwal_info->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    // Query untuk mengambil absensi siswa
+    // Modifikasi kueri agar JOIN ke tabel 'pertemuan' dan 'jadwal'
     $query_absensi = "
         SELECT
             a.status,
@@ -39,29 +59,33 @@ if ($siswa_class_id) {
             p.tanggal AS tanggal_pertemuan,
             p.topik AS topik_pertemuan,
             m.nama_mapel,
-            c.nama_kelas,
             g.name AS nama_guru,
             j.hari,
             j.jam_mulai,
-            j.jam_selesai,
-            ta.nama_tahun  -- Tambahan: Nama Tahun Akademik
+            j.jam_selesai
         FROM absensi AS a
-        JOIN siswa AS s ON a.id_siswa = s.id
         JOIN pertemuan AS p ON a.id_pertemuan = p.id
         JOIN jadwal AS j ON p.id_jadwal = j.id
         JOIN mapel AS m ON j.id_mapel = m.id
         JOIN guru AS g ON j.teacher_id = g.id
-        JOIN class AS c ON j.class_id = c.id 
-        JOIN tahun_akademik AS ta ON c.id_tahun_akademik = ta.id -- Tambahan: Join dengan tahun_akademik
         WHERE a.id_siswa = ?
-        ORDER BY p.tanggal DESC, j.jam_mulai DESC;
     ";
-
+    
+    // Siapkan parameter
+    $params = [$siswa_id];
+    
+    // Kondisi WHERE tambahan jika id_jadwal tersedia
+    if ($id_jadwal) {
+        $query_absensi .= " AND j.id = ?";
+        $params[] = $id_jadwal;
+    }
+    
+    $query_absensi .= " ORDER BY p.tanggal DESC, j.jam_mulai DESC";
+    
     $stmt_absensi = $pdo->prepare($query_absensi);
-    $stmt_absensi->execute([$siswa_id]);
+    $stmt_absensi->execute($params);
     $rekap_absensi_siswa = $stmt_absensi->fetchAll(PDO::FETCH_ASSOC);
 }
-
 // Cek jika ada pesan sukses dari operasi sebelumnya
 $success_message = '';
 if (isset($_GET['success'])) {
@@ -77,7 +101,6 @@ if (!empty($siswa_id)) {
         $siswa_photo = htmlspecialchars($result['photo']);
     }
 }
-
 ?>
 
 <!DOCTYPE html>

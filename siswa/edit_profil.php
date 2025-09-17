@@ -37,16 +37,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt_check_email = $pdo->prepare("SELECT id FROM siswa WHERE email = ? AND id != ?");
             $stmt_check_email->execute([$email, $siswa_id]);
             if ($stmt_check_email->rowCount() > 0) {
-                $error_message = "Email sudah terdaftar untuk akun lain.";
+                $error_message = "Email sudah digunakan oleh siswa lain.";
             } else {
-                // Perbarui data di database
-                $stmt = $pdo->prepare("UPDATE siswa SET name = ?, nis = ?, gender = ?, email = ?, dob = ?, no_hp = ?, alamat = ? WHERE id = ?");
-                $stmt->execute([$name, $nis, $gender, $email, $dob, $no_hp, $alamat, $siswa_id]);
-                $success_message = "Profil berhasil diperbarui!";
-                $_SESSION['siswa_name'] = $name; // Perbarui nama di sesi
+                // Gunakan query yang sudah diperbaiki
+                $stmt = $pdo->prepare("UPDATE siswa SET name = ?, nis = ?, gender = ?, email = ?, dob = ?, no_hp = ?, alamat = ?, class_id = ? WHERE id = ?");
+                $result = $stmt->execute([$name, $nis, $gender, $email, $dob, $no_hp, $alamat, $class_id, $siswa_id]);
+
+                if ($result) {
+                    $success_message = "Data profil berhasil diperbarui!";
+                } else {
+                    $error_message = "Gagal memperbarui profil.";
+                    // Tambahkan ini untuk melihat error lebih detail
+                    print_r($stmt->errorInfo());
+                }
             }
         } catch (PDOException $e) {
-            $error_message = "Gagal memperbarui profil: " . $e->getMessage();
+            $error_message = "Error: " . $e->getMessage();
         }
     }
 

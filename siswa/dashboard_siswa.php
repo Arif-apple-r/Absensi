@@ -528,10 +528,6 @@ $success_message = $_GET['success'] ?? '';
                 <i class="fas fa-calendar-alt"></i>
                 <span>Jadwal Saya</span>
             </a>
-            <a href="absensi_siswa.php">
-                <i class="fas fa-check-circle"></i>
-                <span>Absensi Saya</span>
-            </a>
             <div class="logout-button-container">
                 <a onclick="showLogoutConfirmation()">
                     <i class="fas fa-sign-out-alt"></i>
