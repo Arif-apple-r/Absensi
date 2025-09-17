@@ -92,21 +92,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($upload_succeeded) {
             if ($_POST['action'] === 'tambah') {
                 if ($nip_baru && $name && $email && $password && $dob && $no_hp && $alamat) { 
-                    try {
-                        $stmt_check_nip = $pdo->prepare("SELECT COUNT(*) FROM guru WHERE nip = ?");
-                        $stmt_check_nip->execute([$nip_baru]);
-                        if ($stmt_check_nip->fetchColumn() > 0) {
-                            $response_message = "Gagal menambahkan guru: NIP sudah terdaftar.";
-                        } else {
-                            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                            $admission_date = date('Y-m-d H:i:s'); 
-                            
-                            $stmt = $pdo->prepare("INSERT INTO guru (nip, name, email, gender, dob, no_hp, alamat, photo, pass, admission_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                            $stmt->execute([$nip_baru, $name, $email, $gender, $dob, $no_hp, $alamat, $foto_path_db, $hashed_password, $admission_date]);
-                            $response_status = 'success';
-                            $response_message = "Guru berhasil ditambahkan!";
-                        }
-                    } catch (PDOException $e) {
+                try {
+                    // Cek apakah NIP sudah terdaftar
+                    $stmt_check_nip = $pdo->prepare("SELECT COUNT(*) FROM guru WHERE nip = ?");
+                    $stmt_check_nip->execute([$nip_baru]);
+                    
+                    // Cek apakah email sudah terdaftar
+                    $stmt_check_email = $pdo->prepare("SELECT COUNT(*) FROM guru WHERE email = ?");
+                    $stmt_check_email->execute([$email]);
+
+                    if ($stmt_check_nip->fetchColumn() > 0) {
+                        $response_message = "Gagal menambahkan guru: NIP sudah terdaftar.";
+                    } elseif ($stmt_check_email->fetchColumn() > 0) {
+                        $response_message = "Gagal menambahkan guru: Email sudah terdaftar.";
+                    } else {
+                        // Jika NIP dan email belum terdaftar, lakukan INSERT
+                        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                        $admission_date = date('Y-m-d H:i:s'); 
+                        
+                        $stmt = $pdo->prepare("INSERT INTO guru (nip, name, email, gender, dob, no_hp, alamat, photo, pass, admission_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                        $stmt->execute([$nip_baru, $name, $email, $gender, $dob, $no_hp, $alamat, $foto_path_db, $hashed_password, $admission_date]);
+                        
+                        $response_status = 'success';
+                        $response_message = "Guru berhasil ditambahkan!";
+                    }
+                } catch (PDOException $e) {
                         $response_message = "Gagal menambahkan guru (DB Error): " . $e->getMessage();
                     }
                 } else {
