@@ -1,124 +1,184 @@
 <?php
 session_start();
+
 // Pastikan hanya guru yang sudah login yang bisa mengakses halaman ini
-if (!isset($_SESSION['guru_id'])) {
-    header("Location: ../login.php"); // Sesuaikan path ke halaman login Anda
+if (!isset($_SESSION['guru_id']) || empty($_SESSION['guru_id'])) {
+    header("Location: ../login.php");
     exit;
 }
 
-// Ambil ID guru dari sesi
 $guru_id = $_SESSION['guru_id'];
-$guru_name = $_SESSION['guru_name'] ?? 'Guru'; // Default jika nama tidak ada di sesi
-$guru_photo_session = $_SESSION['guru_photo'] ?? '';
+$guru_name = htmlspecialchars($_SESSION['guru_name'] ?? 'Guru');
+$guru_photo_session = htmlspecialchars($_SESSION['guru_photo'] ?? '');
 
-// Sertakan file koneksi database Anda
-require '../koneksi.php'; // Sesuaikan path ini sesuai lokasi file koneksi.php Anda
+require '../koneksi.php';
 
-// Ambil id_pertemuan dari URL
-$id_pertemuan = $_GET['id_pertemuan'] ?? null;
+// Fungsi ambil tahun akademik aktif
+function getActiveTahunAkademikId($pdo) {
+    try {
+        $stmt = $pdo->query("SELECT id FROM tahun_akademik WHERE is_active = 1 LIMIT 1");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['id'] ?? null;
+    } catch (PDOException $e) {
+        error_log("Error getting active academic year: " . $e->getMessage());
+        return null;
+    }
+}
 
-// Redirect jika id_pertemuan tidak ada atau tidak valid
+// Ambil id_pertemuan
+$id_pertemuan = filter_input(INPUT_GET, 'id_pertemuan', FILTER_SANITIZE_NUMBER_INT);
 if (!$id_pertemuan) {
-    // Pastikan redirect ke pertemuan_guru.php, dan jika perlu, sertakan id_jadwal yang relevan
-    // Untuk saat ini, kita redirect ke daftar jadwal jika tidak ada info pertemuan
     header("Location: jadwal_guru.php?error=" . urlencode("ID Pertemuan tidak ditemukan."));
     exit;
 }
 
-
 $success = '';
-$error = '';
+$error   = '';
+$can_edit = false;
+
+// Cek apakah pertemuan berada di tahun akademik aktif
+$active_tahun_akademik_id = getActiveTahunAkademikId($pdo);
+try {
+    $stmt_check = $pdo->prepare("
+        SELECT c.id_tahun_akademik 
+        FROM pertemuan p
+        LEFT JOIN jadwal j ON p.id_jadwal = j.id
+        LEFT JOIN class c ON j.class_id = c.id
+        WHERE p.id = ?
+    ");
+    $stmt_check->execute([$id_pertemuan]);
+    $pertemuan_tahun_id = $stmt_check->fetchColumn();
+    if ($pertemuan_tahun_id == $active_tahun_akademik_id) {
+        $can_edit = true;
+    }
+} catch (PDOException $e) {
+    error_log("Error checking academic year: " . $e->getMessage());
+}
 
 // --- Handle Form Submission (Simpan Absensi) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_absensi'])) {
-    $id_pertemuan_form = $_POST['id_pertemuan'] ?? null;
-    $absensi_data = $_POST['absensi'] ?? []; // Array berisi status absensi untuk setiap siswa
-    $keterangan_data = $_POST['keterangan'] ?? []; // Array berisi keterangan untuk setiap siswa
+    if (!$can_edit) {
+        $error = "Tidak dapat menyimpan absensi untuk tahun akademik yang tidak aktif.";
+    } else {
+        $id_pertemuan_form = filter_input(INPUT_POST, 'id_pertemuan', FILTER_SANITIZE_NUMBER_INT);
+        $absensi_data      = $_POST['absensi'] ?? [];
+        $keterangan_data   = $_POST['keterangan'] ?? [];
 
-    if ($id_pertemuan_form && is_array($absensi_data)) {
-        try {
-            // Dapatkan id_jadwal dan class_id dari id_pertemuan untuk redirect kembali
-            $stmt_get_pertemuan_details = $pdo->prepare("SELECT id_jadwal, jadwal.class_id FROM pertemuan JOIN jadwal ON pertemuan.id_jadwal = jadwal.id WHERE pertemuan.id = ?");
-            $stmt_get_pertemuan_details->execute([$id_pertemuan_form]);
-            $pertemuan_details_for_redirect = $stmt_get_pertemuan_details->fetch(PDO::FETCH_ASSOC);
-            $id_jadwal_for_redirect = $pertemuan_details_for_redirect['id_jadwal'] ?? null;
-            $class_id_for_validation = $pertemuan_details_for_redirect['class_id'] ?? null; // Digunakan untuk validasi siswa
+        if ($id_pertemuan_form && is_array($absensi_data)) {
+            try {
+                // Ambil id_jadwal & class_id untuk validasi siswa dan redirect
+                $stmt_get = $pdo->prepare("
+                    SELECT p.id_jadwal, j.class_id 
+                    FROM pertemuan p 
+                    JOIN jadwal j ON p.id_jadwal = j.id 
+                    WHERE p.id = ?
+                ");
+                $stmt_get->execute([$id_pertemuan_form]);
+                $details = $stmt_get->fetch(PDO::FETCH_ASSOC);
+                $id_jadwal_for_redirect = $details['id_jadwal'] ?? null;
+                $class_id_for_validation = $details['class_id'] ?? null;
 
-            // Pastikan guru memiliki akses ke jadwal pertemuan ini (opsional tapi disarankan)
-            $stmt_verify_access = $pdo->prepare("SELECT COUNT(*) FROM jadwal WHERE id = ? AND teacher_id = ?");
-            $stmt_verify_access->execute([$id_jadwal_for_redirect, $guru_id]);
-            if ($stmt_verify_access->fetchColumn() == 0) {
-                throw new Exception("Anda tidak memiliki izin untuk mengelola absensi pertemuan ini.");
-            }
-
-            $pdo->beginTransaction(); // Mulai transaksi database
-
-            // Fetch current list of students for this class_id to validate incoming data
-            $stmt_current_siswa = $pdo->prepare("SELECT id FROM siswa WHERE class_id = ?");
-            $stmt_current_siswa->execute([$class_id_for_validation]);
-            $valid_siswa_ids = $stmt_current_siswa->fetchAll(PDO::FETCH_COLUMN); // Ambil hanya ID siswa
-
-            foreach ($absensi_data as $siswa_id => $status) {
-                // Validasi bahwa siswa_id adalah bagian dari kelas ini
-                if (!in_array($siswa_id, $valid_siswa_ids)) {
-                    continue; // Skip invalid siswa_id
+                // Validasi akses guru
+                $stmt_verify = $pdo->prepare("SELECT COUNT(*) FROM jadwal WHERE id = ? AND teacher_id = ?");
+                $stmt_verify->execute([$id_jadwal_for_redirect, $guru_id]);
+                if ($stmt_verify->fetchColumn() == 0) {
+                    throw new Exception("Anda tidak memiliki izin untuk mengelola absensi ini.");
                 }
 
-                $keterangan = $keterangan_data[$siswa_id] ?? null;
+                // Ambil daftar siswa valid di kelas ini
+                $stmt_siswa = $pdo->prepare("SELECT id FROM siswa WHERE class_id = ?");
+                $stmt_siswa->execute([$class_id_for_validation]);
+                $valid_siswa_ids = $stmt_siswa->fetchAll(PDO::FETCH_COLUMN);
 
-                // Menggunakan INSERT ... ON DUPLICATE KEY UPDATE
-                $stmt = $pdo->prepare("
-                    INSERT INTO absensi (id_pertemuan, id_siswa, status, keterangan, waktu_input)
-                    VALUES (?, ?, ?, ?, NOW())
-                    ON DUPLICATE KEY UPDATE
-                        status = VALUES(status),
-                        keterangan = VALUES(keterangan),
-                        waktu_input = NOW()
-                ");
-                $stmt->execute([$id_pertemuan_form, $siswa_id, $status, $keterangan]);
+                $pdo->beginTransaction();
+
+                foreach ($absensi_data as $siswa_id => $status) {
+                    if (!in_array($siswa_id, $valid_siswa_ids)) {
+                        continue; // skip invalid siswa
+                    }
+                    $keterangan = $keterangan_data[$siswa_id] ?? null;
+
+                    // Insert atau update absensi
+                    $stmt = $pdo->prepare("
+                        INSERT INTO absensi (id_pertemuan, id_siswa, status, keterangan, waktu_input)
+                        VALUES (?, ?, ?, ?, NOW())
+                        ON DUPLICATE KEY UPDATE 
+                            status = VALUES(status),
+                            keterangan = VALUES(keterangan),
+                            waktu_input = NOW()
+                    ");
+                    $stmt->execute([$id_pertemuan_form, $siswa_id, $status, $keterangan]);
+                }
+
+                $pdo->commit();
+                $success = "Absensi berhasil disimpan!";
+
+                // Redirect kembali ke halaman pertemuan
+                header("Location: pertemuan_guru.php?id_jadwal=" . urlencode($id_jadwal_for_redirect) 
+                    . "&success=" . urlencode($success));
+                exit;
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $error = "Gagal menyimpan absensi: " . $e->getMessage();
             }
-
-            $pdo->commit(); // Commit transaksi
-            $success = "Absensi berhasil disimpan!";
-
-            // Redirect kembali ke halaman pertemuan dengan id_jadwal yang sesuai
-            $redirect_url = '/AbsensiPKL/guru/pertemuan_guru.php?id_jadwal=' . urlencode($id_jadwal_for_redirect) . '&success=' . urlencode($success);
-            header("Location: " . $redirect_url);
-            exit;
-
-        } catch (PDOException $e) {
-            $pdo->rollBack(); // Rollback transaksi jika ada error
-            $error = "Gagal menyimpan absensi: " . $e->getMessage();
-        } catch (Exception $e) { // Tangani exception dari validasi akses
-            $pdo->rollBack();
-            $error = "Error: " . $e->getMessage();
+        } else {
+            $error = "Data absensi tidak lengkap.";
         }
-    } else {
-        $error = "Data absensi tidak lengkap atau tidak valid.";
     }
 }
 
-// --- Ambil data pertemuan dan jadwal terkait untuk konteks ---
-$stmt_pertemuan_info = $pdo->prepare("
-    SELECT
-        p.tanggal,
-        p.topik,
-        p.id_jadwal,
-        j.hari,
-        j.jam_mulai,
-        j.jam_selesai,
-        j.class_id, -- <<< Ini yang ditambahkan!
-        m.nama_mapel,
-        c.nama_kelas
-        
-    FROM pertemuan AS p
-    JOIN jadwal AS j ON p.id_jadwal = j.id
-    JOIN mapel AS m ON j.id_mapel = m.id
-    JOIN class AS c ON j.class_id = c.id
-    WHERE p.id = ?;
-");
-$stmt_pertemuan_info->execute([$id_pertemuan]);
-$pertemuan_info = $stmt_pertemuan_info->fetch(PDO::FETCH_ASSOC);
+// --- Ambil data pertemuan untuk konteks ---
+try {
+    $stmt_info = $pdo->prepare("
+        SELECT p.tanggal, p.topik, p.id_jadwal,
+               j.hari, j.jam_mulai, j.jam_selesai, j.class_id,
+               m.nama_mapel, c.nama_kelas
+        FROM pertemuan p
+        JOIN jadwal j ON p.id_jadwal = j.id
+        JOIN mapel m ON j.id_mapel = m.id
+        JOIN class c ON j.class_id = c.id
+        WHERE p.id = ?
+    ");
+    $stmt_info->execute([$id_pertemuan]);
+    $pertemuan_info = $stmt_info->fetch(PDO::FETCH_ASSOC);
+
+    if (!$pertemuan_info) {
+        header("Location: jadwal_guru.php?error=" . urlencode("Pertemuan tidak ditemukan."));
+        exit;
+    }
+} catch (PDOException $e) {
+    header("Location: jadwal_guru.php?error=" . urlencode("Kesalahan ambil data pertemuan."));
+    exit;
+}
+
+$id_jadwal_current = $pertemuan_info['id_jadwal'];
+$class_id_from_pertemuan = $pertemuan_info['class_id'];
+
+// --- Ambil daftar siswa ---
+try {
+    $stmt_siswa = $pdo->prepare("SELECT id, NIS, name FROM siswa WHERE class_id = ? ORDER BY name ASC");
+    $stmt_siswa->execute([$class_id_from_pertemuan]);
+    $list_siswa = $stmt_siswa->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $list_siswa = [];
+    $error = "Gagal memuat daftar siswa.";
+}
+
+// --- Ambil absensi existing ---
+$absensi_existing = [];
+try {
+    $stmt_abs = $pdo->prepare("SELECT id_siswa, status, keterangan FROM absensi WHERE id_pertemuan = ?");
+    $stmt_abs->execute([$id_pertemuan]);
+    $rows = $stmt_abs->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($rows as $row) {
+        $absensi_existing[$row['id_siswa']] = [
+            'status' => $row['status'],
+            'keterangan' => $row['keterangan']
+        ];
+    }
+} catch (PDOException $e) {
+    error_log("Error fetching absensi: " . $e->getMessage());
+}
 
 $guru_photo = '';
 if (!empty($guru_id)) {
@@ -129,40 +189,9 @@ if (!empty($guru_id)) {
         $guru_photo = htmlspecialchars($result['photo']);
     }
 }
-
-// Jika pertemuan tidak ditemukan, redirect
-if (!$pertemuan_info) {
-    header("Location: jadwal_guru.php?error=" . urlencode("Pertemuan tidak ditemukan atau Anda tidak memiliki akses."));
-    exit;
-}
-
-$id_jadwal_current = $pertemuan_info['id_jadwal']; // Digunakan untuk link kembali
-$class_id_from_pertemuan = $pertemuan_info['class_id']; // ID Kelas dari pertemuan yang ditemukan
-
-// --- Ambil daftar siswa yang tergabung dalam kelas ini ---
-$stmt_siswa = $pdo->prepare("SELECT id, NIS, name FROM siswa WHERE class_id = ? ORDER BY name ASC");
-$stmt_siswa->execute([$class_id_from_pertemuan]);
-$list_siswa = $stmt_siswa->fetchAll(PDO::FETCH_ASSOC);
-
-// --- Ambil status absensi yang sudah ada untuk pertemuan ini ---
-$absensi_existing = [];
-$stmt_absensi_existing = $pdo->prepare("SELECT id_siswa, status, keterangan FROM absensi WHERE id_pertemuan = ?");
-$stmt_absensi_existing->execute([$id_pertemuan]);
-foreach ($stmt_absensi_existing as $row) {
-    $absensi_existing[$row['id_siswa']] = [
-        'status' => $row['status'],
-        'keterangan' => $row['keterangan']
-    ];
-}
-
-// Cek pesan sukses/error dari redirect sebelumnya
-if (isset($_GET['success'])) {
-    $success = htmlspecialchars($_GET['success']);
-}
-if (isset($_GET['error'])) {
-    $error = htmlspecialchars($_GET['error']);
-}
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="id">
@@ -635,6 +664,11 @@ if (isset($_GET['error'])) {
             background-color: #27ae60;
         }
 
+        .save-absensi-btn.disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
         /* Media Queries untuk Responsivitas */
         @media (max-width: 768px) {
             .sidebar {
@@ -782,6 +816,13 @@ if (isset($_GET['error'])) {
                 <div class="alert alert-error">Data pertemuan tidak ditemukan. Pastikan Anda mengakses halaman ini dari pertemuan yang valid.</div>
             <?php endif; ?>
 
+            <?php if (!$can_edit): ?>
+                <div class="alert alert-warning">
+                    Tahun akademik ini <b>tidak aktif</b>. Anda hanya bisa melihat absensi tanpa mengubahnya.
+                </div>
+            <?php endif; ?>
+
+
             <form method="POST" autocomplete="off">
                 <input type="hidden" name="id_pertemuan" value="<?php echo htmlspecialchars($id_pertemuan); ?>">
                 <div class="table-responsive">
@@ -803,7 +844,7 @@ if (isset($_GET['error'])) {
                                 <?php foreach ($list_siswa as $siswa): ?>
                                     <?php
                                     // Dapatkan status dan keterangan yang sudah ada untuk siswa ini
-                                    $current_status = $absensi_existing[$siswa['id']]['status'] ?? 'Alpha';
+                                    $current_status = $absensi_existing[$siswa['id']]['status'] ?? 'Hadir';
                                     $current_keterangan = $absensi_existing[$siswa['id']]['keterangan'] ?? '';
                                     ?>
                                     <tr>
@@ -816,7 +857,8 @@ if (isset($_GET['error'])) {
                                                         name="absensi[<?php echo htmlspecialchars($siswa['id']); ?>]"
                                                         value="Hadir"
                                                         onchange="toggleKeterangan(this)"
-                                                        <?php echo ($current_status == 'Hadir') ? 'checked' : ''; ?>> Hadir
+                                                        <?php echo ($current_status == 'Hadir') ? 'checked' : ''; ?>
+                                                        <?php echo !$can_edit ? 'disabled' : ''; ?>> Hadir
                                                 </label>
 
                                                 <label>
@@ -824,28 +866,33 @@ if (isset($_GET['error'])) {
                                                         name="absensi[<?php echo htmlspecialchars($siswa['id']); ?>]"
                                                         value="Alpha"
                                                         onchange="toggleKeterangan(this)"
-                                                        <?php echo ($current_status == 'Alpha') ? 'checked' : ''; ?>> Alpha
+                                                        <?php echo ($current_status == 'Alpha') ? 'checked' : ''; ?>
+                                                        <?php echo !$can_edit ? 'disabled' : ''; ?>> Alpha
                                                 </label>
                                                 <label>
                                                     <input type="radio"
                                                         name="absensi[<?php echo htmlspecialchars($siswa['id']); ?>]"
                                                         value="Sakit"
                                                         onchange="toggleKeterangan(this)"
-                                                        <?php echo ($current_status == 'Sakit') ? 'checked' : ''; ?>> Sakit
+                                                        <?php echo ($current_status == 'Sakit') ? 'checked' : ''; ?>
+                                                        <?php echo !$can_edit ? 'disabled' : ''; ?>> Sakit
                                                 </label>
                                                 <label>
                                                     <input type="radio"
                                                         name="absensi[<?php echo htmlspecialchars($siswa['id']); ?>]"
                                                         value="Izin"
                                                         onchange="toggleKeterangan(this)"
-                                                        <?php echo ($current_status == 'Izin') ? 'checked' : ''; ?>> Izin
+                                                        <?php echo ($current_status == 'Izin') ? 'checked' : ''; ?>
+                                                        <?php echo !$can_edit ? 'disabled' : ''; ?>> Izin
                                                 </label>
                                             </div>
                                         </td>
                                         <td class="absensi-keterangan">
                                             <textarea name="keterangan[<?php echo htmlspecialchars($siswa['id']); ?>]"
                                                 placeholder="Tambahkan keterangan (opsional)"
-                                                <?php echo (!($current_status == 'Sakit' || $current_status == 'Izin')) ? 'disabled' : ''; ?>><?php echo htmlspecialchars($current_keterangan); ?></textarea>
+                                                <?php echo (!($current_status == 'Sakit' || $current_status == 'Izin') || !$can_edit) ? 'disabled' : ''; ?>
+                                                ><?php echo htmlspecialchars($current_keterangan); ?>
+                                            </textarea>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -853,9 +900,15 @@ if (isset($_GET['error'])) {
                         </tbody>
                     </table>
                 </div>
-                <button type="submit" name="submit_absensi" class="save-absensi-btn">
-                    <i class="fas fa-save"></i> Simpan Absensi
-                </button>
+                <?php if ($can_edit): ?>
+                    <button type="submit" name="submit_absensi" class="save-absensi-btn">
+                        <i class="fas fa-save"></i> Simpan Absensi
+                    </button>
+                <?php else: ?>
+                    <button type="button" class="save-absensi-btn disabled" disabled>
+                        <i style="margin-right: 12px;" class="fas fa-lock"></i>Absensi Tidak Bisa Disimpan
+                    </button>
+                <?php endif; ?>
             </form>
 
             <a href="pertemuan_guru.php?id_jadwal=<?php echo htmlspecialchars($id_jadwal_current); ?>" class="back-link">

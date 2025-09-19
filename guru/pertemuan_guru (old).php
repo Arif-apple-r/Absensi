@@ -496,15 +496,6 @@ try {
             background-color: #c0392b;
         }
 
-        .text-muted {
-            padding: 8px 12px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: background-color 0.2s, color 0.2s;
-            cursor: not-allowed;
-        }
-
 
         /* Add link (button like) */
         .add-link {
@@ -746,6 +737,7 @@ try {
         .sidebar.collapsed .logout-button-container a span {
             display: none;
         }
+
     </style>
 </head>
 
@@ -820,15 +812,9 @@ try {
                 <p><strong>Jadwal:</strong> <?php echo htmlspecialchars(substr($jadwal_info['hari'], 0, 5)) . ', ' . htmlspecialchars(substr($jadwal_info['jam_mulai'], 0, 5)) . ' - ' . htmlspecialchars(substr($jadwal_info['jam_selesai'], 0, 5)); ?></p>
             </div>
 
-            <?php if ($can_edit): ?>
-                <a href="#" onclick="openAddModal()" class="add-link">
-                    <i class="fas fa-plus"></i> Tambah Pertemuan
-                </a>
-            <?php else: ?>
-                <div class="alert alert-warning" style="margin:10px 0;">
-                    Tahun akademik ini <b>tidak aktif</b>. Anda tidak dapat menambah pertemuan baru.
-                </div>
-            <?php endif; ?>
+            <a href="#" onclick="openAddModal()" class="add-link">
+                <i class="fas fa-plus"></i> Tambah Pertemuan
+            </a>
 
             <div class="table-responsive">
                 <table class="data-table">
@@ -851,21 +837,14 @@ try {
                                     <td><?php echo htmlspecialchars($pertemuan['topik']); ?></td>
                                     <td>
                                         <div class="action-links">
-                                            <?php if ($can_edit): ?>
-                                                <a href="#" onclick="openEditModal(<?php echo htmlspecialchars(json_encode($pertemuan), ENT_QUOTES, 'UTF-8'); ?>)" class="action-link edit" title="Edit Pertemuan">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <a href="#" onclick="openDeleteModal(<?php echo htmlspecialchars($pertemuan['id']); ?>)" class="action-link delete" title="Hapus Pertemuan">
-                                                    <i class="fas fa-trash-alt"></i>
-                                                </a>
-                                            <?php else: ?>
-                                                <!-- kalau tidak aktif, edit & hapus hilang -->
-                                                <span class="text-muted" title="Tahun akademik tidak aktif"><i class="fas fa-lock"></i></span>
-                                            <?php endif; ?>
-
-                                            <!-- Isi Absensi tetap boleh dilihat, tapi bisa dikondisikan juga -->
+                                            <a href="#" onclick="openEditModal(<?php echo htmlspecialchars(json_encode($pertemuan), ENT_QUOTES, 'UTF-8'); ?>)" class="action-link edit" title="Edit Pertemuan">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
                                             <a href="absensi_guru.php?id_pertemuan=<?php echo htmlspecialchars($pertemuan['id']); ?>" class="action-link absensi" title="Isi Absensi">
                                                 <i class="fas fa-check-circle"></i>
+                                            </a>
+                                            <a href="#" onclick="openDeleteModal(<?php echo htmlspecialchars($pertemuan['id']); ?>)" class="action-link delete" title="Hapus Pertemuan">
+                                                <i class="fas fa-trash-alt"></i>
                                             </a>
                                         </div>
                                     </td>
@@ -884,25 +863,21 @@ try {
 
     <div id="pertemuanModal" class="modal">
       <div class="modal-content">
-        <span class="close-btn" onclick="closeModal()">&times;</span>
-        <h2 id="modalTitle">Tambah Pertemuan</h2>
+          <span class="close-btn" onclick="closeModal()">&times;</span>
+          <h2 id="modalTitle">Tambah Pertemuan</h2>
 
-        <form method="POST" autocomplete="off" id="pertemuanForm">
-            <input type="hidden" name="id_pertemuan" id="pertemuan_id">
-            <input type="hidden" name="id_jadwal" value="<?php echo htmlspecialchars($id_jadwal); ?>">
+          <form method="POST" autocomplete="off" id="pertemuanForm">
+              <input type="hidden" name="id_pertemuan" id="pertemuan_id">
+              <input type="hidden" name="id_jadwal" value="<?php echo htmlspecialchars($id_jadwal); ?>">
 
-            <label for="tanggal">Tanggal:</label>
-            <input type="date" name="tanggal" id="tanggal" required <?php echo !$can_edit ? 'disabled' : ''; ?>>
+              <label for="tanggal">Tanggal:</label>
+              <input type="date" name="tanggal" id="tanggal" required>
 
-            <label for="topik">Topik Pertemuan:</label>
-            <textarea name="topik" id="topik" required <?php echo !$can_edit ? 'disabled' : ''; ?>></textarea>
+              <label for="topik">Topik Pertemuan:</label>
+              <textarea name="topik" id="topik" required></textarea>
 
-            <?php if ($can_edit): ?>
-                <button type="submit">Simpan Pertemuan</button>
-            <?php else: ?>
-                <button type="button" disabled>Tidak Bisa Disimpan</button>
-            <?php endif; ?>
-        </form>
+              <button type="submit">Simpan Pertemuan</button>
+          </form>
       </div>
     </div>
 
