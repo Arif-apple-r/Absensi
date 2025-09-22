@@ -4,14 +4,14 @@ session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-if (!isset($_SESSION['superadmin_id'])) { 
+if (!isset($_SESSION['superadmin_id'])) {
     header("Location: ../../login.php");
     exit;
 }
 require '../../koneksi.php';
 
-$superadmin_name = htmlspecialchars($_SESSION['superadmin_name'] ?? 'SuperAdmin'); 
-$superadmin_photo = 'https://placehold.co/40x40/cccccc/333333?text=SA'; 
+$superadmin_name = htmlspecialchars($_SESSION['superadmin_name'] ?? 'SuperAdmin');
+$superadmin_photo = 'https://placehold.co/40x40/cccccc/333333?text=SA';
 
 $message = '';
 $alert_type = '';
@@ -51,33 +51,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $response_status = 'error';
     $response_message = 'Terjadi kesalahan tidak dikenal.';
 
-    try { 
-        $NIS_baru      = $_POST['NISsiswa'] ?? null; 
-        $NIS_lama_for_update = $_POST['NIS_lama_for_update'] ?? null; 
+    try {
+        $NIS_baru      = $_POST['NISsiswa'] ?? null;
+        $NIS_lama_for_update = $_POST['NIS_lama_for_update'] ?? null;
         $name     = $_POST['namasiswa'] ?? '';
         $email    = $_POST['emailsiswa'] ?? '';
-        $gender   = $_POST['gender'] ?? ''; 
+        $gender   = $_POST['gender'] ?? '';
         $dob_raw  = $_POST['dobsiswa'] ?? '';
         $alamat   = $_POST['alamatsiswa'] ?? '';
         $class_id = $_POST['class_id'] ?? null;
-        $password = $_POST['passwordsiswa'] ?? null; 
+        $password = $_POST['passwordsiswa'] ?? null;
 
         $dob = !empty($dob_raw) ? $dob_raw : null;
 
         $no_hp_raw = $_POST['nohpsiswa'] ?? '';
-        $no_hp = null; 
+        $no_hp = null;
         if (is_numeric($no_hp_raw) && $no_hp_raw !== '') {
             $no_hp = (int)$no_hp_raw;
-            if ($no_hp < 0 || $no_hp > 4294967295) { 
+            if ($no_hp < 0 || $no_hp > 4294967295) {
                 throw new Exception("Nomor HP terlalu besar atau negatif untuk disimpan.");
             }
-        } else if (!empty($no_hp_raw)) { 
+        } else if (!empty($no_hp_raw)) {
             throw new Exception("Nomor HP harus berupa angka.");
         }
 
         $foto_path_db = null;
         $folder_upload = "../../uploads/siswa/";
-        $upload_succeeded = true; 
+        $upload_succeeded = true;
 
         if (!is_dir($folder_upload)) {
             mkdir($folder_upload, 0777, true);
@@ -101,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         if ($upload_succeeded) {
             if ($_POST['action'] === 'tambah') {
-                if ($NIS_baru && $name && $email && $gender && $class_id && $password && $dob) { 
+                if ($NIS_baru && $name && $email && $gender && $class_id && $password && $dob) {
                     try {
                         $stmt_check_nis = $pdo->prepare("SELECT COUNT(*) FROM siswa WHERE NIS = ?");
                         $stmt_check_nis->execute([$NIS_baru]);
@@ -109,8 +109,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             $response_message = "Gagal menambahkan siswa: NIS sudah terdaftar.";
                         } else {
                             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                            $admission_date = date('Y-m-d H:i:s'); 
-                            
+                            $admission_date = date('Y-m-d H:i:s');
+
                             $stmt = $pdo->prepare("INSERT INTO siswa (NIS, name, email, gender, dob, no_hp, alamat, class_id, photo, pass, admission_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                             $stmt->execute([$NIS_baru, $name, $email, $gender, $dob, $no_hp, $alamat, $class_id, $foto_path_db, $hashed_password, $admission_date]);
                             $response_status = 'success';
@@ -123,21 +123,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $response_message = "Mohon lengkapi semua field yang diperlukan (NIS, Nama, Email, Gender, Tanggal Lahir, Kelas, Password) untuk menambah siswa.";
                 }
             } elseif ($_POST['action'] === 'edit') {
-                if ($NIS_lama_for_update && $NIS_baru && $name && $email && $gender && $dob && $alamat && $class_id) { 
+                if ($NIS_lama_for_update && $NIS_baru && $name && $email && $gender && $dob && $alamat && $class_id) {
                     try {
                         if ($NIS_baru !== $NIS_lama_for_update) {
                             $stmt_check_nis_exist = $pdo->prepare("SELECT COUNT(*) FROM siswa WHERE NIS = ? AND NIS != ?");
                             $stmt_check_nis_exist->execute([$NIS_baru, $NIS_lama_for_update]);
                             if ($stmt_check_nis_exist->fetchColumn() > 0) {
                                 $response_message = "Gagal mengupdate siswa: NIS baru sudah terdaftar untuk siswa lain.";
-                                throw new Exception($response_message); 
+                                throw new Exception($response_message);
                             }
                         }
 
                         if ($foto_path_db && isset($_POST['old_photosiswa']) && $_POST['old_photosiswa'] !== $foto_path_db && file_exists($folder_upload . $_POST['old_photosiswa'])) {
                             unlink($folder_upload . $_POST['old_photosiswa']);
                         }
-        
+
                         $update_pass_sql = '';
                         $update_pass_params = [];
                         if (!empty($password)) {
@@ -145,15 +145,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             $update_pass_sql = ', pass = ?';
                             $update_pass_params = [$hashed_password];
                         }
-        
+
                         $stmt = $pdo->prepare("UPDATE siswa SET NIS = ?, name = ?, email = ?, gender = ?, dob = ?, no_hp = ?, alamat = ?, class_id = ?, photo = ? " . $update_pass_sql . " WHERE NIS = ?");
                         $stmt->execute(array_merge([$NIS_baru, $name, $email, $gender, $dob, $no_hp, $alamat, $class_id, $foto_path_db], $update_pass_params, [$NIS_lama_for_update]));
-                        
+
                         $response_status = 'success';
                         $response_message = "Siswa berhasil diupdate!";
                     } catch (PDOException $e) {
                         $response_message = "Gagal mengupdate siswa (DB Error): " . $e->getMessage();
-                    } catch (Exception $e) { 
+                    } catch (Exception $e) {
                         $response_message = $e->getMessage();
                     }
                 } else {
@@ -161,18 +161,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 }
             }
         }
-    } catch (Throwable $e) { 
+    } catch (Throwable $e) {
         $response_message = "Kesalahan fatal di server: " . $e->getMessage() . " (Line: " . $e->getLine() . " in " . basename($e->getFile()) . ")";
         error_log("Fatal error in siswa AJAX POST: " . $e->getMessage() . " on line " . $e->getLine() . " in file " . $e->getFile() . "\n" . $e->getTraceAsString());
     }
-    
+
     if ($response_status === 'success') {
         echo "success";
     } else {
         echo "error: " . $response_message;
     }
-    exit; 
-} 
+    exit;
+}
 // --- END Handle AJAX POST untuk menambah atau mengedit siswa ---
 
 
@@ -200,7 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $tahun_data = $stmt_check_tahun->fetch(PDO::FETCH_ASSOC);
 
         if (!$tahun_data || ($tahun_data['asal'] >= $tahun_data['tujuan'])) { // Asumsi nama_tahun '2024/2025' > '2023/2024'
-             throw new Exception("Tahun Akademik Tujuan harus lebih baru dari Tahun Akademik Asal.");
+            throw new Exception("Tahun Akademik Tujuan harus lebih baru dari Tahun Akademik Asal.");
         }
 
 
@@ -220,7 +220,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         $response_status = 'success';
         $response_message = count($siswa_ids) . " siswa berhasil dipromosikan!";
-
     } catch (Throwable $e) {
         $response_message = $e->getMessage();
         error_log("Error Promosi Siswa: " . $e->getMessage() . " on line " . $e->getLine() . " in file " . $e->getFile());
@@ -269,7 +268,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus_siswa' && isset($_GET['
             $message = "Siswa dengan NIS tersebut tidak ditemukan.";
             $alert_type = 'alert-error';
         }
-        
+
         header("Location: index.php?error=" . urlencode($message) . "&tahun_akademik_id=" . $current_tahun_akademik_id);
         exit;
     } catch (PDOException $e) {
@@ -315,6 +314,7 @@ if (isset($_GET['success'])) {
 
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -324,7 +324,101 @@ if (isset($_GET['success'])) {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.7.1.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/2.0.7/js/dataTables.js"></script>
     <style>
+
+        .dt-search {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-size: 1rem;
+            width: 200px;
+            justify-content: right;
+        }
+
+        .dt-length {
+            margin: 10px 0;
+            display: flex;
+            justify-content: left;
+        }
+        
+        /* Container untuk DataTables */
+        .dataTables_wrapper {
+            padding: 15px !important;
+            background-color: var(--card-background) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 20px var(--shadow-color) !important;
+            margin-bottom: 25px !important;
+            position: relative !important;
+        }
+
+        /* Mengatur tata letak kontrol di bagian atas tabel dengan Flexbox */
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            margin: 10px 0 !important;
+        }
+
+        .dataTables_wrapper .dataTables_filter {
+            margin-left: auto !important;
+            /* Memindahkan kotak pencarian ke kanan */
+        }
+
+        /* Menyesuaikan kotak pencarian */
+        .dataTables_wrapper .dataTables_filter input[type="search"] {
+            width: 250px !important;
+            padding: 10px 15px !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: 8px !important;
+            background-color: var(--card-background) !important;
+            color: var(--text-color) !important;
+            font-size: 16px !important;
+            transition: box-shadow 0.3s, border-color 0.3s !important;
+        }
+
+        .dataTables_wrapper .dataTables_filter input[type="search"]:focus {
+            border-color: var(--primary-color) !important;
+            outline: none !important;
+            box-shadow: 0 0 5px rgba(26, 188, 156, 0.5) !important;
+        }
+
+        /* Mengatur label "Search:" */
+        .dataTables_wrapper .dataTables_filter label {
+            font-weight: 600 !important;
+            color: var(--text-color) !important;
+            margin-right: 0 !important;
+        }
+
+        /* Menyesuaikan tombol pagination */
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 8px 12px !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: 6px !important;
+            background-color: #f8f8f8 !important;
+            color: var(--text-color) !important;
+            margin: 0 5px !important;
+            cursor: pointer !important;
+            transition: background-color 0.3s, color 0.3s !important;
+            text-decoration: none !important;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+            border-color: var(--primary-color) !important;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+            cursor: default !important;
+            background-color: #eee !important;
+            color: #999 !important;
+            border-color: #ddd !important;
+        }
+
         :root {
             --primary-color: #1abc9c;
             --secondary-color: #34495e;
@@ -337,11 +431,13 @@ if (isset($_GET['success'])) {
             --sidebar-width: 250px;
             --sidebar-collapsed-width: 70px;
         }
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
+
         body {
             font-family: 'Poppins', sans-serif;
             background-color: var(--background-color);
@@ -350,6 +446,7 @@ if (isset($_GET['success'])) {
             color: var(--text-color);
             overflow-x: hidden;
         }
+
         .sidebar {
             width: var(--sidebar-width);
             background-color: var(--secondary-color);
@@ -362,9 +459,11 @@ if (isset($_GET['success'])) {
             padding-top: 70px;
             overflow: hidden;
         }
+
         .sidebar.collapsed {
             width: var(--sidebar-collapsed-width);
         }
+
         .sidebar .logo {
             color: #fff;
             font-size: 24px;
@@ -377,6 +476,7 @@ if (isset($_GET['success'])) {
             width: 100%;
             background: var(--primary-color);
         }
+
         .logo span {
             transition: font-size 0.3s ease;
         }
@@ -385,6 +485,7 @@ if (isset($_GET['success'])) {
             font-size: 0.5em;
             transition: font-size 0.3s ease;
         }
+
         .sidebar nav a {
             display: flex;
             align-items: center;
@@ -393,26 +494,32 @@ if (isset($_GET['success'])) {
             text-decoration: none;
             transition: background-color 0.2s ease, padding-left 0.2s ease;
         }
+
         .sidebar nav a i {
             width: 25px;
             text-align: center;
             margin-right: 20px;
             font-size: 18px;
         }
+
         .sidebar.collapsed nav a i {
             margin-right: 0;
         }
+
         .sidebar.collapsed nav a span {
             display: none;
         }
+
         .sidebar nav a:hover,
         .sidebar nav a.active {
             background-color: #3e566d;
             padding-left: 25px;
         }
+
         .sidebar nav a.active i {
             color: var(--primary-color);
         }
+
         .header {
             height: 65.5px;
             background-color: var(--card-background);
@@ -428,10 +535,12 @@ if (isset($_GET['success'])) {
             transition: left 0.3s ease, width 0.3s ease;
             justify-content: space-between;
         }
+
         .header.shifted {
             left: var(--sidebar-collapsed-width);
             width: calc(100% - var(--sidebar-collapsed-width));
         }
+
         .header h1 {
             font-size: 22px;
             font-weight: 600;
@@ -439,6 +548,7 @@ if (isset($_GET['success'])) {
             display: flex;
             align-items: center;
         }
+
         .header h1 i {
             margin-right: 10px;
         }
@@ -456,9 +566,11 @@ if (isset($_GET['success'])) {
             border-radius: 8px;
             transition: background-color 0.2s ease;
         }
+
         .user-info:hover {
             background-color: #f0f0f0;
         }
+
         .user-info img {
             width: 35px;
             height: 35px;
@@ -466,25 +578,29 @@ if (isset($_GET['success'])) {
             object-fit: cover;
             border: 2px solid var(--primary-color);
         }
+
         .user-info span {
             font-weight: 600;
         }
+
         .user-info i.fa-caret-down {
             margin-left: 5px;
         }
+
         .dropdown-menu {
             display: none;
             position: absolute;
             top: 100%;
             right: 0;
             background-color: var(--card-background);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
             z-index: 1002;
             min-width: 160px;
             border-radius: 8px;
             overflow: hidden;
             margin-top: 10px;
         }
+
         .dropdown-menu a {
             color: var(--text-color);
             padding: 12px 16px;
@@ -493,9 +609,11 @@ if (isset($_GET['success'])) {
             font-weight: 500;
             transition: background-color 0.2s ease;
         }
+
         .dropdown-menu a:hover {
             background-color: var(--background-color);
         }
+
         .dropdown-menu a i {
             margin-right: 10px;
             width: 20px;
@@ -508,9 +626,11 @@ if (isset($_GET['success'])) {
             transition: margin-left 0.3s ease;
             max-width: 100%;
         }
+
         .content.shifted {
             margin-left: var(--sidebar-collapsed-width);
         }
+
         .toggle-btn {
             background-color: var(--primary-color);
             color: white;
@@ -524,9 +644,11 @@ if (isset($_GET['success'])) {
             margin-right: 20px;
             transition: background-color 0.3s;
         }
+
         .toggle-btn:hover {
             background-color: #16a085;
         }
+
         .card {
             background: var(--card-background);
             border-radius: 12px;
@@ -537,39 +659,47 @@ if (isset($_GET['success'])) {
             margin-left: auto;
             margin-right: auto;
         }
+
         .card h2 {
             margin-bottom: 20px;
             font-size: 24px;
             font-weight: 600;
             color: var(--text-color);
         }
+
         .table-responsive {
             width: 100%;
             overflow-x: auto;
         }
+
         .data-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 15px;
         }
+
         .data-table th,
         .data-table td {
             padding: 15px;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
         }
+
         .data-table th {
             background-color: #f8f8f8;
             font-weight: 600;
             color: var(--text-color);
             text-transform: uppercase;
         }
+
         .data-table tbody tr:nth-child(even) {
             background-color: #f9f9f9;
         }
+
         .data-table tr:hover {
             background-color: #fafafa;
         }
+
         .action-link {
             padding: 8px 12px;
             border-radius: 6px;
@@ -577,24 +707,32 @@ if (isset($_GET['success'])) {
             font-weight: 600;
             transition: background-color 0.2s, color 0.2s;
             display: inline-block;
-            margin-right: 5px; /* Added spacing */
+            margin-right: 5px;
+            /* Added spacing */
         }
+
         .action-link.edit {
             background-color: #3498db;
             color: white;
         }
+
         .action-link.edit:hover {
             background-color: #2980b9;
         }
+
         .action-link.delete {
             background-color: #e74c3c;
             color: white;
             margin-top: 10px;
         }
+
         .action-link.delete:hover {
             background-color: #c0392b;
         }
-        .add-link, .promote-link { /* Added promote-link */
+
+        .add-link,
+        .promote-link {
+            /* Added promote-link */
             display: inline-flex;
             align-items: center;
             gap: 8px;
@@ -606,12 +744,17 @@ if (isset($_GET['success'])) {
             border-radius: 8px;
             font-weight: 600;
             transition: background-color 0.3s, transform 0.2s;
-            margin-right: 15px; /* Spacing between add and promote buttons */
+            margin-right: 15px;
+            /* Spacing between add and promote buttons */
         }
-        .add-link:hover, .promote-link:hover { /* Added promote-link */
+
+        .add-link:hover,
+        .promote-link:hover {
+            /* Added promote-link */
             background-color: #16a085;
             transform: translateY(-2px);
         }
+
         /* Alerts */
         .alert {
             padding: 15px;
@@ -619,11 +762,13 @@ if (isset($_GET['success'])) {
             border-radius: 8px;
             font-weight: 600;
         }
+
         .alert-success {
             background-color: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
+
         .alert-error {
             background-color: #f8d7da;
             color: #721c24;
@@ -640,22 +785,30 @@ if (isset($_GET['success'])) {
             padding: 15px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
-            align-items: flex-end; /* Align items to the bottom */
+            align-items: flex-end;
+            /* Align items to the bottom */
         }
+
         .filter-section .filter-group {
-            margin-bottom: 0; /* Override default margin */
-            flex: 1; /* Allow groups to take equal space */
-            min-width: 150px; /* Minimum width for filter dropdowns */
+            margin-bottom: 0;
+            /* Override default margin */
+            flex: 1;
+            /* Allow groups to take equal space */
+            min-width: 150px;
+            /* Minimum width for filter dropdowns */
         }
+
         .filter-section .filter-group label {
             font-size: 0.9em;
             margin-bottom: 5px;
             color: var(--light-text-color);
-            display: block; /* Ensure label takes full width */
+            display: block;
+            /* Ensure label takes full width */
         }
+
         .filter-section .filter-group select,
         .filter-section .filter-group button {
-            width: 100%; 
+            width: 100%;
             padding: 10px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
@@ -663,6 +816,7 @@ if (isset($_GET['success'])) {
             color: var(--text-color);
             font-size: 0.95em;
         }
+
         .filter-section .filter-group button {
             background-color: var(--primary-color);
             color: white;
@@ -670,6 +824,7 @@ if (isset($_GET['success'])) {
             transition: background-color 0.3s;
             height: 42px;
         }
+
         .filter-section .filter-group button:hover {
             background-color: #16a085;
         }
@@ -685,7 +840,7 @@ if (isset($_GET['success'])) {
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0,0,0,0.4);
+            background-color: rgba(0, 0, 0, 0.4);
             justify-content: center;
             align-items: center;
             padding-top: 50px;
@@ -696,7 +851,7 @@ if (isset($_GET['success'])) {
             margin: auto;
             padding: 30px;
             border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
             width: 90%;
             max-width: 500px;
             position: relative;
@@ -705,8 +860,15 @@ if (isset($_GET['success'])) {
         }
 
         @keyframes animatetop {
-            from {top: -300px; opacity: 0}
-            to {top: 0; opacity: 1}
+            from {
+                top: -300px;
+                opacity: 0
+            }
+
+            to {
+                top: 0;
+                opacity: 1
+            }
         }
 
         .close-button {
@@ -729,6 +891,28 @@ if (isset($_GET['success'])) {
             color: var(--text-color);
         }
 
+        .dt-length select {
+            margin-right: 5px;
+        }
+
+        .dt-paging {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .dt-paging button {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: #f8f8f8;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
         .form-group {
             margin-bottom: 15px;
         }
@@ -746,9 +930,10 @@ if (isset($_GET['success'])) {
         .form-group input[type="tel"],
         .form-group textarea,
         .form-group input[type="file"],
-        .form-group input[type="password"], /* Added password input */
+        .form-group input[type="password"],
+        /* Added password input */
         .form-group select {
-            width: 100%; 
+            width: 100%;
             padding: 10px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
@@ -756,17 +941,20 @@ if (isset($_GET['success'])) {
             background-color: var(--background-color);
             color: var(--text-color);
         }
+
         .form-group input[type="file"] {
             padding: 8px 10px;
         }
+
         .form-group .photo-preview {
             max-width: 100px;
             height: auto;
             display: block;
             margin-top: 10px;
             border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
+
         /* Radio button styling */
         .form-group .radio-group {
             display: flex;
@@ -776,8 +964,9 @@ if (isset($_GET['success'])) {
 
         .form-group .radio-group input[type="radio"] {
             margin-right: 5px;
-            width: auto; 
+            width: auto;
         }
+
         .form-group .radio-group label {
             display: inline-block;
             margin-bottom: 0;
@@ -826,33 +1015,43 @@ if (isset($_GET['success'])) {
             .sidebar {
                 transform: translateX(-100%);
             }
+
             .sidebar.collapsed {
                 transform: translateX(0);
                 width: var(--sidebar-collapsed-width);
             }
-            .content, .header {
+
+            .content,
+            .header {
                 margin-left: 0 !important;
                 left: 0 !important;
                 width: 100% !important;
                 padding-left: 20px !important;
             }
+
             .header .user-info {
                 display: none;
             }
-            .sidebar.collapsed + .header, .sidebar.collapsed ~ .content {
+
+            .sidebar.collapsed+.header,
+            .sidebar.collapsed~.content {
                 margin-left: var(--sidebar-collapsed-width) !important;
                 left: var(--sidebar-collapsed-width) !important;
                 width: calc(100% - var(--sidebar-collapsed-width)) !important;
             }
-            .data-table th, .data-table td {
+
+            .data-table th,
+            .data-table td {
                 padding: 10px;
                 font-size: 0.85em;
             }
+
             .modal-content {
                 width: 95%;
                 padding: 20px;
             }
         }
+
         /* New CSS for User Info dropdown */
         .user-info {
             position: relative;
@@ -866,9 +1065,11 @@ if (isset($_GET['success'])) {
             border-radius: 8px;
             transition: background-color 0.2s ease;
         }
+
         .user-info:hover {
             background-color: #f0f0f0;
         }
+
         .user-info img {
             width: 35px;
             height: 35px;
@@ -876,25 +1077,29 @@ if (isset($_GET['success'])) {
             object-fit: cover;
             border: 2px solid var(--primary-color);
         }
+
         .user-info span {
             font-weight: 600;
         }
+
         .user-info i.fa-caret-down {
             margin-left: 5px;
         }
+
         .dropdown-menu {
             display: none;
             position: absolute;
             top: 100%;
             right: 0;
             background-color: var(--card-background);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
             z-index: 1002;
             min-width: 160px;
             border-radius: 8px;
             overflow: hidden;
             margin-top: 10px;
         }
+
         .dropdown-menu a {
             color: var(--text-color);
             padding: 12px 16px;
@@ -903,13 +1108,16 @@ if (isset($_GET['success'])) {
             font-weight: 500;
             transition: background-color 0.2s ease;
         }
+
         .dropdown-menu a:hover {
             background-color: var(--background-color);
         }
+
         .dropdown-menu a i {
             margin-right: 10px;
             width: 20px;
         }
+
         /* Logout button at bottom of sidebar */
         .sidebar .logout-button-container {
             position: absolute;
@@ -944,6 +1152,7 @@ if (isset($_GET['success'])) {
         }
     </style>
 </head>
+
 <body>
     <div class="sidebar" id="sidebar">
         <div class="logo"><span>SuperAdminCoy</span></div>
@@ -1040,7 +1249,7 @@ if (isset($_GET['success'])) {
             </a>
 
             <div class="table-responsive">
-                <table class="data-table">
+                <table id="myTable" class="data-table">
                     <thead>
                         <tr>
                             <th>NIS</th>
@@ -1065,8 +1274,7 @@ if (isset($_GET['success'])) {
                                     <td>
                                         <img src="<?php echo htmlspecialchars('../../uploads/siswa/' . ($siswa['photo'] ?? 'default.jpg')); ?>" alt="Foto Siswa" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;"
                                             loading="lazy"
-                                            onerror="this.onerror=null;this.src='https://placehold.co/50x50/cccccc/333333?text=NO+IMG';"
-                                        >
+                                            onerror="this.onerror=null;this.src='https://placehold.co/50x50/cccccc/333333?text=NO+IMG';">
                                     </td>
                                     <td><?php echo htmlspecialchars($siswa['name']); ?></td>
                                     <td><?php echo htmlspecialchars($siswa['email']); ?></td>
@@ -1184,7 +1392,7 @@ if (isset($_GET['success'])) {
             <h2>Promosikan Siswa ke Kelas Baru</h2>
             <form id="promoteSiswaForm" method="POST" action="index.php">
                 <input type="hidden" name="action" value="promote_siswa">
-                
+
                 <div class="form-group">
                     <label for="id_tahun_akademik_asal">Tahun Akademik Asal:</label>
                     <select id="id_tahun_akademik_asal" name="id_tahun_akademik_asal" required>
@@ -1271,39 +1479,39 @@ if (isset($_GET['success'])) {
         const idKelasTujuanSelect = document.getElementById("id_kelas_tujuan");
 
         function openSiswaModal(action, NIS = '', name = '', email = '', gender = '', dob = '', no_hp = '', alamat = '', class_id = '', photo = '') {
-            siswaForm.reset(); 
+            siswaForm.reset();
             siswaActionInput.value = action;
-            isEditMode = (action === 'edit'); 
-            
+            isEditMode = (action === 'edit');
+
             if (action === 'tambah') {
                 siswaModalTitle.textContent = "Tambah Siswa";
                 submitSiswaBtn.textContent = "Simpan";
-                NISsiswaInput.readOnly = false; 
+                NISsiswaInput.readOnly = false;
                 NISsiswaInput.value = '';
-                siswaNISHiddenInput.value = ''; 
+                siswaNISHiddenInput.value = '';
                 siswaOldPhotoHiddenInput.value = '';
                 photosiswaPreview.src = "https://placehold.co/100x100/cccccc/333333?text=NO+IMG";
                 classIdModalSelect.value = '';
-                
+
                 passwordGroup.style.display = 'block';
                 passwordsiswaInput.required = true;
-                dobsiswaInput.required = true; 
+                dobsiswaInput.required = true;
             } else if (action === 'edit') {
                 siswaModalTitle.textContent = "Edit Siswa";
                 submitSiswaBtn.textContent = "Update";
-                NISsiswaInput.readOnly = false; 
-                
-                NISsiswaInput.value = NIS; 
-                siswaNISHiddenInput.value = NIS; 
+                NISsiswaInput.readOnly = false;
+
+                NISsiswaInput.value = NIS;
+                siswaNISHiddenInput.value = NIS;
                 namasiswaInput.value = name;
                 emailsiswaInput.value = email;
-                
-                if (gender && gender.toLowerCase() === 'laki-laki') { 
+
+                if (gender && gender.toLowerCase() === 'laki-laki') {
                     genderLInput.checked = true;
-                } else if (gender && gender.toLowerCase() === 'perempuan') { 
+                } else if (gender && gender.toLowerCase() === 'perempuan') {
                     genderPInput.checked = true;
                 }
-                
+
                 dobsiswaInput.value = dob;
                 nohpsiswaInput.value = no_hp;
                 alamatsiswaTextarea.value = alamat;
@@ -1311,10 +1519,10 @@ if (isset($_GET['success'])) {
                 siswaOldPhotoHiddenInput.value = photo;
                 photosiswaPreview.src = photo ? `../../uploads/siswa/${photo}` : "https://placehold.co/100x100/cccccc/333333?text=NO+IMG";
 
-                passwordGroup.style.display = 'none'; 
-                passwordsiswaInput.required = false; 
-                passwordsiswaInput.value = ''; 
-                dobsiswaInput.required = true; 
+                passwordGroup.style.display = 'none';
+                passwordsiswaInput.required = false;
+                passwordsiswaInput.value = '';
+                dobsiswaInput.required = true;
             }
             siswaModal.style.display = "flex";
         }
@@ -1327,7 +1535,7 @@ if (isset($_GET['success'])) {
             if (errorAlert) errorAlert.style.display = 'none';
         }
 
-        window.onclick = function (event) {
+        window.onclick = function(event) {
             if (event.target == siswaModal) {
                 closeSiswaModal();
             }
@@ -1353,54 +1561,52 @@ if (isset($_GET['success'])) {
         siswaForm.addEventListener("submit", function(e) {
             e.preventDefault();
             const formData = new FormData(siswaForm);
-            
-            fetch('index.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.text()) 
-            .then(async result => {
-                const actionMode = siswaActionInput.value;
 
-                if (result.trim().startsWith("success")) {
-                    await Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil!',
-                        text: result.trim().substring(7) || (actionMode === 'edit' ? "Siswa berhasil diupdate!" : "Siswa berhasil ditambahkan!"),
-                        showConfirmButton: false,
-                        timer: 1500
-                    }).then(() => {
-                        const currentTahunAkademikId = filterTahunAkademik.value;
-                        window.location.href = `index.php?success=${encodeURIComponent(result.trim().substring(7) || (actionMode === 'edit' ? "Siswa berhasil diupdate!" : "Siswa berhasil ditambahkan!"))}&tahun_akademik_id=${currentTahunAkademikId}`;
-                    });
-                } 
-                else if (result.trim().startsWith("error:")) {
-                    await Swal.fire({
-                        icon: 'error',
-                        title: 'Gagal!',
-                        text: result.trim().substring(6), 
-                        confirmButtonText: 'OK'
-                    });
-                }
-                else {
-                    console.error("Server responded with unexpected output:", result);
+            fetch('index.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(async result => {
+                    const actionMode = siswaActionInput.value;
+
+                    if (result.trim().startsWith("success")) {
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil!',
+                            text: result.trim().substring(7) || (actionMode === 'edit' ? "Siswa berhasil diupdate!" : "Siswa berhasil ditambahkan!"),
+                            showConfirmButton: false,
+                            timer: 1500
+                        }).then(() => {
+                            const currentTahunAkademikId = filterTahunAkademik.value;
+                            window.location.href = `index.php?success=${encodeURIComponent(result.trim().substring(7) || (actionMode === 'edit' ? "Siswa berhasil diupdate!" : "Siswa berhasil ditambahkan!"))}&tahun_akademik_id=${currentTahunAkademikId}`;
+                        });
+                    } else if (result.trim().startsWith("error:")) {
+                        await Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal!',
+                            text: result.trim().substring(6),
+                            confirmButtonText: 'OK'
+                        });
+                    } else {
+                        console.error("Server responded with unexpected output:", result);
+                        await Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: 'Respons server tidak terduga. Output PHP: ' + result.substring(0, 300) + '...',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                })
+                .catch(async error => {
+                    console.error("Fetch error:", error);
                     await Swal.fire({
                         icon: 'error',
                         title: 'Error!',
-                        text: 'Respons server tidak terduga. Output PHP: ' + result.substring(0, 300) + '...',
+                        text: 'Terjadi kesalahan jaringan atau client: ' + error.message,
                         confirmButtonText: 'OK'
                     });
-                }
-            })
-            .catch(async error => {
-                console.error("Fetch error:", error);
-                await Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    text: 'Terjadi kesalahan jaringan atau client: ' + error.message,
-                    confirmButtonText: 'OK'
                 });
-            });
         });
 
         function openDeleteModal(NIS) {
@@ -1447,7 +1653,7 @@ if (isset($_GET['success'])) {
             });
 
             window.onclick = function(event) {
-                if (event.target == siswaModal) { 
+                if (event.target == siswaModal) {
                     closeSiswaModal();
                 }
                 if (event.target == promoteSiswaModal) { // Close promote modal too
@@ -1460,7 +1666,7 @@ if (isset($_GET['success'])) {
                 }
             }
         }
-        
+
         function showLogoutConfirmation() {
             Swal.fire({
                 title: 'Konfirmasi Logout',
@@ -1475,7 +1681,7 @@ if (isset($_GET['success'])) {
                 }
             });
         }
-        
+
         if (logoutButtonSidebar) {
             logoutButtonSidebar.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -1484,7 +1690,7 @@ if (isset($_GET['success'])) {
         }
 
         window.addEventListener('DOMContentLoaded', (event) => {
-            const currentPathname = window.location.pathname; 
+            const currentPathname = window.location.pathname;
             const pathSegments = currentPathname.split('/');
             const superadminIndex = pathSegments.indexOf('superadmin');
             let relativePathFromSuperadmin = '';
@@ -1494,11 +1700,11 @@ if (isset($_GET['success'])) {
             } else {
                 relativePathFromSuperadmin = currentPathname.split('/').pop();
             }
-            
-            document.querySelectorAll('.sidebar nav a').forEach(link => {
-                link.classList.remove('active'); 
 
-                let linkHref = new URL(link.href).pathname; 
+            document.querySelectorAll('.sidebar nav a').forEach(link => {
+                link.classList.remove('active');
+
+                let linkHref = new URL(link.href).pathname;
                 const linkSegments = linkHref.split('/');
                 const linkSuperadminIndex = linkSegments.indexOf('superadmin');
                 let linkRelativePath = '';
@@ -1506,9 +1712,9 @@ if (isset($_GET['success'])) {
                 if (linkSuperadminIndex !== -1 && linkSegments.length > linkSuperadminIndex) {
                     linkRelativePath = linkSegments.slice(linkSuperadminIndex + 1).join('/');
                 } else {
-                     linkRelativePath = linkHref.split('/').pop();
+                    linkRelativePath = linkHref.split('/').pop();
                 }
-                
+
                 linkRelativePath = linkRelativePath.split('?')[0];
                 let currentPathWithoutQuery = relativePathFromSuperadmin.split('?')[0];
 
@@ -1541,7 +1747,7 @@ if (isset($_GET['success'])) {
             try {
                 const response = await fetch(`../../api/get_kelas_by_tahun_akademik.php?id_tahun_akademik=${tahunAkademikId}`);
                 const data = await response.json();
-                
+
                 targetSelectElement.innerHTML = '<option value="">Pilih Kelas</option>';
                 if (data.status === 'success' && data.kelas.length > 0) {
                     data.kelas.forEach(kelas => {
@@ -1585,52 +1791,56 @@ if (isset($_GET['success'])) {
             }).then((result) => {
                 if (result.isConfirmed) {
                     fetch('index.php', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => response.text())
-                    .then(async result => {
-                        if (result.trim().startsWith("success:")) {
-                            await Swal.fire({
-                                icon: 'success',
-                                title: 'Berhasil!',
-                                text: result.trim().substring(8),
-                                showConfirmButton: false,
-                                timer: 2000
-                            }).then(() => {
-                                const currentTahunAkademikId = filterTahunAkademik.value;
-                                window.location.href = `index.php?success=${encodeURIComponent(result.trim().substring(8))}&tahun_akademik_id=${currentTahunAkademikId}`;
-                            });
-                        } else if (result.trim().startsWith("error:")) {
-                            await Swal.fire({
-                                icon: 'error',
-                                title: 'Gagal!',
-                                text: result.trim().substring(6),
-                                confirmButtonText: 'OK'
-                            });
-                        } else {
-                            console.error("Server responded with unexpected output:", result);
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.text())
+                        .then(async result => {
+                            if (result.trim().startsWith("success:")) {
+                                await Swal.fire({
+                                    icon: 'success',
+                                    title: 'Berhasil!',
+                                    text: result.trim().substring(8),
+                                    showConfirmButton: false,
+                                    timer: 2000
+                                }).then(() => {
+                                    const currentTahunAkademikId = filterTahunAkademik.value;
+                                    window.location.href = `index.php?success=${encodeURIComponent(result.trim().substring(8))}&tahun_akademik_id=${currentTahunAkademikId}`;
+                                });
+                            } else if (result.trim().startsWith("error:")) {
+                                await Swal.fire({
+                                    icon: 'error',
+                                    title: 'Gagal!',
+                                    text: result.trim().substring(6),
+                                    confirmButtonText: 'OK'
+                                });
+                            } else {
+                                console.error("Server responded with unexpected output:", result);
+                                await Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error!',
+                                    text: 'Respons server tidak terduga. Output PHP: ' + result.substring(0, 300) + '...',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        })
+                        .catch(async error => {
+                            console.error("Fetch error:", error);
                             await Swal.fire({
                                 icon: 'error',
                                 title: 'Error!',
-                                text: 'Respons server tidak terduga. Output PHP: ' + result.substring(0, 300) + '...',
+                                text: 'Terjadi kesalahan jaringan atau client: ' + error.message,
                                 confirmButtonText: 'OK'
                             });
-                        }
-                    })
-                    .catch(async error => {
-                        console.error("Fetch error:", error);
-                        await Swal.fire({
-                            icon: 'error',
-                            title: 'Error!',
-                            text: 'Terjadi kesalahan jaringan atau client: ' + error.message,
-                            confirmButtonText: 'OK'
                         });
-                    });
                 }
             });
         });
 
+        $(document).ready(function() {
+            $('#myTable').DataTable();
+        });
     </script>
 </body>
+
 </html>
