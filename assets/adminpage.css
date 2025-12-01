@@ -1,0 +1,1357 @@
+/* ========================================================================= */
+/* Global Variables, Reset, and Base Styles */
+/* ========================================================================= */
+:root {
+    --primary-color: #1abc9c;
+    --secondary-color: #34495e;
+    --background-color: #f0f2f5;
+    --card-background: #ffffff;
+    --text-color: #2c3e50;
+    --light-text-color: #7f8c8d;
+    --border-color: #e0e0e0;
+    --shadow-color: rgba(0, 0, 0, 0.08);
+    --sidebar-width: 250px;
+    --sidebar-collapsed-width: 70px;
+}
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--background-color);
+    display: flex;
+    min-height: 100vh;
+    color: var(--text-color);
+    overflow-x: hidden;
+}
+
+/* ========================================================================= */
+/* Sidebar & Header Styles */
+/* ========================================================================= */
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--secondary-color);
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    transition: width 0.3s ease;
+    z-index: 1000;
+
+    overflow: visible;
+}
+.sidebar.collapsed {
+    width: var(--sidebar-collapsed-width);
+}
+.sidebar .logo {
+    color: #fff;
+    font-size: 24px;
+    font-weight: 700;
+    /* Ubah dari text-align: center; menjadi flexbox */
+    display: flex; /* Menggunakan Flexbox untuk menata ikon dan teks */
+    align-items: center;
+    justify-content: center; /* Membuat konten di tengah saat expanded */
+    padding: 14.5px 0; /* Padding vertikal yang lebih sedikit */
+    background: var(--primary-color);
+    transition: all 0.3s ease; /* Tambahkan transisi untuk padding agar mulus */
+    /* position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%; */
+}
+
+.sidebar .logo .logo-icon {
+    width: 30px; /* Atur ukuran ikon */
+    height: 30px;
+    margin-right: 10px; /* Jarak antara ikon dan teks */
+    transition: margin-right 0.3s ease;
+    scrollbar-width: none;  /* Firefox */
+}
+
+.sidebar .logo .logo-text {
+    transition: opacity 0.3s ease, max-width 0.3s ease;
+    white-space: nowrap; /* Pastikan teks tidak patah */
+    overflow: auto; /* Sembunyikan jika melebihi batas */
+    max-width: 160px; /* Atur lebar maksimum saat expanded */
+}
+
+.sidebar .logo .logo-text::-webkit-scrollbar {
+  /* Ini adalah cara utama untuk menghilangkan visual scrollbar */
+  display: none; /* Beberapa orang juga menambahkan ini sebagai cadangan */
+}
+
+
+.sidebar.collapsed .logo {
+    padding: 14.5px 0; /* Padding vertikal tetap */
+    /* Pusatkan item, karena teks akan disembunyikan */
+    justify-content: center; 
+}
+
+/* KETIKA COLLAPSED: Sembunyikan teks label (AdminCoy) */
+.sidebar.collapsed .logo .logo-text {
+    /* Gunakan max-width dan opacity 0 untuk menyembunyikan dengan transisi halus */
+    opacity: 0;
+    max-width: 0;
+    padding: 0;
+    margin: 0;
+}
+
+/* KETIKA COLLAPSED: Hapus margin di kanan ikon agar dia di tengah */
+.sidebar.collapsed .logo .logo-icon {
+    margin-right: 0; 
+}
+
+.sidebar nav {
+    padding-top: 0px;   
+}
+
+.sidebar nav a {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    color: #fff;
+    text-decoration: none;
+    transition: background-color 0.2s ease, padding-left 0.2s ease;
+}
+.sidebar nav a i {
+    transition: opacity 0.5s ease, max-width 0.3s ease;
+    width: 25px;
+    text-align: center;
+    margin-right: 20px;
+    font-size: 18px;
+}
+.sidebar.collapsed nav a i {
+    margin-right: 0;
+}
+.sidebar.collapsed nav a span {
+    opacity: 0;
+    max-width: 0;
+    padding: 0;
+    margin: 0;    
+    display: none;
+}
+
+.sidebar nav a:hover,
+.sidebar nav a.active {
+    background-color: #3e566d;
+    padding-left: 25px;
+}
+.sidebar nav a.active i {
+    color: var(--primary-color);
+}
+
+/* Logout button at bottom of sidebar (Combined from both files) */
+.sidebar .logout-button-container {
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    width: 100%;
+    padding: 0 20px;
+}
+.sidebar .logout-button-container a {
+    background-color: #e74c3c;
+    color: white;
+    font-weight: 600;
+    text-align: center;
+    border-radius: 8px;
+    display: block;
+    padding: 12px 20px;
+    text-decoration: none;
+    transition: background-color 0.3s;
+}
+.sidebar .logout-button-container a:hover {
+    background-color: #c0392b;
+}
+.sidebar.collapsed .logout-button-container {
+    padding: 0 10px;
+}
+.sidebar.collapsed .logout-button-container a span {
+    display: none;
+}
+
+.sidebar.no-transition,
+.header.no-transition,
+.content.no-transition {
+    transition: none !important; 
+}
+
+/* [PERBAIKAN KRITIS]: Matikan transisi untuk semua elemen di dalam sidebar */
+.sidebar.no-transition * { 
+    transition: none !important;
+}
+
+
+/* hovertext nih coy */
+.hovertext {
+    position: relative;
+    display: inline-block;
+}
+
+.hovertext::before {
+    content: attr(data-hover);
+    visibility: hidden;
+    opacity: 0;
+    
+    background-color: rgb(32, 30, 30);
+    color: #f5f0f0;
+    text-align: center;
+    border-radius: 5px;
+    padding: 5px 8px;
+    
+    position: absolute;
+    z-index: 10;
+    bottom: 120%; /* tampil di atas */
+    left: 50%;
+    transform: translateX(-50%);
+    
+    white-space: nowrap;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar .hovertext::before {
+    z-index: 99999;
+}
+
+.sidebar:not(.collapsed) .hovertext::before {
+    display: none !important;
+}
+
+.sidebar.collapsed .hovertext:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+.sidebar.collapsed .hovertext::before {
+    bottom: 50%;
+    left: 120%;
+    transform: translateY(50%);
+}
+
+
+/* header */
+.header {
+    height: 65.5px;
+    background-color: var(--card-background);
+    box-shadow: 0 2px 10px var(--shadow-color);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
+    z-index: 999;
+    transition: left 0.3s ease, width 0.3s ease;
+    justify-content: space-between;
+}
+.header.shifted {
+    left: var(--sidebar-collapsed-width);
+    width: calc(100% - var(--sidebar-collapsed-width));
+}
+.header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+.header h1 i {
+    margin-right: 10px;
+}
+
+.header {
+    height: 65.5px;
+    background-color: var(--card-background);
+    box-shadow: 0 2px 10px var(--shadow-color);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
+    z-index: 999;
+    transition: left 0.3s ease, width 0.3s ease;
+    justify-content: space-between; /* Added for user-info */
+}
+
+.header.shifted {
+    left: var(--sidebar-collapsed-width);
+    width: calc(100% - var(--sidebar-collapsed-width));
+}
+
+.header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.header.h-left {
+    justify-content: flex-start;
+}
+
+.info-header {
+    background: #f0f2f5;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    border-left: 5px solid var(--primary-color);
+}
+.info-header p {
+    margin: 5px 0;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.toggle-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    margin-right: 20px;
+    transition: background-color 0.3s;
+}
+.toggle-btn:hover {
+    background-color: #16a085;
+}
+
+/* User Info Dropdown Styling (Combined from both files - identical) */
+.user-info {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--text-color);
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+.user-info:hover {
+    background-color: #f0f0f0;
+}
+.user-info img {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary-color);
+}
+.user-info span {
+    font-weight: 600;
+}
+.user-info i.fa-caret-down {
+    margin-left: 5px;
+}
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: var(--card-background);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    z-index: 1002;
+    min-width: 160px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+.dropdown-menu a {
+    color: var(--text-color);
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+.dropdown-menu a:hover {
+    background-color: var(--background-color);
+}
+.dropdown-menu a i {
+    margin-right: 10px;
+    width: 20px;
+}
+
+/* ========================================================================= */
+/* Content, Card, and Table Styles */
+/* ========================================================================= */
+.content {
+    flex-grow: 1;
+    padding: 90px 30px 30px 30px;
+    margin-left: var(--sidebar-width);
+    transition: margin-left 0.3s ease;
+    max-width: 100%;
+}
+.content.shifted {
+    margin-left: var(--sidebar-collapsed-width);
+}
+.card {
+    background: var(--card-background);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 20px var(--shadow-color);
+    margin-bottom: 25px;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.card h2 {
+    margin-bottom: 20px;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+.data-table th,
+.data-table td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+.data-table th {
+    background-color: #f8f8f8;
+    font-weight: 600;
+    color: var(--text-color);
+    text-transform: uppercase;
+}
+.data-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+.data-table tr:hover {
+    background-color: #fafafa;
+}
+
+/* dashboard stat grid  */
+
+.dashboard-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+.stat-card {
+    background: #f8f8f8;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease-in-out;
+    border-left: 5px solid;
+}
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+.stat-card.green { border-color: #27ae60; }
+.stat-card.blue { border-color: #3498db; }
+.stat-card.orange { border-color: #f39c12; }
+.stat-card.red { border-color: #e74c3c; }
+.stat-card .icon {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+    color: var(--secondary-color);
+}
+.stat-card.green .icon { color: #27ae60; }
+.stat-card.blue .icon { color: #3498db; }
+.stat-card.orange .icon { color: #f39c12; }
+.stat-card.red .icon { color: #e74c3c; }
+.stat-card .value {
+    font-size: 2.2em;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 5px;
+}
+.stat-card .label {
+    font-size: 0.9em;
+    color: var(--light-text-color);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* ------------------------------------------------------------ */
+
+/* element grid */
+
+.element-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2.5rem;
+    text-align: center;
+}
+
+.element-item {
+    background: #fff;
+    border-radius: 16px;
+    padding: 5px 5px 20px 5px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease;
+    cursor: pointer;
+}
+
+.element-item:hover {
+    transform: translateY(-5px);
+}
+
+.element-item img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    max-width: 100%;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.element-item h3 {
+    margin-bottom: 5px;
+    font-size: 1.2em;
+}
+
+.element-item p {
+    font-size: 0.9em;
+    color: #777;
+}
+
+.image-preview {
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.image-preview img {
+    max-width: 150px;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+
+/* =========================================================================== */
+
+/* Tabel Jadwal */
+.table-container-schedule {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.schedule-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.schedule-table thead {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.schedule-table th,
+.schedule-table td {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.schedule-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.schedule-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.schedule-table tbody tr:hover {
+    background-color: #f2f2f2;
+    transition: background-color 0.2s ease;
+}
+
+.schedule-table th:first-child,
+.schedule-table td:first-child {
+    padding-left: 20px;
+}
+
+.schedule-table th:last-child,
+.schedule-table td:last-child {
+    padding-right: 20px;
+}
+
+.schedule-table img {
+    width: 100%;
+    max-width: 100px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px var(--shadow-color);
+}
+
+/*============================================================================ */
+
+/* Tabel Absensi */
+.table-container-absensi {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.absensi-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+.absensi-table thead {
+    background-color: var(--secondary-color);
+    color: white;
+}
+.absensi-table th,
+.absensi-table td {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+.absensi-table tbody tr:last-child td {
+    border-bottom: none;
+}
+.absensi-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+.absensi-table tbody tr:hover {
+    background-color: #f2f2f2;
+    transition: background-color 0.2s ease;
+}
+/* /====================================================/ */
+
+
+/* Action Links and Buttons */
+.action-link {
+    padding: 8px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background-color 0.2s, color 0.2s;
+    display: inline-block;
+    margin-right: 5px;
+}
+.action-link.edit {
+    background-color: #3498db;
+    color: white;
+}
+.action-link.edit:hover {
+    background-color: #2980b9;
+}
+.action-link.delete {
+    background-color: #e74c3c;
+    color: white;
+    margin-top: 10px;
+}
+.action-link.delete:hover {
+    background-color: #c0392b;
+}
+
+.action-link.view {
+    background-color: #f39c12;
+    color: white;
+}
+
+.action-link.view:hover {
+    background-color: #e67e22;
+}
+
+.action-link.rekap {
+    background-color: #2ecc71;
+    color: white;
+}
+.action-link.rekap:hover {
+    background-color: #27ae60;
+}
+
+.action-mapel {
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.action-mapel a {
+    padding: 8px 12px;
+    border-radius: 5px;
+    text-decoration: none;
+    color: white;
+    font-size: 0.9em;
+    transition: background-color 0.3s;
+}
+
+.action-mapel .action-edit {
+    background-color: #3498db;
+}
+
+.action-mapel .action-edit:hover {
+    background-color: #2980b9;
+}
+
+.action-mapel .action-delete {
+    background-color: #e74c3c;
+}
+
+.action-mapel .action-delete:hover {
+    background-color: #c0392b;
+}
+
+.back-link {
+    display: inline-block;
+    margin-top: 20px;
+    text-decoration: none;
+    color: var(--light-text-color);
+    font-weight: 600;
+}
+
+.back-link:hover {
+    color: var(--primary-color);
+}
+
+.add-link,
+.promote-link { /* 'promote-link' included from adminpagesiswa.css */
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 25px;
+    padding: 10px 20px;
+    background-color: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: background-color 0.3s, transform 0.2s;
+    margin-right: 15px;
+}
+.add-link:hover,
+.promote-link:hover {
+    background-color: #16a085;
+    transform: translateY(-2px);
+}
+
+/* Alerts (Combined and standardizing from both) */
+.alert {
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    display: flex; /* Adopted flex from adminpageguru.css */
+    align-items: center;
+    gap: 12px;
+}
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+.alert-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6fb; /* Adjusted to use f5c6fb from adminpagesiswa.css */
+}
+
+/* Filter Section (From adminpagesiswa.css) */
+.filter-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 25px;
+    background: var(--background-color);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    align-items: flex-end;
+}
+.filter-section .filter-group {
+    margin-bottom: 0;
+    flex: 1;
+    min-width: 150px;
+}
+.filter-section .filter-group label {
+    font-size: 0.9em;
+    margin-bottom: 5px;
+    color: var(--light-text-color);
+    display: block;
+}
+.filter-section .filter-group select,
+.filter-section .filter-group input,
+.filter-section .filter-group button {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--card-background);
+    color: var(--text-color);
+    font-size: 0.95em;
+}
+.filter-section .filter-group button {
+    background-color: var(--primary-color);
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    height: 42px;
+}
+.filter-section .filter-group button:hover {
+    background-color: #16a085;
+}
+
+/* ========================================================================= */
+/* DataTables Specific Styles (From adminpagesiswa.css - Best Practice for DataTables) */
+/* ========================================================================= */
+
+/* Container untuk DataTables */
+.dataTables_wrapper {
+    padding: 15px !important;
+    background-color: var(--card-background) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 20px var(--shadow-color) !important;
+    margin-bottom: 25px !important;
+    position: relative !important;
+}
+
+/* Mengatur tata letak kontrol di bagian atas tabel dengan Flexbox */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin: 10px 0 !important;
+}
+
+.dataTables_wrapper .dataTables_filter {
+    margin-left: auto !important;
+    /* Memindahkan kotak pencarian ke kanan */
+}
+
+/* Menyesuaikan kotak pencarian */
+.dataTables_wrapper .dataTables_filter input[type="search"] {
+    width: 250px !important;
+    padding: 10px 15px !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 8px !important;
+    background-color: var(--card-background) !important;
+    color: var(--text-color) !important;
+    font-size: 16px !important;
+    transition: box-shadow 0.3s, border-color 0.3s !important;
+}
+
+.dataTables_wrapper .dataTables_filter input[type="search"]:focus {
+    border-color: var(--primary-color) !important;
+    outline: none !important;
+    box-shadow: 0 0 5px rgba(26, 188, 156, 0.5) !important;
+}
+
+/* Mengatur label "Search:" */
+.dataTables_wrapper .dataTables_filter label {
+    font-weight: 600 !important;
+    color: var(--text-color) !important;
+    margin-right: 0 !important;
+}
+
+/* Menyesuaikan tombol pagination */
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 8px 12px !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 6px !important;
+    background-color: #f8f8f8 !important;
+    color: var(--text-color) !important;
+    margin: 0 5px !important;
+    cursor: pointer !important;
+    transition: background-color 0.3s, color 0.3s !important;
+    text-decoration: none !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+    border-color: var(--primary-color) !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+    cursor: default !important;
+    background-color: #eee !important;
+    color: #999 !important;
+    border-color: #ddd !important;
+}
+
+/* 1. Atur Tata Letak Kontrol Atas (Penting agar dt-search di bawah dt-length) */
+/* Wrapper yang membungkus dt-length dan dt-search (Asumsi: div:nth-child(2)) */
+
+/* Manual Datatables elements (dt- classes are for manual or older DataTables versions) */
+.dt-search {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    padding: 0 0 0 15px;
+    border: 1px solid var(--border-color);
+    background-color: var(--background-color);
+    border-radius: 5px;
+    font-size: 1rem;
+    width: 100%;
+    height: 50px;
+    align-items: center;
+}
+
+.dt-search .dt-input {
+    border-radius: 5px;
+    padding: 5px 15px 5px 5px;
+    border: 2px solid var(--border-color);
+    margin-left: 15px;
+    background-color: white;
+}
+
+.dt-length {
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+    /* Kita tidak perlu memberi border tebal seperti dt-search, cukup inputnya saja */
+}
+
+/* 3. Styling Dropdown Select (Entries) */
+.dt-length select {
+    /* Samakan tinggi dengan dt-search agar visualnya seimbang */
+    height: 40px !important; 
+    
+    padding: 10px 15px !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 8px !important;
+    background-color: var(--card-background) !important; /* Latar putih seperti form input lainnya */
+    font-size: 16px !important;
+    color: var(--text-color) !important;
+}
+
+/* 4. Styling Label Teks "Show [X] entries" */
+.dt-length label {
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    font-weight: 500 !important;
+    color: var(--text-color) !important;
+}
+
+.dt-paging {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+}
+.dt-paging button {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: #f8f8f8;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* ========================================================================= */
+/* Modal and Form Styles */
+/* ========================================================================= */
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1001;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4); /* Adopted lighter overlay from adminpagesiswa.css */
+    justify-content: center; /* Added for vertical/horizontal centering */
+    align-items: center; /* Added for vertical/horizontal centering */
+    padding-top: 50px; /* Reduced padding from adminpagesiswa.css (was 60px in guru) */
+    padding-bottom: 50px; /* Added padding-bottom for better centering */
+    scrollbar-width: none;  /* Firefox */
+}
+
+s.modal::-webkit-scrollbar {
+  /* Ini adalah cara utama untuk menghilangkan visual scrollbar */
+  display: none; /* Beberapa orang juga menambahkan ini sebagai cadangan */
+}
+
+/* Adjusted for standard content from adminpagesiswa.css */
+.modal-content {
+    background-color: var(--card-background);
+    margin: auto;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 500px; /* Adopted max-width from adminpagesiswa.css for generally smaller modals */
+    position: relative;
+    animation-name: animatetop;
+    animation-duration: 0.4s;
+    /* Removed border: 1px solid #888; from adminpageguru.css */
+}
+
+@keyframes animatetop {
+    from { top: -300px; opacity: 0 }
+    to { top: 0; opacity: 1 }
+}
+
+/* Close button from adminpagesiswa.css (simpler) */
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+.close-button:hover,
+.close-button:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+
+
+/* If a modal-header is used (from adminpageguru.css) */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+.modal-header h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+}
+.modal-content h2 { /* Standard h2 style for modals (from adminpagesiswa.css) */
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: var(--text-color);
+}
+
+/* modal confirmation delete button */
+.modal-confirm-delete {
+    display: none;
+    position: fixed;
+    z-index: 1002; /* Lebih tinggi dari modal formulir */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.6);
+    padding-top: 20%;
+}
+.modal-confirm-delete-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+.modal-confirm-delete-content h3 {
+    margin-bottom: 20px;
+    font-size: 20px;
+}
+.modal-confirm-delete-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+.modal-confirm-delete-buttons button {
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-confirm-delete {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    transition: background-color 0.3s;
+}
+.btn-confirm-delete:hover {
+    background-color: #c0392b;
+}
+.btn-cancel-delete {
+    background-color: #ccc;
+    color: #333;
+    border: 1px solid #999;
+    transition: background-color 0.3s;
+}
+.btn-cancel-delete:hover {
+    background-color: #bbb;
+}
+
+.status-active {
+    color: #27ae60; /* Green */
+    font-weight: 600;
+}
+.status-inactive {
+    color: #e67e22; /* Orange */
+    font-weight: 600;
+}
+/* /===============================/ */
+
+/* //style for modal rekap-absensi  */
+/* student list and ketereangan */
+.student-item {
+
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Layout menjadi 2 kolom */
+    align-items: center;
+    gap: 15px;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+.student-item:last-child {
+    border-bottom: none;
+}
+.student-item select {
+padding: 10px;
+    width: 100%;
+}
+.student-item .keterangan-container {
+    grid-column: 1 / -1; /* Ini membuat div keterangan mengambil seluruh lebar */
+}
+
+.student-item textarea {
+    min-height: 75px;
+    max-height: 150px;
+    width: 100%;
+    border-radius: 5px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    font-family: inherit;
+    resize: vertical;
+}
+
+/* =========================================================================== */
+
+/* Form Groups (Unified styles) */
+.form-group {
+    margin-bottom: 15px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="date"],
+.form-group input[type="tel"],
+.form-group textarea,
+.form-group input[type="file"],
+.form-group input[type="password"],
+.form-group input[type="time"],
+.form-group select {
+    width: 100%;
+    padding: 10px; /* Adopted 10px padding from adminpagesiswa.css */
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 16px; /* Adopted 16px font-size from adminpagesiswa.css */
+    background-color: var(--background-color); /* Adopted background-color from adminpagesiswa.css */
+    color: var(--text-color);
+    font-family: 'Poppins', sans-serif; /* Added from adminpageguru.css */
+    transition: border-color 0.2s;
+}
+
+/* Specific focus style (Adopted from adminpageguru.css's cleaner focus state) */
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.form-group textarea {
+    min-height: 150px;
+    max-height: 500px;
+    resize: vertical;
+}
+.form-group input[type="checkbox"] {
+    margin-right: 10px;
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
+}
+
+.form-group .checkbox-label {
+    display: inline-block;
+    vertical-align: middle;
+    font-weight: normal; /* Override bold from main label */
+}
+
+.form-group input[type="file"] {
+    padding: 8px 10px;
+}
+
+/* Photo preview (from adminpagesiswa.css) */
+.form-group .photo-preview {
+    max-width: 100px;
+    height: auto;
+    display: block;
+    margin-top: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Radio button styling (from adminpagesiswa.css) */
+.form-group .radio-group {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+}
+.form-group .radio-group input[type="radio"] {
+    margin-right: 5px;
+    width: auto;
+}
+.form-group .radio-group label {
+    display: inline-block;
+    margin-bottom: 0;
+    font-weight: normal;
+}
+
+/* Photo Upload (from adminpageguru.css) */
+.photo-upload {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 10px;
+}
+.photo-upload img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border-color);
+}
+
+/* Profile Photo (for table rows, from adminpageguru.css) */
+.profile-photo {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Form Actions (Button containers - unified) */
+.form-actions, 
+.modal-footer { /* Combine both classes for consistency */
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.form-actions button,
+.modal-footer .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.3s, transform 0.2s;
+    font-size: 16px; /* Standardized to 16px (siswa), guru was 14px for .btn */
+    border: none; /* Ensure no border */
+}
+
+.form-actions .btn-primary,
+.modal-footer .btn-submit {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.form-actions .btn-primary:hover,
+.modal-footer .btn-submit:hover {
+    background-color: #16a085;
+    transform: translateY(-2px); /* Adopted from adminpagesiswa.css */
+}
+
+.form-actions .btn-secondary,
+.modal-footer .btn-cancel {
+    background-color: #ccc; /* Adopted #ccc from adminpagesiswa.css */
+    color: var(--text-color); /* Adopted var(--text-color) from adminpagesiswa.css */
+    /* guru's .btn-cancel was #bdc3c7 and white text, this is a visual compromise */
+}
+
+.form-actions .btn-secondary:hover,
+.modal-footer .btn-cancel:hover {
+    background-color: #bbb; /* Adopted #bbb from adminpagesiswa.css */
+    transform: translateY(-2px); /* Adopted from adminpagesiswa.css */
+}
+
+
+/* ========================================================================= */
+/* Responsive Adjustments (Unified) */
+/* ========================================================================= */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+
+    .sidebar.collapsed {
+        transform: translateX(0);
+        width: var(--sidebar-collapsed-width);
+    }
+
+    .content,
+    .header {
+        margin-left: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        padding-left: 20px !important;
+    }
+
+    .header .user-info {
+        display: none;
+    }
+
+    .sidebar.collapsed+.header,
+    .sidebar.collapsed~.content {
+        margin-left: var(--sidebar-collapsed-width) !important;
+        left: var(--sidebar-collapsed-width) !important;
+        width: calc(100% - var(--sidebar-collapsed-width)) !important;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 10px;
+        font-size: 0.85em;
+    }
+
+    .modal-content {
+        width: 95%;
+        padding: 20px;
+    }
+}
