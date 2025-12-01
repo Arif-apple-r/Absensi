@@ -189,588 +189,55 @@ if (isset($_GET['success'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manajemen Kelas | Admin</title>
+    <link rel="stylesheet" href="../../assets/adminpage.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        :root {
-            --primary-color: #1abc9c;
-            --secondary-color: #34495e;
-            --background-color: #f0f2f5;
-            --card-background: #ffffff;
-            --text-color: #2c3e50;
-            --light-text-color: #7f8c8d;
-            --border-color: #e0e0e0;
-            --shadow-color: rgba(0, 0, 0, 0.08);
-            --sidebar-width: 250px;
-            --sidebar-collapsed-width: 70px;
-        }
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: var(--background-color);
-            display: flex;
-            min-height: 100vh;
-            color: var(--text-color);
-            overflow-x: hidden;
-        }
-        .sidebar {
-            width: var(--sidebar-width);
-            background-color: var(--secondary-color);
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            transition: width 0.3s ease;
-            z-index: 1000;
-            padding-top: 70px;
-            overflow: hidden;
-        }
-        .sidebar.collapsed {
-            width: var(--sidebar-collapsed-width);
-        }
-        .sidebar .logo {
-            color: #fff;
-            font-size: 24px;
-            font-weight: 700;
-            text-align: center;
-            padding: 15px 0;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background: var(--primary-color);
-        }
-
-        .logo span {
-            transition: font-size 0.3s ease;
-        }
-
-        .sidebar.collapsed .logo span {
-            font-size: 0.5em;
-            transition: font-size 0.3s ease;
-        }
-
-        .sidebar nav a {
-            display: flex;
-            align-items: center;
-            padding: 15px 20px;
-            color: #fff;
-            text-decoration: none;
-            transition: background-color 0.2s ease, padding-left 0.2s ease;
-        }
-        .sidebar nav a i {
-            width: 25px;
-            text-align: center;
-            margin-right: 20px;
-            font-size: 18px;
-        }
-        .sidebar.collapsed nav a i {
-            margin-right: 0;
-        }
-        .sidebar.collapsed nav a span {
-            display: none;
-        }
-        .sidebar nav a:hover,
-        .sidebar nav a.active {
-            background-color: #3e566d;
-            padding-left: 25px;
-        }
-        .sidebar nav a.active i {
-            color: var(--primary-color);
-        }
-        .header {
-            height: 65.5px;
-            background-color: var(--card-background);
-            box-shadow: 0 2px 10px var(--shadow-color);
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            position: fixed;
-            top: 0;
-            left: var(--sidebar-width);
-            width: calc(100% - var(--sidebar-width));
-            z-index: 999;
-            transition: left 0.3s ease, width 0.3s ease;
-            justify-content: space-between;
-        }
-        .header.shifted {
-            left: var(--sidebar-collapsed-width);
-            width: calc(100% - var(--sidebar-collapsed-width));
-        }
-        .header h1 {
-            font-size: 22px;
-            font-weight: 600;
-            margin: 0;
-            display: flex;
-            align-items: center;
-        }
-        .header h1 i {
-            margin-right: 10px;
-        }
-
-        /* User Info Dropdown Styling */
-        .user-info {
-            position: relative;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            color: var(--text-color);
-            cursor: pointer;
-            padding: 5px 10px;
-            border-radius: 8px;
-            transition: background-color 0.2s ease;
-        }
-        .user-info:hover {
-            background-color: #f0f0f0;
-        }
-        .user-info img {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--primary-color);
-        }
-        .user-info span {
-            font-weight: 600;
-        }
-        .user-info i.fa-caret-down {
-            margin-left: 5px;
-        }
-        .dropdown-menu {
-            display: none;
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background-color: var(--card-background);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-            z-index: 1002;
-            min-width: 160px;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-        .dropdown-menu a {
-            color: var(--text-color);
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-            font-weight: 500;
-            transition: background-color 0.2s ease;
-        }
-        .dropdown-menu a:hover {
-            background-color: var(--background-color);
-        }
-        .dropdown-menu a i {
-            margin-right: 10px;
-            width: 20px;
-        }
-
-        .content {
-            flex-grow: 1;
-            padding: 90px 30px 30px 30px;
-            margin-left: var(--sidebar-width);
-            transition: margin-left 0.3s ease;
-            max-width: 100%;
-        }
-        .content.shifted {
-            margin-left: var(--sidebar-collapsed-width);
-        }
-        .toggle-btn {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            margin-right: 20px;
-            transition: background-color 0.3s;
-        }
-        .toggle-btn:hover {
-            background-color: #16a085;
-        }
-        .card {
-            background: var(--card-background);
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 4px 20px var(--shadow-color);
-            margin-bottom: 25px;
-            max-width: 1200px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .card h2 {
-            margin-bottom: 20px;
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--text-color);
-        }
-        .table-responsive {
-            width: 100%;
-            overflow-x: auto;
-        }
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        .data-table th,
-        .data-table td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .data-table th {
-            background-color: #f8f8f8;
-            font-weight: 600;
-            color: var(--text-color);
-            text-transform: uppercase;
-        }
-        .data-table tbody tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        .data-table tr:hover {
-            background-color: #fafafa;
-        }
-        .action-link {
-            padding: 12px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: background-color 0.2s, color 0.2s;
-            display: inline-flex; /* Agar bisa diatur margin */
-        }
-        .action-link.edit {
-            background-color: #3498db; /* Blue for Edit */
-            color: white;
-        }
-        .action-link.edit:hover {
-            background-color: #2980b9;
-        }
-        .action-link.delete {
-            background-color: #e74c3c;
-            color: white;
-            margin-top: 10px;
-        }
-        .action-link.delete:hover {
-            background-color: #c0392b;
-        }
-        .add-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 25px;
-            padding: 10px 20px;
-            background-color: var(--primary-color);
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: background-color 0.3s, transform 0.2s;
-        }
-        .add-link:hover {
-            background-color: #16a085;
-            transform: translateY(-2px);
-        }
-        /* Alerts */
-        .alert {
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            font-weight: 600;
-        }
-        .alert-success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .alert-error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6fb;
-        }
-
-        /* Modal Styles */
-        .modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 1001; /* Sit on top */
-            left: 0;
-            top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            overflow: auto; /* Enable scroll if needed */
-            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-            justify-content: center;
-            align-items: center;
-            padding-top: 50px; /* Jarak dari atas */
-        }
-
-        .modal-content {
-            background-color: var(--card-background);
-            margin: auto;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            width: 90%;
-            max-width: 500px;
-            position: relative;
-            animation-name: animatetop;
-            animation-duration: 0.4s;
-        }
-
-        @keyframes animatetop {
-            from {top: -300px; opacity: 0}
-            to {top: 0; opacity: 1}
-        }
-
-        .close-button {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-
-        .close-button:hover,
-        .close-button:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .modal-content h2 {
-            font-size: 24px;
-            margin-bottom: 20px;
-            color: var(--text-color);
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: var(--text-color);
-        }
-
-        .form-group input[type="text"],
-        .form-group textarea,
-        .form-group input[type="file"],
-        .form-group select { /* Tambahkan select di sini */
-            width: calc(100% - 20px);
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 16px;
-            background-color: var(--background-color);
-            color: var(--text-color);
-        }
-        .form-group input[type="file"] {
-            padding: 8px 10px; /* Sedikit beda padding untuk input file */
-        }
-        .form-group .photo-preview {
-            max-width: 100px;
-            height: auto;
-            display: block;
-            margin-top: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .form-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .form-actions button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background-color 0.3s, transform 0.2s;
-        }
-
-        .form-actions .btn-primary {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
-        .form-actions .btn-primary:hover {
-            background-color: #16a085;
-            transform: translateY(-2px);
-        }
-
-        .form-actions .btn-secondary {
-            background-color: #ccc;
-            color: var(--text-color);
-        }
-
-        .form-actions .btn-secondary:hover {
-            background-color: #bbb;
-            transform: translateY(-2px);
-        }
-
-        /* Filter Section */
-        .filter-section {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 25px;
-            background: var(--background-color);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            align-items: flex-end; /* Align items to the bottom */
-        }
-        .filter-section .filter-group {
-            margin-bottom: 0; /* Override default margin */
-            flex: 1; /* Allow groups to take equal space */
-            min-width: 150px; /* Minimum width for filter dropdowns */
-        }
-        .filter-section .filter-group label {
-            font-size: 0.9em;
-            margin-bottom: 5px;
-            color: var(--light-text-color);
-            display: block; /* Ensure label takes full width */
-        }
-        .filter-section .filter-group select,
-        .filter-section .filter-group button {
-            width: 100%; 
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            background-color: var(--card-background);
-            color: var(--text-color);
-            font-size: 0.95em;
-        }
-        .filter-section .filter-group button {
-            background-color: var(--primary-color);
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            height: 42px;
-        }
-        .filter-section .filter-group button:hover {
-            background-color: #16a085;
-        }
-        /* --- Penambahan CSS untuk Tombol Logout --- */
-        .sidebar .logout-button-container {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            width: 100%;
-            padding: 0 20px;
-        }
-
-        .sidebar .logout-button-container a {
-            background-color: #e74c3c;
-            /* Warna merah untuk Logout */
-            color: white;
-            font-weight: 600;
-            text-align: center;
-            border-radius: 8px;
-            display: block;
-            padding: 12px 20px;
-            text-decoration: none;
-            transition: background-color 0.3s;
-        }
-
-        .sidebar .logout-button-container a:hover {
-            background-color: #c0392b;
-        }
-
-        .sidebar.collapsed .logout-button-container {
-            padding: 0;
-        }
-
-        .sidebar.collapsed .logout-button-container a span {
-            display: none;
-        }
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            .sidebar.collapsed {
-                transform: translateX(0);
-                width: var(--sidebar-collapsed-width);
-            }
-            .content, .header {
-                margin-left: 0 !important;
-                left: 0 !important;
-                width: 100% !important;
-                padding-left: 20px !important;
-            }
-            .header .user-info {
-                display: none;
-            }
-            .sidebar.collapsed + .header, .sidebar.collapsed ~ .content {
-                margin-left: var(--sidebar-collapsed-width) !important;
-                left: var(--sidebar-collapsed-width) !important;
-                width: calc(100% - var(--sidebar-collapsed-width)) !important;
-            }
-            .data-table th, .data-table td {
-                padding: 10px;
-                font-size: 0.85em;
-            }
-            .modal-content {
-                width: 95%;
-                padding: 20px;
-            }
-        }
-    </style>
 </head>
 <body>
     <div class="sidebar" id="sidebar">
-        <div class="logo"><span>AdminCoy</span></div>
+        <div class="logo">
+            <img src="../../uploads/icon/logo.png" alt="Logo AdminCoy" class="logo-icon">
+            <span class="logo-text">AdminCoy</span>
+        </div>
         <nav>
             <a href="../dashboard_admin.php">
-                <i class="fas fa-tachometer-alt"></i>
+                <div class="hovertext" data-hover="Dashboard"><i class="fas fa-tachometer-alt"></i></div>
                 <span>Dashboard</span>
             </a>
             <a href="../guru/index.php">
-                <i class="fas fa-chalkboard-teacher"></i>
+                <div class="hovertext" data-hover="Guru"><i class="fas fa-chalkboard-teacher"></i></div>
                 <span>Guru</span>
             </a>
             <a href="../siswa/index.php">
-                <i class="fas fa-user-graduate"></i>
+                <div class="hovertext" data-hover="Siswa"><i class="fas fa-user-graduate"></i></div>
                 <span>Siswa</span>
             </a>
             <a href="../jadwal/index.php">
-                <i class="fas fa-calendar-alt"></i>
+                <div class="hovertext" data-hover="Jadwal"><i class="fas fa-calendar-alt"></i></div>
                 <span>Jadwal</span>
             </a>
             <a href="../Tahun_Akademik/index.php">
-                <i class="fas fa-calendar"></i>
+                <div class="hovertext" data-hover="Tahun Akademik"><i class="fas fa-calendar"></i></div>
                 <span>Tahun Akademik</span>
             </a>
-            <a href="index.php">
-                <i class="fas fa-school"></i>
+            <a href="#" class="active">
+                <div class="hovertext" data-hover="Kelas"><i class="fas fa-school"></i></div>
                 <span>Kelas</span>
             </a>
             <a href="../mapel/index.php">
-                <i class="fas fa-book"></i>
+                <div class="hovertext" data-hover="Mata Pelajaran"><i class="fas fa-book"></i></div>
                 <span>Mata Pelajaran</span>
             </a>
-            <div class="logout-button-container">
-                <a onclick="showLogoutConfirm(); return false;" id="logoutButton"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
-            </div>
         </nav>
+        <div class="logout-button-container hovertext" data-hover="Logout">
+            <a onclick="showLogoutConfirmation()" id="logoutButtonSidebar">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </a>
+        </div>
     </div>
 
 
@@ -783,7 +250,7 @@ if (isset($_GET['success'])) {
             <span><?= $admin_name ?></span>
             <div class="dropdown-menu" id="userDropdownContent">
                 <!-- <a href="profil_admin.php"><i class="fas fa-user-circle"></i> Profil</a> -->
-                <a href="#" id="logoutDropdownLink" onclick="showLogoutConfirm(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a onclick="showLogoutConfirm(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
         </div>
     </div>
@@ -1042,10 +509,42 @@ if (isset($_GET['success'])) {
         const header = document.getElementById("header");
 
         function toggleSidebar() {
-            sidebar.classList.toggle("collapsed");
+            const isCollapsed = sidebar.classList.toggle("collapsed");
             mainContent.classList.toggle("shifted");
             header.classList.toggle("shifted");
+
+            // --- PERBAIKAN: Simpan status sidebar di Local Storage ---
+            if (isCollapsed) {
+                localStorage.setItem('sidebarState', 'collapsed');
+                localStorage.setItem('mainContentState', 'shifted');
+                localStorage.setItem('headerState', 'shifted');
+            } else {
+                localStorage.setItem('sidebarState', 'expanded');
+                localStorage.setItem('mainContentState', 'expanded');
+                localStorage.setItem('headerState', 'expanded');
+            }
         }
+
+        // --- penerapan sidebarnya iki state dari Local Storage ---
+        const savedState = localStorage.getItem('sidebarState');
+        if (savedState === 'collapsed') {
+            // Pastikan variabel elemen DOM sudah terdefinisi/dapat diakses
+            if (sidebar && mainContent && header) {
+                sidebar.classList.add("no-transition");
+                sidebar.classList.add("collapsed");
+                mainContent.classList.add("no-transition");
+                mainContent.classList.add("shifted");
+                header.classList.add("no-transition");
+                header.classList.add("shifted");
+            }
+
+            setTimeout(() => {
+                sidebar.classList.remove("no-transition");
+                mainContent.classList.remove("no-transition");
+                header.classList.remove("no-transition");
+            }, 50); // 50ms sudah cukup singkat dan aman
+
+        }        
 
         // Logika Dropdown User Info
         const userInfoDropdown = document.getElementById("userInfoDropdown");
