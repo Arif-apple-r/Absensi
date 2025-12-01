@@ -44,9 +44,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     try { 
         $nip_baru       = $_POST['NIPguru'] ?? null; 
+        // [HARMONI] Menggunakan NIP_lama_for_update seperti siswapage.php menggunakan NIS_lama_for_update
         $nip_lama_for_update = $_POST['NIP_lama_for_update'] ?? null; 
         $name     = $_POST['namaguru'] ?? '';
         $email    = $_POST['emailguru'] ?? '';
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new Exception("Format email tidak valid.");
+        }
         $gender   = $_POST['genderguru'] ?? ''; 
         $dob_raw  = $_POST['dobguru'] ?? '';
         $alamat   = $_POST['alamatguru'] ?? '';
@@ -73,6 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             mkdir($folder_upload, 0777, true);
         }
 
+        // Asumsi: Field upload file di form bernama 'photoguru' (seperti 'photosiswa')
         if (isset($_FILES['photoguru']) && $_FILES['photoguru']['error'] === UPLOAD_ERR_OK) {
             $foto_tmp = $_FILES['photoguru']['tmp_name'];
             $foto_name = $_FILES['photoguru']['name'];
@@ -85,13 +90,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             } else {
                 throw new Exception("Gagal mengunggah foto guru. Coba lagi atau pastikan folder 'uploads/guru/' dapat ditulis.");
             }
-        } else if (isset($_POST['old_photoguru']) && !empty($_POST['old_photoguru'])) {
+        // Asumsi: Field hidden old photo di form bernama 'old_photoguru' (seperti 'old_photosiswa')
+        } else if (isset($_POST['old_photoguru']) && !empty($_POST['old_photoguru'])) { 
             $foto_path_db = $_POST['old_photoguru'];
         }
 
         if ($upload_succeeded) {
             if ($_POST['action'] === 'tambah') {
-                if ($nip_baru && $name && $email && $password && $dob && $no_hp && $alamat) { 
+                if ($nip_baru && $name && $email && $password && $dob && $alamat) { 
                 try {
                     // Cek apakah NIP sudah terdaftar
                     $stmt_check_nip = $pdo->prepare("SELECT COUNT(*) FROM guru WHERE nip = ?");
@@ -120,9 +126,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         $response_message = "Gagal menambahkan guru (DB Error): " . $e->getMessage();
                     }
                 } else {
+                    // [HARMONI] Menambahkan validasi semua field wajib diisi (gender dan no_hp/alamat mungkin opsional tergantung desain DB)
                     $response_message = "Mohon lengkapi semua field yang diperlukan (NIP, Nama, Email, Gender, Tanggal Lahir, Password) untuk menambah guru.";
                 }
             } elseif ($_POST['action'] === 'edit') {
+                // [HARMONI] Memastikan field wajib ada saat edit
                 if ($nip_lama_for_update && $nip_baru && $name && $email && $gender && $dob) { 
                     try {
                         if ($nip_baru !== $nip_lama_for_update) {
@@ -166,8 +174,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         error_log("Fatal error in guru AJAX POST: " . $e->getMessage() . " on line " . $e->getLine() . " in file " . $e->getFile() . "\n" . $e->getTraceAsString());
     }
     
+    // [PERUBAHAN UTAMA] Menyamakan respons sukses dengan siswapage.php (tanpa pesan/kolon)
     if ($response_status === 'success') {
-        echo "success:" . $response_message;
+        echo "success"; 
     } else {
         echo "error: " . $response_message;
     }
@@ -198,24 +207,38 @@ if (isset($_GET['action']) && $_GET['action'] === 'hapus_guru' && isset($_GET['N
         $message = "Guru berhasil dihapus!";
         $alert_type = 'alert-success';
         
+        // Redirect menggunakan 'success' key untuk konsistensi pesan notifikasi
         header("Location: index.php?success=" . urlencode($message) . "&tahun_akademik_id=" . $current_tahun_akademik_id);
         exit;
     } catch (PDOException $e) {
         $message = "Gagal menghapus guru: " . $e->getMessage();
         $alert_type = 'alert-error';
+        // Redirect menggunakan 'error' key
         header("Location: index.php?error=" . urlencode($message) . "&tahun_akademik_id=" . $current_tahun_akademik_id);
         exit;
     }
 }
 
 
-// --- Ambil daftar Guru untuk ditampilkan ---
-$query_guru = "SELECT * FROM guru ORDER BY name ASC";
+// --- Ambil daftar Guru untuk ditampilkan + filter nama sih ---
+$search = $_GET['search'] ?? '';
+$params = [];
+
+if (!empty($search)) {
+    $search_keyword_start = $search . "%";
+    $query_guru = "SELECT * FROM guru 
+                   WHERE nip LIKE ? 
+                      OR name LIKE ?
+                   ORDER BY name ASC";
+    $params = [$search_keyword_start, $search_keyword_start];
+} else {
+    $query_guru = "SELECT * FROM guru ORDER BY name ASC";
+}
 
 $stmt_guru = $pdo->prepare($query_guru);
-$stmt_guru->execute();
-$guru_list = $stmt_guru->fetchAll(PDO::FETCH_ASSOC);
+$stmt_guru->execute($params);
 
+$guru_list = $stmt_guru->fetchAll(PDO::FETCH_ASSOC);
 
 // Ambil pesan dari URL jika ada
 if (isset($_GET['success'])) {
@@ -236,532 +259,46 @@ if (isset($_GET['success'])) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">    
+    <link rel="stylesheet" href="../../assets/adminpage.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <style>
-        :root {
-            --primary-color: #1abc9c;
-            --secondary-color: #34495e;
-            --background-color: #f0f2f5;
-            --card-background: #ffffff;
-            --text-color: #2c3e50;
-            --light-text-color: #7f8c8d;
-            --border-color: #e0e0e0;
-            --shadow-color: rgba(0, 0, 0, 0.08);
-            --sidebar-width: 250px;
-            --sidebar-collapsed-width: 70px;
-        }
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: var(--background-color);
-            display: flex;
-            min-height: 100vh;
-            color: var(--text-color);
-            overflow-x: hidden;
-        }
-        .sidebar {
-            width: var(--sidebar-width);
-            background-color: var(--secondary-color);
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            transition: width 0.3s ease;
-            z-index: 1000;
-            padding-top: 70px;
-            overflow: hidden;
-        }
-        .sidebar.collapsed {
-            width: var(--sidebar-collapsed-width);
-        }
-        .sidebar .logo {
-            color: #fff;
-            font-size: 24px;
-            font-weight: 700;
-            text-align: center;
-            padding: 15px 0;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background: var(--primary-color);
-        }
-        .logo span {
-            transition: font-size 0.3s ease;
-        }
 
-        .sidebar.collapsed .logo span {
-            font-size: 0.5em;
-            transition: font-size 0.3s ease;
-        }
-        .sidebar nav a {
-            display: flex;
-            align-items: center;
-            padding: 15px 20px;
-            color: #fff;
-            text-decoration: none;
-            transition: background-color 0.2s ease, padding-left 0.2s ease;
-        }
-        .sidebar nav a i {
-            width: 25px;
-            text-align: center;
-            margin-right: 20px;
-            font-size: 18px;
-        }
-        .sidebar.collapsed nav a i {
-            margin-right: 0;
-        }
-        .sidebar.collapsed nav a span {
-            display: none;
-        }
-        .sidebar nav a:hover,
-        .sidebar nav a.active {
-            background-color: #3e566d;
-            padding-left: 25px;
-        }
-        .sidebar nav a.active i {
-            color: var(--primary-color);
-        }
-        .header {
-            height: 65.5px;
-            background-color: var(--card-background);
-            box-shadow: 0 2px 10px var(--shadow-color);
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            position: fixed;
-            top: 0;
-            left: var(--sidebar-width);
-            width: calc(100% - var(--sidebar-width));
-            z-index: 999;
-            transition: left 0.3s ease, width 0.3s ease;
-            justify-content: space-between;
-        }
-        .header.shifted {
-            left: var(--sidebar-collapsed-width);
-            width: calc(100% - var(--sidebar-collapsed-width));
-        }
-        .header h1 {
-            font-size: 22px;
-            font-weight: 600;
-            margin: 0;
-            display: flex;
-            align-items: center;
-        }
-        .header h1 i {
-            margin-right: 10px;
-        }
-        /* User Info Dropdown Styling */
-        .user-info {
-            position: relative;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            color: var(--text-color);
-            cursor: pointer;
-            padding: 5px 10px;
-            border-radius: 8px;
-            transition: background-color 0.2s ease;
-        }
-        .user-info:hover {
-            background-color: #f0f0f0;
-        }
-        .user-info img {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--primary-color);
-        }
-        .user-info span {
-            font-weight: 600;
-        }
-        .user-info i.fa-caret-down {
-            margin-left: 5px;
-        }
-        .dropdown-menu {
-            display: none;
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background-color: var(--card-background);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-            z-index: 1002;
-            min-width: 160px;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-        .dropdown-menu a {
-            color: var(--text-color);
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-            font-weight: 500;
-            transition: background-color 0.2s ease;
-        }
-        .dropdown-menu a:hover {
-            background-color: var(--background-color);
-        }
-        .dropdown-menu a i {
-            margin-right: 10px;
-            width: 20px;
-        }
-        .content {
-            flex-grow: 1;
-            padding: 90px 30px 30px 30px;
-            margin-left: var(--sidebar-width);
-            transition: margin-left 0.3s ease;
-            max-width: 100%;
-        }
-        .content.shifted {
-            margin-left: var(--sidebar-collapsed-width);
-        }
-        .toggle-btn {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            margin-right: 20px;
-            transition: background-color 0.3s;
-        }
-        .toggle-btn:hover {
-            background-color: #16a085;
-        }
-        .card {
-            background: var(--card-background);
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 4px 20px var(--shadow-color);
-            margin-bottom: 25px;
-            max-width: 1200px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .card h2 {
-            margin-bottom: 20px;
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--text-color);
-        }
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        .data-table th, .data-table td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .data-table th {
-            background-color: #f8f8f8;
-            font-weight: 600;
-            color: var(--text-color);
-            text-transform: uppercase;
-        }
-        .data-table tbody tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        .data-table tr:hover {
-            background-color: #fafafa;
-        }
-        .action-link {
-            padding: 8px 12px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: background-color 0.2s, color 0.2s;
-            display: inline-block;
-            margin-right: 5px;
-        }
-
-        .action-link {
-            padding: 8px 12px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: background-color 0.2s, color 0.2s;
-            display: inline-block;
-            margin-right: 5px;
-            /* Added spacing */
-        }
-
-        .action-link.edit {
-            background-color: #3498db;
-            color: white;
-        }
-
-        .action-link.edit:hover {
-            background-color: #2980b9;
-        }
-
-        .action-link.delete {
-            background-color: #e74c3c;
-            color: white;
-            margin-top: 10px;
-        }
-
-        .action-link.delete:hover {
-            background-color: #c0392b;
-        }
-        .add-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 25px;
-            padding: 10px 20px;
-            background-color: var(--primary-color);
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: background-color 0.3s, transform 0.2s;
-            margin-right: 15px;
-        }
-        .add-link:hover {
-            background-color: #16a085;
-            transform: translateY(-2px);
-        }
-        /* Alerts */
-        .alert {
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .alert-success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .alert-error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        /* Modals */
-        .modal {
-            display: none; 
-            position: fixed; 
-            z-index: 1001; 
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.5);
-            padding-top: 60px;
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 5% auto;
-            padding: 30px;
-            border-radius: 12px;
-            border: 1px solid #888;
-            width: 90%;
-            max-width: 600px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            position: relative;
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-        .modal-header h3 {
-            margin: 0;
-            font-size: 22px;
-            font-weight: 600;
-        }
-        .close-btn {
-            color: var(--light-text-color);
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .close-btn:hover,
-        .close-btn:focus {
-            color: var(--text-color);
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: var(--text-color);
-        }
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: 'Poppins', sans-serif;
-            transition: border-color 0.2s;
-        }
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--primary-color);
-        }
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 20px;
-            gap: 10px;
-        }
-        .modal-footer .btn {
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 14px;
-            transition: background-color 0.2s, color 0.2s;
-            border: none;
-        }
-        .modal-footer .btn-cancel {
-            background-color: #bdc3c7;
-            color: white;
-        }
-        .modal-footer .btn-cancel:hover {
-            background-color: #95a5a6;
-        }
-        .modal-footer .btn-submit {
-            background-color: var(--primary-color);
-            color: white;
-        }
-        .modal-footer .btn-submit:hover {
-            background-color: #16a085;
-        }
-        .profile-photo {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-        .photo-upload {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 20px;
-            gap: 10px;
-        }
-        .photo-upload img {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--border-color);
-        }
-        .table-responsive {
-            overflow-x: auto;
-        }
-
-        /* Logout button at bottom of sidebar */
-        .sidebar .logout-button-container {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            width: 100%;
-            padding: 0 20px;
-        }
-
-        .sidebar .logout-button-container a {
-            background-color: #e74c3c;
-            color: white;
-            font-weight: 600;
-            text-align: center;
-            border-radius: 8px;
-            display: block;
-            padding: 12px 20px;
-            text-decoration: none;
-            transition: background-color 0.3s;
-        }
-
-        .sidebar .logout-button-container a:hover {
-            background-color: #c0392b;
-        }
-
-        .sidebar.collapsed .logout-button-container {
-            padding: 0;
-        }
-
-        .sidebar.collapsed .logout-button-container a span {
-            display: none;
-        }
-
-        
-    </style>
 </head>
 <body>
 
     <div class="sidebar" id="sidebar">
-        <div class="logo"><span>AdminCoy</span></div>
+        <div class="logo">
+            <img src="../../uploads/icon/logo.png" alt="Logo AdminCoy" class="logo-icon">
+            <span class="logo-text">AdminCoy</span>
+        </div>
         <nav>
             <a href="../dashboard_admin.php">
-                <i class="fas fa-tachometer-alt"></i>
-                <span>Dashboard</span>
-            </a>
-            <a href="index.php" class="active">
-                <i class="fas fa-chalkboard-teacher"></i>
-                <span>Guru</span>
-            </a>
+                <div class="hovertext" data-hover="dashboard"><i class="fas fa-tachometer-alt"></div></i><span>Dashboard</span></a>
+            <a href="#" class="active">
+                <div class="hovertext" data-hover="Guru"><i class="fas fa-chalkboard-teacher"></div></i><span>Guru</span></a>
             <a href="../siswa/index.php">
-                <i class="fas fa-user-graduate"></i>
-                <span>Siswa</span>
-            </a>
+                <div class="hovertext" data-hover="Siswa"><i class="fas fa-user-graduate"></div></i><span>Siswa</span></a>
             <a href="../jadwal/index.php">
-                <i class="fas fa-calendar-alt"></i>
-                <span>Jadwal</span>
-            </a>
-            <a href="../Tahun_Akademik/index.php">
-                <i class="fas fa-calendar"></i>
-                <span>Tahun Akademik</span>
-            </a>
+                <div class="hovertext" data-hover="Jadwal"><i class="fas fa-calendar-alt"></div></i><span>Jadwal</span></a>
+            <a href="../tahun_akademik/index.php">
+                <div class="hovertext" data-hover="Tahun Akademik"><i class="fas fa-calendar"></div></i><span>Tahun Akademik</span></a>
             <a href="../kelas/index.php">
-                <i class="fas fa-school"></i>
-                <span>Kelas</span>
-            </a>
+                <div class="hovertext" data-hover="Kelas"><i class="fas fa-school"></div></i><span>Kelas</span></a>
             <a href="../mapel/index.php">
-                <i class="fas fa-book"></i>
-                <span>Mata Pelajaran</span>
-            </a>
+                <div class="hovertext" data-hover="Mata Pelajaran"><i class="fas fa-book"></div></i><span>Mata Pelajaran</span></a>
         </nav>
-        <div class="logout-button-container">
-            <a onclick="showLogoutConfirmation()" id="logoutButtonSidebar">
+        <div class="logout-button-container hovertext" data-hover="Logout">
+            <a onclick="showLogoutConfirmation()">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>Logout</span>
             </a>
         </div>
     </div>
 
-    <div class="content" id="content">
+    <div class="content" id="mainContent">
         <div class="header" id="header">
-            <button class="toggle-btn" id="toggle-btn"><i class="fas fa-bars"></i></button>
+            <button class="toggle-btn" id="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
             <h1><i class="fas fa-chalkboard-teacher"></i> Manajemen Guru</h1>
             <div class="user-info" id="userInfo">
                 <span><?= htmlspecialchars($admin_name) ?></span>
@@ -780,8 +317,21 @@ if (isset($_GET['success'])) {
                 </div>
             <?php endif; ?>
 
+            <form id ="searchForm" method="GET" style="margin-bottom: 15px;">
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <label for="liveSearch">Pencarian:</label>
+                        <input id="liveSearch" type="text" name="search" placeholder="Cari NIP / Nama Guru..."
+                            value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
+                    </div>
+                    <div class="filter-group" style="flex-grow: 0;">
+                        <button type="submit" style="padding:8px;">Cari</button>
+                    </div>
+                </div>
+            </form>
+
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-                <button type="button" class="add-link" id="tambahGuruBtn"><i class="fas fa-plus-circle"></i> Tambah Guru</button>
+                <a href="#" class="add-link" id="tambahGuruBtn" onclick="openGuruModal('tambah'); return false;"><i class="fas fa-plus-circle"></i> Tambah Guru</a>
             </div>
 
            <div class="table-responsive">
@@ -797,7 +347,7 @@ if (isset($_GET['success'])) {
                             <th>Aksi</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="guruTableBody">
                         <?php if (empty($guru_list)): ?>
                             <tr>
                                 <td colspan="7" style="text-align: center;">Tidak ada data guru.</td>
@@ -812,20 +362,20 @@ if (isset($_GET['success'])) {
                                     <td><?= htmlspecialchars($guru['gender'] ?? '') ?></td>
                                     <td><?= htmlspecialchars($guru['no_hp'] ?? '') ?></td>
                                     <td>
-                                        <button class="action-link edit" 
-                                            data-nip="<?= urlencode($guru['nip'] ?? '') ?>"
-                                            data-name="<?= urlencode($guru['name'] ?? '') ?>" 
-                                            data-email="<?= urlencode($guru['email'] ?? '') ?>" 
-                                            data-gender="<?= urlencode($guru['gender'] ?? '') ?>"
-                                            data-dob="<?= urlencode($guru['dob'] ?? '') ?>" 
-                                            data-nohp="<?= urlencode($guru['no_hp'] ?? '') ?>"
-                                            data-alamat="<?= urlencode($guru['alamat'] ?? '') ?>"
-                                            data-photo="<?= urlencode($guru['photo'] ?? '') ?>">
+                                        <a href="#" class="action-link edit" 
+                                            data-nip="<?= htmlspecialchars($guru['nip'] ?? '') ?>"
+                                            data-name="<?= htmlspecialchars($guru['name'] ?? '') ?>" 
+                                            data-email="<?= htmlspecialchars($guru['email'] ?? '') ?>" 
+                                            data-gender="<?= htmlspecialchars($guru['gender'] ?? '') ?>"
+                                            data-dob="<?= htmlspecialchars($guru['dob'] ?? '') ?>" 
+                                            data-nohp="<?= htmlspecialchars($guru['no_hp'] ?? '') ?>"
+                                            data-alamat="<?= htmlspecialchars($guru['alamat'] ?? '') ?>"
+                                            data-photo="<?= htmlspecialchars($guru['photo'] ?? '') ?>">
                                             <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="action-link delete" data-nip="<?= urlencode($guru['nip'] ?? '') ?>">
+                                        </a>
+                                        <a href="#" class="action-link delete" data-nip="<?= htmlspecialchars($guru['nip'] ?? '') ?>">
                                             <i class="fas fa-trash-alt"></i>
-                                        </button>
+                                        </a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -864,8 +414,8 @@ if (isset($_GET['success'])) {
                     <label for="genderguru">Jenis Kelamin <span style="color: red;">*</span></label>
                     <select id="genderguru" name="genderguru">
                         <option value="">Pilih Jenis Kelamin</option>
-                        <option value="Laki-laki">laki-laki</option>
-                        <option value="Perempuan">Perempuan</option>
+                        <option value="laki-laki">laki-laki</option>
+                        <option value="perempuan">Perempuan</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -894,178 +444,128 @@ if (isset($_GET['success'])) {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-cancel" id="cancelBtn">Batal</button>
-                    <button type="submit" class="btn btn-submit">Simpan</button>
+                    <button type="submit" class="btn btn-submit" id="submitGuruBtn">Simpan</button>
                 </div>
             </form>
         </div>
     </div>
+    <script>
+         // Deklarasi Elemen DOM (Serasi dengan siswapage.js)
+        const sidebar = document.getElementById("sidebar");
+        const mainContent = document.getElementById("mainContent");
+        const header = document.getElementById("header");
+        const logoutButtonSidebar = document.getElementById('logoutButtonSidebar'); // Pastikan ini ada di HTML
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-<script>
-    $(document).ready(function() {
-        // Cache DOM elements
-        const $sidebar = $('#sidebar');
-        const $content = $('#content');
-        const $header = $('#header');
-        const $toggleBtn = $('#toggle-btn');
-        const $userInfo = $('#userInfo');
-        const $dropdownMenu = $('#dropdownMenu');
-        const $guruModal = $('#guruModal');
-        const $modalTitle = $('#modalTitle');
-        const $formAction = $('#formAction');
-        const $guruForm = $('#guruForm');
-        const $NIPguru = $('#NIPguru');
-        const $namaguru = $('#namaguru');
-        const $emailguru = $('#emailguru');
-        const $genderguru = $('#genderguru');
-        const $dobguru = $('#dobguru');
-        const $nohpguru = $('#nohpguru');
-        const $alamatguru = $('#alamatguru');
-        const $passwordguru = $('#passwordguru');
-        const $passwordReq = $('#password-req');
-        const $oldNip = $('#oldNip');
-        const $oldPhoto = $('#oldPhoto');
-        const $currentPhotoPreview = $('#currentPhotoPreview');
-        const $currentPhotoText = $('#currentPhotoText');
+        const guruModal = document.getElementById("guruModal");
+        const guruModalTitle = document.getElementById("modalTitle"); // Menggunakan ID yang sudah ada
+        const guruForm = document.getElementById("guruForm");
+        const guruActionInput = document.getElementById("formAction"); // Menggunakan ID yang sudah ada
+        const oldNipInput = document.getElementById("oldNip");
+        const oldPhotoInput = document.getElementById("oldPhoto");
 
-        // Sidebar and Header Toggling
-        $toggleBtn.on('click', function() {
-            $sidebar.toggleClass('collapsed');
-            $content.toggleClass('shifted');
-            $header.toggleClass('shifted');
-        });
+        const NIPguruInput = document.getElementById("NIPguru");
+        const namaguruInput = document.getElementById("namaguru");
+        const emailguruInput = document.getElementById("emailguru");
+        const passwordGroup = document.getElementById("passwordGroup"); // Tambahkan grup di HTML atau gunakan ID password
+        const passwordguruInput = document.getElementById("passwordguru");
+        const passwordReqText = document.getElementById("password-req");
 
-        // User Info Dropdown
-        $userInfo.on('click', function(e) {
-            e.stopPropagation(); 
-            $dropdownMenu.fadeToggle(200);
-        });
+        // Asumsi: Gender diubah dari Select menjadi Radio Button atau Select dengan value:
+        const genderguruInput = document.getElementById("genderguru"); // Asumsi: Select
+        const dobguruInput = document.getElementById("dobguru");
+        const nohpguruInput = document.getElementById("nohpguru");
+        const alamatguruTextarea = document.getElementById("alamatguru");
 
-        // Close dropdown when clicking outside
-        $(document).on('click', function() {
-            $dropdownMenu.fadeOut(200);
-        });
+        const currentPhotoPreview = document.getElementById("currentPhotoPreview");
+        const currentPhotoText = document.getElementById("currentPhotoText");
+        const submitGuruBtn = document.getElementById("submitGuruBtn"); // Pastikan ini ada di HTML
 
-        // Guru Modal Logic
-        const resetGuruModal = () => {
-            $guruForm[0].reset();
-            $NIPguru.prop('disabled', false);
-            $passwordguru.prop('required', true).val('');
-            $passwordReq.show();
-            $oldPhoto.val('');
-            $currentPhotoPreview.hide().attr('src', '');
-            $currentPhotoText.hide();
-        };
+        // Fungsi Toggling Sidebar (Sama persis dengan siswapage.js)
+        function toggleSidebar() {
+            const isCollapsed = sidebar.classList.toggle("collapsed");
+            mainContent.classList.toggle("shifted");
+            header.classList.toggle("shifted");
 
-        $('#tambahGuruBtn').on('click', function() {
-            resetGuruModal();
-            $modalTitle.text('Tambah Guru');
-            $formAction.val('tambah');
-            $guruModal.show();
-        });
-
-        $('.edit').on('click', function() {
-            resetGuruModal(); 
-            const data = $(this).data();
-            $modalTitle.text('Edit Guru');
-            $formAction.val('edit');
-            
-            // Correctly decode URL-encoded data from PHP
-            $oldNip.val(decodeURIComponent(data.nip));
-            $NIPguru.val(decodeURIComponent(data.nip)).prop('disabled', false);
-            $namaguru.val(decodeURIComponent(data.name));
-            $emailguru.val(decodeURIComponent(data.email));
-            const decodedGender = decodeURIComponent(data.gender);
-            if (decodedGender) {
-                // Convert the first letter to uppercase for a proper match
-                const normalizedGender = decodedGender.charAt(0).toUpperCase() + decodedGender.slice(1);
-                $genderguru.val(normalizedGender);
-            }
-            $dobguru.val(decodeURIComponent(data.dob));
-            $nohpguru.val(decodeURIComponent(data.nohp));
-            $alamatguru.val(decodeURIComponent(data.alamat));
-            
-            $passwordguru.prop('required', false);
-            $passwordReq.hide();
-            
-            if (data.photo) {
-                const photoName = decodeURIComponent(data.photo);
-                $oldPhoto.val(photoName);
-                $currentPhotoPreview.show().attr('src', `../../uploads/guru/${photoName}`);
-                $currentPhotoText.show().text(`File lama: ${photoName}`);
+            // --- PERBAIKAN: Simpan status sidebar di Local Storage ---
+            if (isCollapsed) {
+                localStorage.setItem('sidebarState', 'collapsed');
+                localStorage.setItem('mainContentState', 'shifted');
+                localStorage.setItem('headerState', 'shifted');
             } else {
-                $oldPhoto.val('');
+                localStorage.setItem('sidebarState', 'expanded');
+                localStorage.setItem('mainContentState', 'expanded');
+                localStorage.setItem('headerState', 'expanded');
             }
-            $guruModal.show();
-        });
+        }
 
-        $('.close-btn, #cancelBtn').on('click', function() {
-            $guruModal.hide();
-        });
+        // Fungsi Buka Modal Guru (Disamakan dengan openSiswaModal)
+        function openGuruModal(action, NIP = '', name = '', email = '', gender = '', dob = '', no_hp = '', alamat = '', photo = '') {
+            guruForm.reset();
+            guruActionInput.value = action;
 
-        window.onclick = function(event) {
-            if (event.target === $guruModal[0]) {
-                $guruModal.hide();
-            }
-        };
+            // Reset preview dan hidden fields
+            oldNipInput.value = '';
+            oldPhotoInput.value = '';
+            currentPhotoPreview.src = '';
+            currentPhotoPreview.style.display = 'none';
+            currentPhotoText.style.display = 'none';
 
-        // Submit form with AJAX
-        $guruForm.on('submit', async function(e) {
-            $NIPguru.prop('disabled', false); 
-            e.preventDefault();
+            if (action === 'tambah') {
+                guruModalTitle.textContent = "Tambah Guru";
+                submitGuruBtn.textContent = "Simpan";
+                NIPguruInput.readOnly = false;
+                
+                // Asumsi: Password group/field harus ditampilkan
+                if (passwordGroup) passwordGroup.style.display = 'block';
+                passwordguruInput.required = true;
+                if (passwordReqText) passwordReqText.style.display = 'block';
 
-            const formData = new FormData(this);
-
-            Swal.fire({
-                title: 'Memproses...',
-                text: 'Mohon tunggu sebentar',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
-
-            try {
-                const response = await fetch('index.php', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.text();
-                const trimmedResult = result.trim();
-
-                if (trimmedResult.startsWith("success:")) {
-                    await Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil!',
-                        text: trimmedResult.substring(8),
-                        confirmButtonText: 'OK'
-                    });
-                    window.location.reload();
-                } else if (trimmedResult.startsWith("error:")) {
-                    await Swal.fire({
-                        icon: 'error',
-                        title: 'Gagal!',
-                        text: trimmedResult.substring(6),
-                        confirmButtonText: 'OK'
-                    });
-                } else {
-                    console.error("Server responded with unexpected output:", result);
-                    await Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        text: 'Respons server tidak terduga. Output PHP: ' + trimmedResult.substring(0, 300) + '...',
-                        confirmButtonText: 'OK'
-                    });
+            } else if (action === 'edit') {
+                guruModalTitle.textContent = "Edit Guru";
+                submitGuruBtn.textContent = "Update";
+                NIPguruInput.readOnly = false; // Mungkin tidak perlu readOnly true saat edit, tergantung logika backend
+                
+                // Mengisi data
+                NIPguruInput.value = decodeURIComponent(NIP);
+                oldNipInput.value = decodeURIComponent(NIP);
+                namaguruInput.value = decodeURIComponent(name);
+                emailguruInput.value = decodeURIComponent(email);
+                
+                // Pengisian Gender (Asumsi: Select/Input ID: genderguru)
+                if (genderguruInput) {
+                    const normalizedGender = decodeURIComponent(gender).charAt(0).toUpperCase() + decodeURIComponent(gender).slice(1);
+                    genderguruInput.value = normalizedGender;
                 }
-            } catch (error) {
-                console.error("Fetch error:", error);
-                await Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    text: 'Terjadi kesalahan jaringan atau client: ' + error.message,
-                    confirmButtonText: 'OK'
-                });
-            }
-        });
 
+                dobguruInput.value = decodeURIComponent(dob);
+                nohpguruInput.value = decodeURIComponent(no_hp);
+                alamatguruTextarea.value = decodeURIComponent(alamat);
+                oldPhotoInput.value = decodeURIComponent(photo);
+
+                if (photo) {
+                    const photoName = decodeURIComponent(photo);
+                    currentPhotoPreview.style.display = 'block';
+                    currentPhotoPreview.src = `../../uploads/guru/${photoName}`;
+                    currentPhotoText.style.display = 'block';
+                    currentPhotoText.textContent = `File lama: ${photoName}`;
+                }
+
+                // Asumsi: Password group/field disembunyikan dan tidak required
+                if (passwordGroup) passwordGroup.style.display = 'none';
+                passwordguruInput.required = false;
+                passwordguruInput.value = '';
+                if (passwordReqText) passwordReqText.style.display = 'none';
+            }
+            guruModal.style.display = "flex";
+        }
+
+        // Fungsi Tutup Modal Guru
+        function closeGuruModal() {
+            guruModal.style.display = "none";
+        }
+
+
+        // Fungsi SweetAlert Logout (Sama persis dengan siswapage.js)
         function showLogoutConfirmation() {
             Swal.fire({
                 title: 'Konfirmasi Logout',
@@ -1081,6 +581,7 @@ if (isset($_GET['success'])) {
             });
         }
 
+        // Event Listener untuk Logout Sidebar
         if (logoutButtonSidebar) {
             logoutButtonSidebar.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -1088,27 +589,208 @@ if (isset($_GET['success'])) {
             });
         }
 
-        // SweetAlert for delete confirmation
-        $('.delete').on('click', function() {
-            const nipToDelete = $(this).data('nip');
-            const currentTahunAkademikId = new URLSearchParams(window.location.search).get('tahun_akademik_id');
 
-            Swal.fire({
-                title: 'Apakah Anda yakin?',
-                text: "Anda tidak akan dapat mengembalikan data ini!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Ya, hapus!',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = `?action=hapus_guru&NIP=${nipToDelete}&tahun_akademik_id=${currentTahunAkademikId}`;
-                }
-            });
+        // Event Listener Form Submission (Disamakan dengan siswapage.js)
+        guruForm.addEventListener("submit", function(e) {
+            e.preventDefault();
+            // Re-enable NIP input sebelum submit jika disabled untuk memastikan NIP terkirim
+            NIPguruInput.disabled = false;
+            const formData = new FormData(guruForm);
+            // Setelah mendapatkan FormData, disable lagi jika mode edit
+            if (guruActionInput.value === 'edit') {
+                // NIPguruInput.disabled = true; // Tidak perlu, karena sudah diatur di openGuruModal
+            }
+
+            fetch('index.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(async result => {
+                    const actionMode = guruActionInput.value;
+                    const trimmedResult = result.trim();
+
+                    if (trimmedResult.startsWith("success")) {
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil!',
+                            text: trimmedResult.substring(8) || (actionMode === 'edit' ? "Guru berhasil diupdate!" : "Guru berhasil ditambahkan!"),
+                            showConfirmButton: false,
+                            timer: 1500
+                        }).then(() => {
+                            // Redirect atau reload halaman setelah berhasil
+                            window.location.href = `index.php?success=${encodeURIComponent(trimmedResult.substring(8) || (actionMode === 'edit' ? "Guru berhasil diupdate!" : "Guru berhasil ditambahkan!"))}`;
+                        });
+                    } else if (trimmedResult.startsWith("error:")) {
+                        await Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal!',
+                            text: trimmedResult.substring(6),
+                            confirmButtonText: 'OK'
+                        });
+                    } else {
+                        console.error("Server responded with unexpected output:", result);
+                        await Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: 'Respons server tidak terduga. Output PHP: ' + trimmedResult.substring(0, 300) + '...',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                })
+                .catch(async error => {
+                    console.error("Fetch error:", error);
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: 'Terjadi kesalahan jaringan atau client: ' + error.message,
+                        confirmButtonText: 'OK'
+                    });
+                });
         });
-    });
-</script>
+
+        // Event Listener Penutupan Modal ketika klik di luar (Sama persis dengan siswapage.js)
+        window.onclick = function(event) {
+            if (event.target == guruModal) {
+                closeGuruModal();
+            }
+        };
+
+
+        // jQuery ready function (Untuk live search, delete, dan inisialisasi DataTables)
+        $(document).ready(function() {
+            
+            // --- penerapan sidebarnya iki state dari Local Storage (Sama persis dengan siswapage.js) ---
+            // --- penerapan sidebarnya iki state dari Local Storage ---
+            const savedState = localStorage.getItem('sidebarState');
+            const sidebar = document.getElementById("sidebar");
+            const mainContent = document.getElementById("mainContent");
+            const header = document.getElementById("header");
+            if (savedState === 'collapsed') {
+                // Pastikan variabel elemen DOM sudah terdefinisi/dapat diakses
+                if (sidebar && mainContent && header) {
+                    sidebar.classList.add("no-transition");
+                    sidebar.classList.add("collapsed");
+                    mainContent.classList.add("no-transition");
+                    mainContent.classList.add("shifted");
+                    header.classList.add("no-transition");
+                    header.classList.add("shifted");
+                }
+
+                setTimeout(() => {
+                    sidebar.classList.remove("no-transition");
+                    mainContent.classList.remove("no-transition");
+                    header.classList.remove("no-transition");
+                }, 50); // 50ms sudah cukup singkat dan aman
+
+            }
+
+            // Mengganti penggunaan jQuery click handler untuk Modal dengan fungsi baru
+            $('#tambahGuruBtn').on('click', function() {
+                openGuruModal('tambah');
+            });
+
+            // Mengganti event .edit dengan pemicu fungsi openGuruModal baru
+            $('.edit').on('click', function() {
+                const data = $(this).data();
+                openGuruModal(
+                    'edit', 
+                    data.nip, 
+                    data.name, 
+                    data.email, 
+                    data.gender, 
+                    data.dob, 
+                    data.nohp, 
+                    data.alamat, 
+                    data.photo
+                );
+            });
+            
+            // Event listener untuk tombol close/cancel
+            $('.close-btn, #cancelBtn').on('click', function() {
+                closeGuruModal();
+            });
+
+            // SweetAlert for delete confirmation (Disamakan dengan logika delete siswa)
+            $('.delete').on('click', function() {
+                const nipToDelete = $(this).data('nip');
+                const currentTahunAkademikId = new URLSearchParams(window.location.search).get('tahun_akademik_id');
+
+                Swal.fire({
+                    title: 'Apakah Anda yakin?',
+                    text: "Menghapus guru ini juga akan menghapus data yang terkait (jika ada)! Anda tidak akan dapat mengembalikan data ini!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#e74c3c', // Warna merah yang serasi
+                    cancelButtonColor: '#3498db', // Warna biru yang serasi
+                    confirmButtonText: 'Ya, Hapus!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Gunakan redirect seperti di siswapage.js
+                        window.location.href = `index.php?action=hapus_guru&NIP=${nipToDelete}&tahun_akademik_id=${currentTahunAkademikId || ''}`;
+                    }
+                });
+            });
+
+            // live search (Tetap menggunakan jQuery AJAX karena lebih ringkas)
+            $('#liveSearch').on('keyup', function() {
+                const keyword = $(this).val();
+
+                $.get('search_guru.php', { q: keyword }, function(data) {
+                    $('#guruTableBody').html(data);
+
+                    // Re-bind edit/delete events for new rows
+                    bindEditButtons();
+                    bindDeleteButtons();
+                });
+            });
+
+            function bindEditButtons() {
+                // Re-bind dengan fungsi baru
+                $('.edit').off().on('click', function() {
+                    const data = $(this).data();
+                    openGuruModal(
+                        'edit', 
+                        data.nip, 
+                        data.name, 
+                        data.email, 
+                        data.gender, 
+                        data.dob, 
+                        data.nohp, 
+                        data.alamat, 
+                        data.photo
+                    );
+                });
+            }
+
+            function bindDeleteButtons() {
+                $('.delete').off().on('click', function() {
+                    const nipToDelete = $(this).data('nip');
+                    const currentTahunAkademikId = new URLSearchParams(window.location.search).get('tahun_akademik_id');
+
+                    Swal.fire({
+                        title: 'Apakah Anda yakin?',
+                        text: "Menghapus guru ini juga akan menghapus data yang terkait (jika ada)! Anda tidak akan dapat mengembalikan data ini!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#e74c3c', 
+                        cancelButtonColor: '#3498db', 
+                        confirmButtonText: 'Ya, Hapus!',
+                        cancelButtonText: 'Batal'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = `index.php?action=hapus_guru&NIP=${nipToDelete}&tahun_akademik_id=${currentTahunAkademikId || ''}`;
+                        }
+                    });
+                });
+            }
+            
+            // Inisialisasi DataTables (Tetap pertahankan ini)
+            if ($('#myTable').length) {
+                $('#myTable').DataTable();
+            }
+        });
+    </script>
 </body>
 </html>
