@@ -180,6 +180,32 @@ try {
     error_log("Error fetching absensi: " . $e->getMessage());
 }
 
+// --- Tambahan: Hitung Ringkasan Kehadiran Berdasarkan Data Existing ---
+$summary_kehadiran = [
+    'Hadir' => 0,
+    'Alpha' => 0,
+    'Sakit' => 0,
+    'Izin'  => 0,
+    'Total_Siswa' => count($list_siswa)
+];
+
+foreach ($absensi_existing as $siswa_id => $data) {
+    $status = $data['status'];
+    if (isset($summary_kehadiran[$status])) {
+        $summary_kehadiran[$status]++;
+    }
+}
+// Tambahan: Hitung Siswa yang Belum Diisi Absensinya
+$siswa_belum_diisi = $summary_kehadiran['Total_Siswa'] - array_sum($summary_kehadiran) + $summary_kehadiran['Total_Siswa'];
+// Perbaikan: Hitung Siswa yang Belum Diisi Absensinya (Total Siswa dikurangi yang sudah diisi)
+$siswa_sudah_diisi = count($absensi_existing);
+$siswa_belum_diisi = $summary_kehadiran['Total_Siswa'] - $siswa_sudah_diisi;
+
+
+$summary_kehadiran['Belum_Diisi'] = $siswa_belum_diisi;
+
+// --- Akhir Tambahan Ringkasan Kehadiran ---
+
 $guru_photo = '';
 if (!empty($guru_id)) {
     $stmt_guru_photo = $pdo->prepare("SELECT photo FROM guru WHERE id = ?");
@@ -731,6 +757,50 @@ if (!empty($guru_id)) {
         .sidebar.collapsed .logout-button-container a span {
             display: none;
         }
+
+                /* Ringkasan Absensi */
+        .summary-card-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+
+        .summary-card {
+            background-color: var(--card-background);
+            border-radius: 8px;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+            transition: transform 0.2s;
+            border-left: 5px solid;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .summary-card h4 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            color: var(--light-text-color);
+            font-weight: 500;
+        }
+
+        .summary-card p {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .summary-hadir { border-left-color: #2ecc71; } /* Hijau */
+        .summary-alpha { border-left-color: #e74c3c; } /* Merah */
+        .summary-sakit { border-left-color: #f39c12; } /* Kuning/Oranye */
+        .summary-izin { border-left-color: #3498db; } /* Biru */
+        .summary-belum { border-left-color: #95a5a6; } /* Abu-abu */
     </style>
 </head>
 
@@ -815,6 +885,33 @@ if (!empty($guru_id)) {
             <?php else: ?>
                 <div class="alert alert-error">Data pertemuan tidak ditemukan. Pastikan Anda mengakses halaman ini dari pertemuan yang valid.</div>
             <?php endif; ?>
+
+            <div class="summary-card-container">
+                <div class="summary-card summary-hadir">
+                    <h4><i class="fas fa-user-check"></i> Hadir</h4>
+                    <p><?php echo htmlspecialchars($summary_kehadiran['Hadir']); ?></p>
+                </div>
+                <div class="summary-card summary-alpha">
+                    <h4><i class="fas fa-user-times"></i> Alpha</h4>
+                    <p><?php echo htmlspecialchars($summary_kehadiran['Alpha']); ?></p>
+                </div>
+                <div class="summary-card summary-sakit">
+                    <h4><i class="fas fa-procedures"></i> Sakit</h4>
+                    <p><?php echo htmlspecialchars($summary_kehadiran['Sakit']); ?></p>
+                </div>
+                <div class="summary-card summary-izin">
+                    <h4><i class="fas fa-envelope-open-text"></i> Izin</h4>
+                    <p><?php echo htmlspecialchars($summary_kehadiran['Izin']); ?></p>
+                </div>
+                <div class="summary-card summary-belum">
+                    <h4><i class="fas fa-question-circle"></i> Belum Diisi</h4>
+                    <p><?php echo htmlspecialchars($summary_kehadiran['Belum_Diisi']); ?></p>
+                </div>
+                <div class="summary-card">
+                    <h4><i class="fas fa-users"></i> Total Siswa</h4>
+                    <p><?php echo htmlspecialchars($summary_kehadiran['Total_Siswa']); ?></p>
+                </div>
+            </div>
 
             <?php if (!$can_edit): ?>
                 <div class="alert alert-warning">
