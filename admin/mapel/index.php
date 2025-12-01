@@ -92,6 +92,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_mapel'])) {
     exit;
 }
 
+// logika hapus mata pelajaran
+// Cek apakah ada permintaan untuk menghapus mata pelajaran
+if (isset($_GET['action']) && $_GET['action'] === 'hapus' && isset($_GET['id'])) {
+    $id = $_GET['id'];
+
+    // Ambil data mata pelajaran berdasarkan ID untuk mendapatkan foto yang terkait
+    $stmt = $pdo->prepare("SELECT * FROM mapel WHERE id = ?");
+    $stmt->execute([$id]);
+    $mapel = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($mapel) {
+        // Hapus foto dari server jika ada
+        $photo_filename = $mapel['photo'];
+        if (!empty($photo_filename)) {
+            $old_photo_path = '../../uploads/mapel/' . $photo_filename;
+            if (file_exists($old_photo_path)) {
+                unlink($old_photo_path); // Hapus file foto
+            }
+        }
+
+        // Hapus data mata pelajaran dari database
+        $stmt = $pdo->prepare("DELETE FROM mapel WHERE id = ?");
+        $stmt->execute([$id]);
+
+        // Redirect setelah penghapusan
+        header("Location: index.php");
+        exit;
+    } else {
+        // Mata pelajaran tidak ditemukan
+        echo "Mata pelajaran tidak ditemukan.";
+    }
+}
+
+
 // Ambil data mata pelajaran untuk ditampilkan
 $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -105,549 +139,41 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>Mata Pelajaran</title>
+    <link rel="stylesheet" href="../../assets/adminpage.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #1abc9c;
-            --secondary-color: #34495e;
-            --background-color: #f0f2f5;
-            --card-background: #ffffff;
-            --text-color: #2c3e50;
-            --light-text-color: #7f8c8d;
-            --border-color: #e0e0e0;
-            --shadow-color: rgba(0, 0, 0, 0.08);
-            --sidebar-width: 250px;
-            --sidebar-collapsed-width: 70px;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: var(--background-color);
-            display: flex;
-            min-height: 100vh;
-            color: var(--text-color);
-            overflow-x: hidden;
-        }
-
-        /* Sidebar dan Header */
-        .sidebar {
-            width: var(--sidebar-width);
-            background-color: var(--secondary-color);
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            transition: width 0.3s ease;
-            z-index: 1000;
-            padding-top: 70px;
-            overflow: hidden;
-        }
-
-        .sidebar.collapsed {
-            width: var(--sidebar-collapsed-width);
-        }
-
-        .sidebar .logo {
-            color: #fff;
-            font-size: 24px;
-            font-weight: 700;
-            text-align: center;
-            padding: 15px 0;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background: var(--primary-color);
-        }
-
-        .logo span {
-            transition: font-size 0.3s ease;
-        }
-
-        .sidebar.collapsed .logo span {
-            font-size: 0.5em;
-            transition: font-size 0.3s ease;
-        }
-
-        .sidebar nav a {
-            display: flex;
-            align-items: center;
-            padding: 15px 20px;
-            color: #fff;
-            text-decoration: none;
-            transition: background-color 0.2s ease, padding-left 0.2s ease;
-        }
-
-        .sidebar nav a i {
-            width: 25px;
-            text-align: center;
-            margin-right: 20px;
-            font-size: 18px;
-        }
-
-        .sidebar.collapsed nav a i {
-            margin-right: 0;
-        }
-
-        .sidebar.collapsed nav a span {
-            display: none;
-        }
-
-        .sidebar nav a:hover,
-        .sidebar nav a.active {
-            background-color: #3e566d;
-            padding-left: 25px;
-        }
-
-        .sidebar nav a.active i {
-            color: var(--primary-color);
-        }        
-
-        .header {
-            height: 65.5px;
-            background-color: var(--card-background);
-            box-shadow: 0 2px 10px var(--shadow-color);
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            position: fixed;
-            top: 0;
-            left: var(--sidebar-width);
-            width: calc(100% - var(--sidebar-width));
-            z-index: 999;
-            transition: left 0.3s ease, width 0.3s ease;
-            justify-content: space-between;
-        }
-        .header.shifted {
-            left: var(--sidebar-collapsed-width);
-            width: calc(100% - var(--sidebar-collapsed-width));
-        }
-        .header h1 {
-            font-size: 22px;
-            font-weight: 600;
-            margin: 0;
-            display: flex;
-            align-items: center;
-        }
-        .header h1 i {
-            margin-right: 10px;
-        }
-
-        /* User Info Dropdown Styling */
-        .user-info {
-            position: relative;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            color: var(--text-color);
-            cursor: pointer;
-            padding: 5px 10px;
-            border-radius: 8px;
-            transition: background-color 0.2s ease;
-        }
-        .user-info:hover {
-            background-color: #f0f0f0;
-        }
-        .user-info img {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--primary-color);
-        }
-        .user-info span {
-            font-weight: 600;
-        }
-        .user-info i.fa-caret-down {
-            margin-left: 5px;
-        }
-        .dropdown-menu {
-            display: none;
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background-color: var(--card-background);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-            z-index: 1002;
-            min-width: 160px;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-        .dropdown-menu a {
-            color: var(--text-color);
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-            font-weight: 500;
-            transition: background-color 0.2s ease;
-        }
-        .dropdown-menu a:hover {
-            background-color: var(--background-color);
-        }
-        .dropdown-menu a i {
-            margin-right: 10px;
-            width: 20px;
-        }
-
-        .content {
-            flex-grow: 1;
-            padding: 90px 30px 30px 30px;
-            margin-left: var(--sidebar-width);
-            transition: margin-left 0.3s ease;
-            max-width: 100%;
-        }
-
-        .content.shifted {
-            margin-left: var(--sidebar-collapsed-width);
-        }
-
-        /* Tombol Toggle Sidebar */
-        .toggle-btn {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            margin-right: 20px;
-            transition: background-color 0.3s;
-        }
-
-        .toggle-btn:hover {
-            background-color: #16a085;
-        }
-
-        /* Konten Utama */
-        .card {
-            background: var(--card-background);
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 4px 20px var(--shadow-color);
-            margin-bottom: 25px;
-            max-width: 1200px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .card h2 {
-            margin-bottom: 20px;
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--text-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .add-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 25px;
-            padding: 10px 20px;
-            background-color: var(--primary-color);
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: background-color 0.3s, transform 0.2s;
-        }
-
-        .add-link:hover {
-            background-color: #16a085;
-            transform: translateY(-2px);
-        }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 9999;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.5);
-            padding-top: 60px;
-        }
-
-        .modal-content {
-            background-color: #fefefe;
-            margin: 5% auto;
-            padding: 30px;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            position: relative;
-        }
-
-        .close-btn {
-            color: #aaa;
-            position: absolute;
-            top: 10px;
-            right: 25px;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        .close-btn:hover,
-        .close-btn:focus {
-            color: #000;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .modal form {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .modal label {
-            margin-bottom: 5px;
-            font-weight: 600;
-        }
-
-        .modal input[type="text"],
-        .modal input[type="file"],
-        .modal select {
-            margin-bottom: 15px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 16px;
-            width: 100%;
-        }
-
-        .modal-buttons {
-            display: flex;
-            justify-content: space-between;
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .modal-buttons button {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            flex: 1;
-        }
-
-        .modal-buttons button:hover {
-            background-color: #16a085;
-        }
-
-        .modal-buttons .btn-cancel {
-            background-color: #e74c3c;
-        }
-
-        .modal-buttons .btn-cancel:hover {
-            background-color: #c0392b;
-        }
-
-        .image-preview {
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .image-preview img {
-            max-width: 150px;
-            height: auto;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-
-        @media (max-width: 768px) {
-            .sidebar:not(.collapsed) {
-                transform: translateX(-100%);
-            }
-
-            .sidebar.collapsed {
-                transform: translateX(0);
-            }
-
-            .content,
-            .header {
-                margin-left: 0 !important;
-                left: 0 !important;
-                width: 100% !important;
-                padding-left: 20px !important;
-            }
-
-            .sidebar.collapsed + .header,
-            .sidebar.collapsed ~ .content {
-                margin-left: var(--sidebar-collapsed-width) !important;
-                left: var(--sidebar-collapsed-width) !important;
-                width: calc(100% - var(--sidebar-collapsed-width)) !important;
-            }
-        }
-        
-        .element-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2.5rem;
-            text-align: center;
-        }
-
-        .element-item {
-            background: #fff;
-            border-radius: 16px;
-            padding: 5px 5px 20px 5px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s ease;
-            cursor: pointer;
-        }
-
-        .element-item:hover {
-            transform: translateY(-5px);
-        }
-        
-        .element-item img {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            max-width: 100%;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
-            transition: transform 0.4s ease, box-shadow 0.4s ease;
-        }
-
-        .element-item h3 {
-            margin-bottom: 5px;
-            font-size: 1.2em;
-        }
-
-        .element-item p {
-            font-size: 0.9em;
-            color: #777;
-        }
-        
-        .action-buttons {
-            margin-top: 15px;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .action-buttons a {
-            padding: 8px 12px;
-            border-radius: 5px;
-            text-decoration: none;
-            color: white;
-            font-size: 0.9em;
-            transition: background-color 0.3s;
-        }
-
-        .action-buttons .btn-edit {
-            background-color: #3498db;
-        }
-
-        .action-buttons .btn-edit:hover {
-            background-color: #2980b9;
-        }
-
-        .action-buttons .btn-delete {
-            background-color: #e74c3c;
-        }
-
-        .action-buttons .btn-delete:hover {
-            background-color: #c0392b;
-        }
-
-        /* --- Penambahan CSS untuk Tombol Logout --- */
-        .sidebar .logout-button-container {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            width: 100%;
-            padding: 0 20px;
-        }
-
-        .sidebar .logout-button-container a {
-            background-color: #e74c3c; /* Warna merah untuk Logout */
-            color: white;
-            font-weight: 600;
-            text-align: center;
-            border-radius: 8px;
-            display: block;
-            padding: 12px 20px;
-            text-decoration: none;
-            transition: background-color 0.3s;
-        }
-
-        .sidebar .logout-button-container a:hover {
-            background-color: #c0392b;
-        }
-
-        .sidebar.collapsed .logout-button-container {
-            padding: 0;
-        }
-
-        .sidebar.collapsed .logout-button-container a span {
-            display: none;
-        }
-    </style>
 </head>
 
 <body>
     <div class="sidebar" id="sidebar">
-        <div class="logo"><span>AdminCoy</span></div>
+        <div class="logo">
+            <img src="../../uploads/icon/logo.png" alt="Logo AdminCoy" class="logo-icon">
+            <span class="logo-text">AdminCoy</span>
+        </div>
         <nav>
             <a href="../dashboard_admin.php">
-                <i class="fas fa-tachometer-alt"></i>
-                <span>Dashboard</span>
-            </a>
+                <div class="hovertext" data-hover="dashboard"><i class="fas fa-tachometer-alt"></div></i><span>Dashboard</span></a>
             <a href="../guru/index.php">
-                <i class="fas fa-chalkboard-teacher"></i>
-                <span>Guru</span>
-            </a>
+                <div class="hovertext" data-hover="Guru"><i class="fas fa-chalkboard-teacher"></div></i><span>Guru</span></a>
             <a href="../siswa/index.php">
-                <i class="fas fa-user-graduate"></i>
-                <span>Siswa</span>
-            </a>
+                <div class="hovertext" data-hover="Siswa"><i class="fas fa-user-graduate"></div></i><span>Siswa</span></a>
             <a href="../jadwal/index.php">
-                <i class="fas fa-calendar-alt"></i>
-                <span>Jadwal</span>
-            </a>
-            <a href="../Tahun_Akademik/index.php">
-                <i class="fas fa-calendar"></i>
-                <span>Tahun Akademik</span>
-            </a>
+                <div class="hovertext" data-hover="Jadwal"><i class="fas fa-calendar-alt"></div></i><span>Jadwal</span></a>
+            <a href="../tahun_akademik/index.php">
+                <div class="hovertext" data-hover="Tahun Akademik"><i class="fas fa-calendar"></div></i><span>Tahun Akademik</span></a>
             <a href="../kelas/index.php">
-                <i class="fas fa-school"></i>
-                <span>Kelas</span>
-            </a>
-            <a href="index.php" class="active">
-                <i class="fas fa-book"></i>
-                <span>Mata Pelajaran</span>
-            </a>
-            <div class="logout-button-container">
-                <a onclick="showLogoutConfirm()">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                </a>
-            </div>
+                <div class="hovertext" data-hover="Kelas"><i class="fas fa-school"></div></i><span>Kelas</span></a>
+            <a href=#" class="active">
+                <div class="hovertext" data-hover="Mata Pelajaran"><i class="fas fa-book"></div></i><span>Mata Pelajaran</span></a>
         </nav>
+        <div class="logout-button-container hovertext" data-hover="Logout">
+            <a onclick="showLogoutConfirm(event)">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </a>
+        </div>
     </div>
 
     <div class="header" id="header">
@@ -678,9 +204,9 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
                             <img src="../../uploads/mapel/<?= htmlspecialchars($m['photo']) ?>" alt="<?= htmlspecialchars($m['nama_mapel']) ?>">
                             <h3><?= htmlspecialchars($m['nama_mapel']) ?></h3>
                             <p>Kurikulum: <?= htmlspecialchars($m['kurikulum']) ?></p>
-                            <div class="action-buttons">
-                                <a href="#" class="btn-edit" onclick="openModal('edit', '<?= htmlspecialchars($m['id']) ?>', '<?= htmlspecialchars($m['nama_mapel']) ?>', '<?= htmlspecialchars($m['kurikulum']) ?>', '<?= htmlspecialchars($m['photo']) ?>')">Edit</a>
-                                <a href="hapus.php?id=<?= $m['id'] ?>" class="btn-delete" onclick="return confirm('Yakin ingin menghapus mata pelajaran ini?')">Hapus</a>
+                            <div class="action-mapel">
+                                <a href="#" class="action-edit" onclick="openModal('edit', '<?= htmlspecialchars($m['id']) ?>', '<?= htmlspecialchars($m['nama_mapel']) ?>', '<?= htmlspecialchars($m['kurikulum']) ?>', '<?= htmlspecialchars($m['photo']) ?>')">Edit</a>
+                                <a href="#" class="action-delete" onclick="openDeleteModal(<?php echo htmlspecialchars($m['id']); ?>); return false;">Hapus</a>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -694,29 +220,40 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
                     <span class="close-btn" onclick="closeModal()">&times;</span>
                     <h2 id="modalTitle"></h2>
                     <form id="mapelForm" action="index.php" method="post" enctype="multipart/form-data">
-                        <input type="hidden" name="id" id="mapelId">
-                        <input type="hidden" name="old_photo" id="oldPhoto">
+                        <div class="form-group">
+                            <input type="hidden" name="id" id="mapelId">
+                        </div>
 
-                        <label>Nama Mapel: <input type="text" name="nama_mapel" id="nama_mapel" required></label>
+                        <div class="form-group">
+                            <input type="hidden" name="old_photo" id="oldPhoto">
+                        </div>
 
+                        <div class="form-group">
+                            <label>Nama Mapel: <input type="text" name="nama_mapel" id="nama_mapel" required></label>
+                        </div>
+                        
                         <div id="fotoLamaContainer" class="image-preview" style="display:none;">
                             <label>Foto Lama:<br>
                                 <img id="fotoLama" src="" alt="Foto Lama">
                             </label>
                         </div>
 
-                        <label>Foto: <input type="file" name="photo" id="photoInput" accept="image/*"></label>
+                        <div class="form-group">
+                            <label>Foto: <input type="file" name="photo" id="photoInput" accept="image/*"></label>
+                        </div>
 
-                        <label>Kurikulum: 
-                            <select name="kurikulum" id="kurikulum" required>
-                                <option value="K13">K13</option>
-                                <option value="KTSP">KTSP</option>
-                                <option value="Merdeka">Merdeka</option>
-                            </select>
-                        </label>
-                        <div class="modal-buttons">
-                            <button type="submit" id="submitButton"></button>
-                            <button type="button" class="btn-cancel" onclick="closeModal()">Batal</button>
+                        <div class="form-group">
+                            <label>Kurikulum: 
+                                <select name="kurikulum" id="kurikulum" required>
+                                    <option value="K13">K13</option>
+                                    <option value="KTSP">KTSP</option>
+                                    <option value="Merdeka">Merdeka</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" id="submitButton" class="btn-primary"></button>
+                            <button type="button" class="btn-secondary" onclick="closeModal()">Batal</button>
                         </div>
                     </form>
                 </div>
@@ -729,9 +266,41 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
         const header = document.getElementById("header");
 
         function toggleSidebar() {
-            sidebar.classList.toggle("collapsed");
+            const isCollapsed = sidebar.classList.toggle("collapsed");
             mainContent.classList.toggle("shifted");
             header.classList.toggle("shifted");
+
+            // --- PERBAIKAN: Simpan status sidebar di Local Storage ---
+            if (isCollapsed) {
+                localStorage.setItem('sidebarState', 'collapsed');
+                localStorage.setItem('mainContentState', 'shifted');
+                localStorage.setItem('headerState', 'shifted');
+            } else {
+                localStorage.setItem('sidebarState', 'expanded');
+                localStorage.setItem('mainContentState', 'expanded');
+                localStorage.setItem('headerState', 'expanded');
+            }
+        }
+
+        // --- penerapan sidebarnya iki state dari Local Storage ---
+        const savedState = localStorage.getItem('sidebarState');
+        if (savedState === 'collapsed') {
+            // Pastikan variabel elemen DOM sudah terdefinisi/dapat diakses
+            if (sidebar && mainContent && header) {
+                sidebar.classList.add("no-transition");
+                sidebar.classList.add("collapsed");
+                mainContent.classList.add("no-transition");
+                mainContent.classList.add("shifted");
+                header.classList.add("no-transition");
+                header.classList.add("shifted");
+            }
+
+            setTimeout(() => {
+                sidebar.classList.remove("no-transition");
+                mainContent.classList.remove("no-transition");
+                header.classList.remove("no-transition");
+            }, 50); // 50ms sudah cukup singkat dan aman
+
         }
 
         const mapelModal = document.getElementById('mapelModal');
@@ -791,6 +360,23 @@ $mapel = $pdo->query("SELECT * FROM mapel")->fetchAll(PDO::FETCH_ASSOC);
             }).then((result) => {
                 if (result.isConfirmed) {
                     window.location.href = "../../logout.php"; // redirect logout
+                }
+            });
+        }
+
+        function openDeleteModal(id) {
+            Swal.fire({
+                title: 'Apakah Anda yakin?',
+                text: 'Menghapus mata pelajaran ini akan menghapus data yang terkait!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#e74c3c',
+                cancelButtonColor: '#3498db',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = `index.php?action=hapus&id=${id}`;
                 }
             });
         }
